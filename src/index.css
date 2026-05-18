@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Little Brushes Art Academy — Design System
+   Modern, professional, refined. All colors HSL.
+*/
+
+@layer base {
+  :root {
+    /* Neutral surface, slate ink — modern SaaS baseline */
+    --background: 220 24% 98%;
+    --foreground: 222 32% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 32% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 32% 12%;
+
+    /* Refined brand orange — slightly desaturated */
+    --primary: 18 88% 54%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 18 88% 96%;
+
+    /* Deep indigo-purple */
+    --secondary: 258 52% 32%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-soft: 258 40% 96%;
+
+    /* Muted amber accent */
+    --accent: 42 92% 56%;
+    --accent-foreground: 222 32% 12%;
+    --accent-soft: 42 92% 96%;
+
+    /* Emerald success */
+    --success: 158 72% 38%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 158 60% 95%;
+
+    --warning: 32 92% 52%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 32 92% 95%;
+
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 72% 96%;
+
+    --info: 214 84% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --muted: 220 20% 95%;
+    --muted-foreground: 220 12% 42%;
+
+    --border: 220 18% 90%;
+    --input: 220 18% 90%;
+    --ring: 18 88% 54%;
+
+    --radius: 0.625rem;
+
+    /* Role accent palette (sidebar themes) */
+    --role-superadmin: 258 52% 32%;
+    --role-admin: 18 88% 54%;
+    --role-senior: 42 92% 48%;
+    --role-teacher: 158 72% 38%;
+    --role-student: 214 84% 50%;
+
+    /* Gradients — subtle, monochrome-ish */
+    --gradient-primary: linear-gradient(135deg, hsl(18 88% 54%), hsl(14 82% 48%));
+    --gradient-purple: linear-gradient(135deg, hsl(258 52% 32%), hsl(258 48% 44%));
+    --gradient-sunny:  linear-gradient(135deg, hsl(42 92% 56%), hsl(28 88% 54%));
+    --gradient-mint:   linear-gradient(135deg, hsl(158 72% 38%), hsl(180 60% 42%));
+    --gradient-party:  linear-gradient(120deg, hsl(18 88% 54%), hsl(258 52% 38%));
+
+    /* Subtle, professional shadows */
+    --shadow-soft: 0 1px 2px 0 hsl(222 32% 12% / 0.04), 0 1px 3px 0 hsl(222 32% 12% / 0.06);
+    --shadow-card: 0 4px 12px -4px hsl(222 32% 12% / 0.08), 0 2px 4px -2px hsl(222 32% 12% / 0.04);
+    --shadow-pop:  0 12px 32px -12px hsl(222 32% 12% / 0.18);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 32% 12%;
+    --sidebar-primary: 18 88% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 96%;
+    --sidebar-accent-foreground: 222 32% 12%;
+    --sidebar-border: 220 18% 92%;
+    --sidebar-ring: 18 88% 54%;
+  }
+
+  .dark {
+    --background: 222 28% 8%;
+    --foreground: 220 20% 96%;
+    --card: 222 26% 11%;
+    --card-foreground: 220 20% 96%;
+    --popover: 222 26% 11%;
+    --popover-foreground: 220 20% 96%;
+    --primary: 18 88% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 40% 60%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 222 22% 16%;
+    --muted-foreground: 220 14% 65%;
+    --accent: 42 92% 56%;
+    --accent-foreground: 222 32% 12%;
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 22% 18%;
+    --input: 222 22% 18%;
+    --ring: 18 88% 54%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01", "cv11", "cv02";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.005em;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    @apply font-semibold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .card-soft {
+    @apply rounded-xl bg-card border border-border shadow-[var(--shadow-soft)];
+  }
+  .card-pop {
+    @apply rounded-xl bg-card border border-border shadow-[var(--shadow-card)];
+  }
+  .gradient-primary { background: var(--gradient-primary); }
+  .gradient-purple  { background: var(--gradient-purple); }
+  .gradient-sunny   { background: var(--gradient-sunny); }
+  .gradient-mint    { background: var(--gradient-mint); }
+  .gradient-party   { background: var(--gradient-party); }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-thin::-webkit-scrollbar { height: 6px; width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.3); border-radius: 999px; }
+}
