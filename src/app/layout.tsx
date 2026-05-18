@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { Providers } from "./providers";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import "@/index.css";
+
+const Providers = dynamic(() => import("./providers").then((m) => m.Providers));
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const metadata: Metadata = {
   title: "Little Brushes Studio - ERP System",
@@ -14,8 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <body suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <Providers>{children}</Providers>
+        </Suspense>
       </body>
     </html>
   );

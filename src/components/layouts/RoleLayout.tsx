@@ -32,7 +32,10 @@ export function RoleLayout({ navItems, role, children }: { navItems: NavItem[]; 
   const pathname = usePathname();
   const theme = ROLE_THEME[role];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user?.role === "admin") {
+      await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
+    }
     logout();
     router.push("/login");
   };

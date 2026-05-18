@@ -9,16 +9,56 @@ import { BirthdayBanner } from "@/components/shared/BirthdayBanner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { todaysClasses, makeAttendance } from "@/data/mockData";
+import { CLASSES, todaysClasses, makeAttendance } from "@/data/mockData";
 import { useStore, actions, type Student } from "@/store/dataStore";
 import { CertificatePreview } from "@/pages/admin/Certificates";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSunday } from "date-fns";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 export { ChatPage } from "@/pages/senior-teacher/SeniorTeacherPages";
 
 function useMe() {
+  const { user } = useAuth();
   const students = useStore(s => s.students);
-  return { ...students[0], isBirthdayToday: true };
+  const student =
+    students.find(s => user?.email && s.email?.toLowerCase() === user.email.toLowerCase()) ??
+    students[0];
+
+  const now = new Date();
+  const fallback = {
+    id: "",
+    name: user?.name ?? "Student",
+    badgeId: "",
+    class: CLASSES[0],
+    email: user?.email ?? "",
+    parent: "",
+    phone: "",
+    age: 0,
+    totalFee: 0,
+    paidFee: 0,
+    feeStatus: "Pending" as const,
+    status: "Active" as const,
+    isBirthdayToday: false,
+    enrolled: format(now, "yyyy-MM-dd"),
+    dob: format(now, "yyyy-MM-dd"),
+  };
+
+  if (!student) return fallback;
+
+  const totalFee = Number(student.totalFee) || 0;
+  const paidFee = Number(student.paidFee) || 0;
+
+  return {
+    ...student,
+    name: student.name || user?.name || "Student",
+    totalFee,
+    paidFee,
+    isBirthdayToday: false,
+  };
+}
+
+function formatInr(amount: number) {
+  return `₹${Math.max(0, amount).toLocaleString("en-IN")}`;
 }
 
 export function StudentDashboard() {
@@ -30,7 +70,7 @@ export function StudentDashboard() {
   const showReminder = daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
   return (
     <div className="space-y-6">
-      <BirthdayBanner names={me.isBirthdayToday ? [me.name] : []} big />
+      <BirthdayBanner names={me.isBirthdayToday && me.name ? [me.name] : []} big />
       {showReminder && (
         <div className="card-soft p-4 border-l-4 border-warning bg-warning-soft/40 flex items-center gap-3">
           <div className="rounded-lg bg-warning/20 p-2"><AlarmClock className="w-5 h-5 text-warning" /></div>
@@ -50,7 +90,7 @@ export function StudentDashboard() {
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Attendance" value={`${pct}%`} icon={CalendarDays} tone="success" />
-        <StatCard label="Pending Fees" value={`₹${(me.totalFee - me.paidFee).toLocaleString()}`} icon={Wallet} tone="destructive" />
+        <StatCard label="Pending Fees" value={formatInr((me.totalFee ?? 0) - (me.paidFee ?? 0))} icon={Wallet} tone="destructive" />
         <StatCard label="Certificates" value={3} icon={Award} tone="accent" />
         <StatCard label="Next Class" value="4:00 PM" icon={Clock} tone="info" />
       </div>
@@ -170,14 +210,16 @@ export function StudentFees() {
   const me = useMe();
   const payments = useStore(s => s.payments);
   const [payOpen, setPayOpen] = useState(false);
-  const balance = me.totalFee - me.paidFee;
-  const myPays = payments.filter(p => p.student === me.name);
+  const totalFee = me?.totalFee ?? 0;
+  const paidFee = me?.paidFee ?? 0;
+  const balance = totalFee - paidFee;
+  const myPays = payments.filter(p => p.student === me?.name);
   return (
     <div className="space-y-6">
       <PageHeader title="My Fees" subtitle="Payments and dues" />
       <div className="grid sm:grid-cols-3 gap-4">
-        <StatCard label="Total Fee" value={`₹${me.totalFee.toLocaleString()}`} icon={Wallet} tone="info" />
-        <StatCard label="Paid" value={`₹${me.paidFee.toLocaleString()}`} icon={CreditCard} tone="success" />
+        <StatCard label="Total Fee" value={`₹${totalFee.toLocaleString()}`} icon={Wallet} tone="info" />
+        <StatCard label="Paid" value={`₹${paidFee.toLocaleString()}`} icon={CreditCard} tone="success" />
         <StatCard label="Balance" value={`₹${balance.toLocaleString()}`} icon={Wallet} tone="destructive" />
       </div>
       <div className="card-soft p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

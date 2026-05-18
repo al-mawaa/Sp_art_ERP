@@ -6,8 +6,8 @@ import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/AuthContext";
-import { Role } from "@/data/mockData";
+import { useAuth, type AuthUser } from "@/contexts/AuthContext";
+import { Role, ROLE_LABELS } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -15,7 +15,7 @@ type RoleOption = { id: Role; title: string; desc: string; icon: React.Component
 
 const ROLES: RoleOption[] = [
   { id: "super-admin",    title: "Super Admin",    desc: "Manage all institutes",   icon: Crown,         gradient: "from-secondary to-secondary/70", demoEmail: "vikram@littlebrushes.in" },
-  { id: "admin",          title: "Admin",          desc: "Run the academy",         icon: Shield,        gradient: "from-primary to-accent",         demoEmail: "anjali@littlebrushes.in" },
+  { id: "admin",          title: "Admin",          desc: "Run the academy",         icon: Shield,        gradient: "from-primary to-accent",         demoEmail: "admin1@gmail.com" },
   { id: "senior-teacher", title: "Senior Teacher", desc: "Approvals & oversight",   icon: GraduationCap, gradient: "from-accent to-primary",          demoEmail: "rahul@littlebrushes.in" },
   { id: "teacher",        title: "Teacher",        desc: "Classes & attendance",    icon: Users,         gradient: "from-success to-info",            demoEmail: "sneha@littlebrushes.in" },
   { id: "student",        title: "Student",        desc: "Classes, fees, certs",    icon: BookOpen,      gradient: "from-info to-secondary",          demoEmail: "aarav@kid.in" },
@@ -23,17 +23,64 @@ const ROLES: RoleOption[] = [
 
 export default function Login() {
   const [role, setRole] = useState<Role>("admin");
-  const [email, setEmail] = useState("anjali@littlebrushes.in");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("admin1@gmail.com");
+  const [password, setPassword] = useState("admin123");
+  const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password) return toast.error("Please fill in both fields");
-    login(role, email);
-    toast.success(`Welcome, ${ROLES.find(r => r.id === role)?.title}!`);
-    router.push(`/${role}`);
+
+    setSubmitting(true);
+    try {
+      if (role === "admin") {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          toast.error(data.error || "Invalid credentials");
+          return;
+        }
+
+        const admin = data.admin as { id: string; role: "admin"; email: string; name?: string };
+        const user: AuthUser = {
+          name: admin.name ?? "Admin",
+          email: admin.email,
+          role: "admin",
+        };
+        login(user);
+        toast.success("Welcome, Admin!");
+        router.push("/admin");
+        return;
+      }
+
+      const demoNames: Record<Role, string> = {
+        "super-admin": "Vikram Mehta",
+        admin: "Anjali Verma",
+        "senior-teacher": "Rahul Desai",
+        teacher: "Sneha Kulkarni",
+        student: "Aarav Sharma",
+      };
+      const user: AuthUser = {
+        role,
+        email,
+        name: demoNames[role] ?? ROLE_LABELS[role] ?? role,
+      };
+      login(user);
+      toast.success(`Welcome, ${ROLES.find(r => r.id === role)?.title}!`);
+      router.push(`/${role}`);
+    } catch {
+      toast.error("Could not reach the server. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function pickRole(r: Role) {
@@ -79,7 +126,9 @@ export default function Login() {
         <div className="w-full max-w-lg space-y-6">
           <div>
             <h2 className="font-display text-3xl font-bold text-secondary">Welcome back!</h2>
-            <p className="text-muted-foreground mt-1">Pick a role to explore the demo. Any password works.</p>
+            <p className="text-muted-foreground mt-1">
+              Admin uses credentials from server env. Other roles use demo login.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -118,10 +167,18 @@ export default function Login() {
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl h-11" />
-              <p className="text-[11px] text-muted-foreground">Demo: any password unlocks the dashboard.</p>
+              <p className="text-[11px] text-muted-foreground">
+                {role === "admin"
+                  ? "Use ADMIN_EMAIL and ADMIN_PASSWORD from .env"
+                  : "Demo: any password works for this role."}
+              </p>
             </div>
-            <Button type="submit" className="w-full h-11 rounded-xl gradient-primary text-white font-bold border-0 hover:opacity-95 shadow-pop">
-              Enter dashboard <ArrowRight className="w-4 h-4 ml-1" />
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full h-11 rounded-xl gradient-primary text-white font-bold border-0 hover:opacity-95 shadow-pop"
+            >
+              {submitting ? "Signing in…" : "Enter dashboard"} <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </form>
 

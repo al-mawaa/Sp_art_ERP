@@ -3,11 +3,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { Role, ROLE_LABELS } from "@/data/mockData";
 
-type User = { name: string; role: Role; email: string };
+export type AuthUser = { name: string; role: Role; email: string };
 
 type AuthCtx = {
-  user: User | null;
-  login: (role: Role, email: string) => void;
+  user: AuthUser | null;
+  login: (user: AuthUser) => void;
   logout: () => void;
 };
 
@@ -32,7 +32,7 @@ const ROLE_NAMES: Record<Role, string> = {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
+  const [user, setUser] = useState<AuthUser | null>(() => {
     try { const raw = localStorage.getItem("lba.user"); return raw ? JSON.parse(raw) : null; } catch { return null; }
   });
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthCtx>(() => ({
     user,
-    login: (role, email) => setUser({ role, email, name: ROLE_NAMES[role] }),
+    login: (next) => setUser(next),
     logout: () => setUser(null),
   }), [user]);
 

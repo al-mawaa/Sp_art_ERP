@@ -7,6 +7,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.output.chunkLoadTimeout = 300000;
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

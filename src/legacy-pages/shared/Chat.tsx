@@ -34,11 +34,13 @@ export function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const active = threads.find(t => t.id === activeId) ?? threads[0];
-  const activeMsgs = useMemo(() => messages.filter(m => m.threadId === active?.id), [messages, active?.id]);
+  const activeThreadId = active?.id;
+  const activeMsgs = useMemo(() => messages.filter(m => m.threadId === activeThreadId), [messages, activeThreadId]);
 
   useEffect(() => {
-    if (active) actions.markThreadRead(active.id, role);
-  }, [active?.id, role, active]);
+    if (!activeThreadId) return;
+    actions.markThreadRead(activeThreadId, role);
+  }, [activeThreadId, role]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
