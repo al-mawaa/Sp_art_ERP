@@ -24,6 +24,7 @@ export interface TeacherDocument extends mongoose.Document {
   college?: string;
   joiningDate?: string;
   salary?: number;
+  branchName?: string;
   bio?: string;
   classes: string[];
   status: 'Active' | 'Inactive';
@@ -57,6 +58,7 @@ const TeacherSchema = new mongoose.Schema<TeacherDocument>(
     college: { type: String },
     joiningDate: { type: String },
     salary: { type: Number },
+    branchName: { type: String },
     bio: { type: String },
     classes: { type: [String], default: [] },
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },

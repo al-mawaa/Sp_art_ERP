@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+import { configureCloudinary, cloudinary } from '@/lib/cloudinary';
 
 interface CloudinaryUploadResult {
   secure_url: string;
@@ -15,6 +8,7 @@ interface CloudinaryUploadResult {
 
 export async function POST(request: NextRequest) {
   try {
+    configureCloudinary();
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const folder = formData.get('folder') as string || 'general';
