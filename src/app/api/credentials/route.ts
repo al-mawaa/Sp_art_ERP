@@ -5,7 +5,11 @@ import Credential from '@/lib/models/Credentials';
 import Teacher from '@/lib/models/Teacher';
 import SeniorTeacher from '@/lib/models/SeniorTeacher';
 import Student from '@/lib/models/Student';
+
 import { syncStudentPortalPassword } from '@/lib/student-portal';
+
+import { sendAccountCreationEmail } from '@/lib/sendEmail';
+
 
 export const runtime = 'nodejs';
 const roles = ['student', 'teacher', 'senior_teacher'] as const;
@@ -133,6 +137,24 @@ export async function POST(request: NextRequest) {
       createdBy,
     });
 
+    const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL ?? 'http://localhost:3000/login';
+    let emailSent = true;
+    let emailError: string | null = null;
+
+    try {
+      await sendAccountCreationEmail({
+        to: email,
+        name,
+        email,
+        password,
+        loginUrl,
+      });
+    } catch (error) {
+      emailSent = false;
+      emailError = error instanceof Error ? error.message : 'Email send failed';
+      console.error('Error sending account creation email:', error);
+    }
+
     let extraRecord: Record<string, unknown> | null = null;
     let createdBadgeId: string | null = null;
 
@@ -245,7 +267,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: 'Credential created successfully',
+        message: emailSent
+          ? 'Credential created successfully'
+          : 'Credential created successfully, but email failed to send',
+        emailSent,
+        emailError,
         credentials: {
           id: credential._id.toString(),
           name: credential.name,
