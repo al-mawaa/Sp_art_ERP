@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import StudentCredentials from '@/lib/models/StudentCredentials';
 import Student from '@/lib/models/Student';
+import { sendCredentialEmail } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 
@@ -142,6 +143,18 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('Error creating student record for credentials:', error);
       }
+    }
+
+    try {
+      await sendCredentialEmail({
+        to: email,
+        name,
+        role: 'student',
+        username,
+        password,
+      });
+    } catch (error) {
+      console.error('Error sending credential email:', error);
     }
 
     return NextResponse.json({

@@ -5,6 +5,7 @@ import Credential from '@/lib/models/Credentials';
 import Teacher from '@/lib/models/Teacher';
 import SeniorTeacher from '@/lib/models/SeniorTeacher';
 import Student from '@/lib/models/Student';
+import { sendCredentialEmail } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 const roles = ['student', 'teacher', 'senior_teacher'] as const;
@@ -131,6 +132,18 @@ export async function POST(request: NextRequest) {
       mobileNumber,
       createdBy,
     });
+
+    try {
+      await sendCredentialEmail({
+        to: email,
+        name,
+        role,
+        username,
+        password,
+      });
+    } catch (error) {
+      console.error('Error sending credential email:', error);
+    }
 
     let extraRecord: Record<string, unknown> | null = null;
     let createdBadgeId: string | null = null;
