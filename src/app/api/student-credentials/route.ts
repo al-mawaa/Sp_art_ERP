@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import StudentCredentials from '@/lib/models/StudentCredentials';
 import Student from '@/lib/models/Student';
+import { sendAccountCreationEmail } from '@/lib/sendEmail';
 
 export const runtime = 'nodejs';
 
@@ -125,6 +126,24 @@ export async function POST(request: NextRequest) {
       createdBy,
     });
 
+    const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL ?? 'http://localhost:3000/login';
+    let emailSent = true;
+    let emailError: string | null = null;
+
+    try {
+      await sendAccountCreationEmail({
+        to: email,
+        name,
+        email,
+        password,
+        loginUrl,
+      });
+    } catch (error) {
+      emailSent = false;
+      emailError = error instanceof Error ? error.message : 'Email send failed';
+      console.error('Error sending account creation email:', error);
+    }
+
     // Auto-create a Student record when student credentials are created.
     const badgeId = studentIdNumber?.trim() || computedStudentId;
     const existingStudent = await Student.findOne({ $or: [{ badgeId }, { email }] });
@@ -145,7 +164,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Credentials created successfully',
+      message: emailSent
+        ? 'Credentials created successfully'
+        : 'Credentials created successfully, but email failed to send',
+      emailSent,
+      emailError,
       credentials: {
         id: credentials._id,
         studentId: credentials.studentId,

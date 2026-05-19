@@ -94,7 +94,12 @@ export default function CredentialsPage() {
         return;
       }
 
-      toast.success('Credential added successfully');
+      if (result.emailSent === false) {
+        toast.warning('Credential saved but email failed');
+      } else {
+        toast.success('Credential saved and email sent successfully');
+      }
+
       setRows(prev => [{
         id: result.credentials.id,
         studentId: result.credentials.studentId,

@@ -173,7 +173,11 @@ export default function AdminCredentialsPage() {
         toast.success('Credential updated successfully');
       } else {
         setRows(prev => [newRow, ...prev]);
-        toast.success('Credential added successfully');
+        if (result.emailSent === false) {
+          toast.warning('Credential saved but email failed');
+        } else {
+          toast.success('Credential saved and email sent successfully');
+        }
       }
 
       setOpen(false);
