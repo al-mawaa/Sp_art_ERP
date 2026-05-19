@@ -5,7 +5,11 @@ import Credential from '@/lib/models/Credentials';
 import Teacher from '@/lib/models/Teacher';
 import SeniorTeacher from '@/lib/models/SeniorTeacher';
 import Student from '@/lib/models/Student';
+
+import { syncStudentPortalPassword } from '@/lib/student-portal';
+
 import { sendAccountCreationEmail } from '@/lib/sendEmail';
+
 
 export const runtime = 'nodejs';
 const roles = ['student', 'teacher', 'senior_teacher'] as const;
@@ -165,7 +169,9 @@ export async function POST(request: NextRequest) {
           className: 'Not Assigned',
           phone: mobileNumber,
           feeStatus: 'Pending',
+          passwordHash,
         });
+        await syncStudentPortalPassword(student, passwordHash);
         extraRecord = {
           student: {
             id: student._id.toString(),
