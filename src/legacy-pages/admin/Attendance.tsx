@@ -7,8 +7,6 @@ import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CLASSES } from "@/data/mockData";
 import { useStore } from "@/store/dataStore";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -17,13 +15,11 @@ import { toast } from "sonner";
 type Status = "Present" | "Absent" | "Late";
 
 export default function Attendance() {
-  const students = useStore(s => s.students);
   const teachers = useStore(s => s.teachers);
-  const [mode, setMode] = useState<"student" | "teacher">("student");
+  const [mode, setMode] = useState<"senior-teacher" | "teacher">("senior-teacher");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [cls, setCls] = useState<string>("all");
-  const list = mode === "student"
-    ? students.filter(s => cls === "all" || s.class === cls).map(s => ({ id: s.id, name: s.name, sub: s.badgeId }))
+  const list = mode === "senior-teacher"
+    ? teachers.filter(t => t.isSenior).map(t => ({ id: t.id, name: t.name, sub: t.specialization }))
     : teachers.map(t => ({ id: t.id, name: t.name, sub: t.specialization }));
 
   const [marks, setMarks] = useState<Record<string, Status>>(() => Object.fromEntries(list.map(p => [p.id, "Present"])));
@@ -38,23 +34,14 @@ export default function Attendance() {
         </Button>
       } />
 
-      <div className="card-soft p-4 grid md:grid-cols-4 gap-3">
-        <Tabs value={mode} onValueChange={(v: string) => setMode(v as "student" | "teacher")}>
-          <TabsList className="rounded-xl"><TabsTrigger value="student">Students</TabsTrigger><TabsTrigger value="teacher">Teachers</TabsTrigger></TabsList>
+      <div className="card-soft p-4 grid md:grid-cols-3 gap-3">
+        <Tabs value={mode} onValueChange={(v: string) => setMode(v as "senior-teacher" | "teacher")}>
+          <TabsList className="rounded-xl"><TabsTrigger value="senior-teacher">Sr-teacher</TabsTrigger><TabsTrigger value="teacher">Teachers</TabsTrigger></TabsList>
         </Tabs>
         <div className="relative">
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="pl-9 rounded-xl" />
         </div>
-        {mode === "student" && (
-          <Select value={cls} onValueChange={setCls}>
-            <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All classes</SelectItem>
-              {CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
         <div className="flex gap-2 items-center justify-end">
           <Pill label="Present" value={counts.Present} tone="bg-success-soft text-success" />
           <Pill label="Absent"  value={counts.Absent}  tone="bg-destructive-soft text-destructive" />

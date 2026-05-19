@@ -50,21 +50,19 @@ export type Student = {
 export const students: Student[] = [];
 
 // ---------- Teachers ----------
-const teacherNames = [
-  "Anjali Verma","Rahul Desai","Sneha Kulkarni","Mohit Bansal",
-  "Pooja Nair","Karan Singh","Riya Malhotra","Amit Joshi",
-];
-export const teachers = teacherNames.map((name, i) => ({
-  id: `TCH${String(2001 + i).padStart(4, "0")}`,
-  name,
-  specialization: SPECIALIZATIONS[i % SPECIALIZATIONS.length],
-  email: name.toLowerCase().replace(" ", ".") + "@littlebrushes.in",
-  phone: `+91 9${String(811000000 + i * 7777).slice(0, 9)}`,
-  experience: 2 + (i % 8),
-  status: "Active" as const,
-  classes: [CLASSES[i % CLASSES.length], CLASSES[(i + 1) % CLASSES.length]],
-  isSenior: i === 0 || i === 1,
-}));
+export type Teacher = {
+  id: string;
+  name: string;
+  specialization: typeof SPECIALIZATIONS[number];
+  email: string;
+  phone: string;
+  experience: number;
+  status: "Active";
+  classes: typeof CLASSES[number][];
+  isSenior: boolean;
+};
+
+export const teachers: Teacher[] = [];
 
 // ---------- Inventory ----------
 export const inventoryItems = [
