@@ -11,9 +11,17 @@ export type StudentTokenPayload = {
   role: "student";
 };
 
+const DEV_JWT_SECRET = "littlebrushes-local-dev-secret-123456";
+
 function getSecret() {
   const key = process.env.JWT_SECRET;
   if (!key || key.length < 16) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "Warning: JWT_SECRET is not set or too short. Using local development fallback secret. Do not use this in production."
+      );
+      return new TextEncoder().encode(DEV_JWT_SECRET);
+    }
     throw new Error("JWT_SECRET must be set in .env (min 16 characters)");
   }
   return new TextEncoder().encode(key);
