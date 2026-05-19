@@ -1,4 +1,4 @@
-import Attendance from "@/pages/admin/Attendance";
+import Attendance from "../../../pages/admin/Attendance";
 
 export default function AttendancePage() {
   return <Attendance />;
