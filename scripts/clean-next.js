@@ -12,3 +12,4 @@ try {
   console.error("Failed to remove .next:", err.message);
   process.exit(1);
 }
+//yev
