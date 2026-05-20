@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck, TrendingUp,
-  Sparkles, Wallet, Boxes, CreditCard, Award, Bell, MessageSquareHeart, MessageSquare, Shield, UserPlus
+  Sparkles, Wallet, Boxes, CreditCard, Award, Bell, MessageSquareHeart, MessageSquare, Shield, UserPlus, Package,
 } from "lucide-react";
 import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
 import { RequireRole } from "@/components/layouts/RoleLayout";
@@ -20,6 +20,7 @@ const adminNav: NavItem[] = [
   { to: "/admin/crm", label: "CRM Leads", icon: Sparkles },
   { to: "/admin/payroll", label: "HR & Payroll", icon: Wallet },
   { to: "/admin/inventory", label: "Inventory", icon: Boxes },
+  { to: "/senior-teacher/batches", label: "Batches", icon: Package },
   { to: "/admin/billing", label: "Billing", icon: CreditCard },
   { to: "/admin/certificates", label: "Certificates", icon: Award },
   { to: "/admin/notifications", label: "Notifications", icon: Bell },

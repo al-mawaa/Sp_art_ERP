@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Teacher, { type TeacherDocument } from "@/lib/models/Teacher";
 import SeniorTeacher from "@/lib/models/SeniorTeacher";
-import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
+import { getBatchAccess } from "@/lib/auth/require-batch-access";
 
 export const runtime = "nodejs";
 
@@ -86,17 +86,39 @@ function buildFilter(params: {
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireSeniorTeacherFromRequest(request);
-    if (!auth.ok) return auth.response;
+    const access = await getBatchAccess(request);
+    if (!access) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
     await dbConnect();
 
-    const senior = await SeniorTeacher.findById(auth.seniorTeacher.id);
-    if (!senior) {
-      return NextResponse.json({ success: false, error: "Senior teacher not found" }, { status: 404 });
+    if (access.kind === "senior") {
+      const senior = await SeniorTeacher.findById(access.seniorTeacherId);
+      if (!senior) {
+        return NextResponse.json({ success: false, error: "Senior teacher not found" }, { status: 404 });
+      }
     }
 
     const { searchParams } = new URL(request.url);
+    if (searchParams.get("brief") === "1") {
+      const teachers = await Teacher.find({ isSenior: { $ne: true }, status: "Active" })
+        .select("fullName email")
+        .sort({ fullName: 1 })
+        .limit(500)
+        .lean();
+      return NextResponse.json({
+        success: true,
+        data: {
+          teachers: teachers.map(t => ({
+            id: t._id.toString(),
+            fullName: t.fullName,
+            email: t.email,
+          })),
+        },
+      });
+    }
+
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "All";

@@ -2,13 +2,13 @@
 
 import { ReactNode } from "react";
 import {
-  LayoutDashboard, ClipboardCheck, CalendarOff, Palette, CalendarDays, MessageSquare, TrendingUp, ClipboardList, User, UserPlus
+  LayoutDashboard, ClipboardCheck, CalendarOff, Palette, CalendarDays, MessageSquare, TrendingUp, ClipboardList, User, UserPlus, Boxes,
 } from "lucide-react";
-import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
-import { RequireRole } from "@/components/layouts/RoleLayout";
+import { RoleLayout, NavItem, RequireRoles } from "@/components/layouts/RoleLayout";
 
 const seniorNav: NavItem[] = [
   { to: "/senior-teacher", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/senior-teacher/batches", label: "Batches", icon: Boxes },
   { to: "/senior-teacher/classes", label: "My Classes", icon: CalendarDays },
   { to: "/senior-teacher/admission", label: "Admission", icon: UserPlus },
   { to: "/senior-teacher/attendance", label: "Attendance", icon: ClipboardCheck },
@@ -22,10 +22,10 @@ const seniorNav: NavItem[] = [
 
 export default function SeniorTeacherLayout({ children }: { children: ReactNode }) {
   return (
-    <RequireRole role="senior-teacher">
+    <RequireRoles roles={["senior-teacher", "admin"]}>
       <RoleLayout navItems={seniorNav} role="senior-teacher">
         {children}
       </RoleLayout>
-    </RequireRole>
+    </RequireRoles>
   );
 }

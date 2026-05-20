@@ -11,6 +11,7 @@ import { useAuth, ROLE_LABELS } from "@/contexts/AuthContext";
 import { Role } from "@/data/mockData";
 import { notifications } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import { clearAdminSessionToken } from "@/lib/auth/admin-session-client";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -52,6 +53,14 @@ export function RoleLayout({ navItems, role, children }: { navItems: NavItem[]; 
         await fetch("/api/senior-teacher/logout", { method: "POST", credentials: "include" });
       } catch {
         /* clear client session anyway */
+      }
+    }
+    if (role === "admin") {
+      clearAdminSessionToken();
+      try {
+        await fetch("/api/admin/session", { method: "DELETE", credentials: "include" });
+      } catch {
+        /* ignore */
       }
     }
     logout();
@@ -215,6 +224,36 @@ export function RoleLayout({ navItems, role, children }: { navItems: NavItem[]; 
       </div>
     </div>
   );
+}
+
+export function RequireRoles({ roles, children }: { roles: Role[]; children: ReactNode }) {
+  const { user, hydrated } = useAuth();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (!hydrated) return;
+
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (!roles.includes(user.role)) {
+      router.push(user.role === "student" ? "/student/dashboard" : `/${user.role}`);
+    }
+  }, [user, roles, router, hydrated]);
+
+  if (!mounted || !hydrated || !user) {
+    return null;
+  }
+
+  if (!roles.includes(user.role)) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
 
 export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
