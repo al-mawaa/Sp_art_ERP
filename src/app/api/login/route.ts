@@ -5,8 +5,8 @@ import Credential from '@/lib/models/Credentials';
 import Teacher from '@/lib/models/Teacher';
 import SeniorTeacher from '@/lib/models/SeniorTeacher';
 import {
-  SENIOR_TEACHER_SESSION_COOKIE,
   TEACHER_SESSION_COOKIE,
+  SENIOR_TEACHER_SESSION_COOKIE,
   portalSessionCookieOptions,
 } from '@/lib/auth/portal-session';
 

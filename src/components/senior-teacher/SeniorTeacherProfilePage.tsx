@@ -164,7 +164,7 @@ export function SeniorTeacherProfilePage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-8">
-      <PageHeader title="My Profile" subtitle="Your details from the Senior Teachers module (seniorteachers)" />
+      <PageHeader title="My Profile" subtitle="Your details from the Senior Teachers module" />
 
       <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="bg-gradient-to-br from-amber-500 via-accent to-primary text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
