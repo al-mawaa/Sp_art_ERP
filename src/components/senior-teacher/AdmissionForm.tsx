@@ -49,7 +49,7 @@ type AdmissionFormValues = z.infer<typeof admissionSchema>;
 export default function AdmissionForm({ onClose, onSuccess, formId = 'admission-form' }: { onClose: () => void; onSuccess?: (item: AdmissionItem) => void; formId?: string }) {
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionSchema),
-    defaultValues: { className: "", amountPaid: 0, remainingAmount: 0, status: "Pending" }
+    defaultValues: { className: "", amountPaid: 0, remainingAmount: 0 }
   });
 
   async function onSubmit(values: AdmissionFormValues) {
@@ -90,19 +90,7 @@ export default function AdmissionForm({ onClose, onSuccess, formId = 'admission-
         </Select>
       </div>
 
-      <div className="col-span-1">
-        <Label>Status</Label>
-        <Select onValueChange={(val) => setValue('status', val as "Pending" | "Confirmed" | "Rejected")}>
-          <SelectTrigger className="h-9 text-sm" aria-label="Status">
-            <SelectValue placeholder="Pending" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Confirmed">Confirmed</SelectItem>
-            <SelectItem value="Rejected">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      
 
       <div>
         <Label>Email Address</Label>
