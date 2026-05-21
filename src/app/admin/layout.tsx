@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck, TrendingUp,
 
-  Sparkles, Wallet, Boxes, CreditCard, Award, Bell, MessageSquareHeart, MessageSquare, Shield, UserPlus, Package,
+  Sparkles, Wallet, Boxes, CreditCard, Award, Bell, MessageSquareHeart, MessageSquare, Shield, UserPlus, Package, BookOpen,
 
 
 } from "lucide-react";
