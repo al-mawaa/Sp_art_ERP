@@ -16,13 +16,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { batchWriteSchema, type BatchWriteInput, BATCH_DAY_OPTIONS, COURSE_OPTIONS } from "@/lib/validators/batch";
+import { batchWriteSchema, type BatchWriteInput } from "@/lib/validators/batch";
 import type { SerializedBatch } from "@/lib/batch/types";
 import { batchFetch } from "@/lib/batch/batchFetch";
 import { useBatchRoutes } from "@/lib/batch/useBatchRoutes";
 import { messageFromUnknown } from "@/lib/errors/messageFromUnknown";
 
 type TeacherBrief = { id: string; fullName: string; email: string; isSenior?: boolean };
+
+const WEEKDAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
 const emptyDefaults: BatchWriteInput = {
   batchName: "",
@@ -67,6 +69,7 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
   const router = useRouter();
   const routes = useBatchRoutes();
   const [teacherList, setTeacherList] = useState<TeacherBrief[]>([]);
+  const [courseOptions, setCourseOptions] = useState<string[]>([]);
   const [studentModal, setStudentModal] = useState(false);
   const [studentList, setStudentList] = useState<Array<{ id: string; name?: string; fullName?: string; email?: string; badgeId?: string; phone?: string; currentCourse?: string; batchDays?: string; batchTime?: string }>>([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -81,7 +84,11 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "students" });
 
   const courseName = form.watch("courseName");
-  const batchDay = form.watch("batchDay");
+  const batchDayValue = form.watch("batchDay") || "";
+  const selectedBatchDays = batchDayValue
+    .split(",")
+    .map(day => day.trim())
+    .filter(Boolean);
 
   const onInvalid = () => {
     toast.error("Please fill in all required batch fields.");
@@ -104,6 +111,28 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
       }
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/courses");
+        const json = await res.json();
+        if (res.ok && Array.isArray(json.courses)) {
+          const options = Array.from(new Set<string>(json.courses
+            .map((course: any) => course.courseTitle)
+            .filter((title: unknown): title is string => typeof title === "string")));
+          const currentCourse = form.getValues("courseName");
+          if (currentCourse && !options.includes(currentCourse)) {
+            options.unshift(currentCourse);
+          }
+          options.sort();
+          setCourseOptions(options);
+        }
+      } catch (err) {
+        console.error("Failed to load course options", err);
+      }
+    })();
+  }, [form]);
 
   const teacherIds = form.watch("teacherIds") || [];
 
@@ -249,36 +278,21 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
                   <SelectValue placeholder="Select course" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COURSE_OPTIONS.map(c => (
-                    <SelectItem key={c} value={c}>
-                      {c}
+                  {courseOptions.length > 0 ? (
+                    courseOptions.map(c => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="__no-courses" disabled>
+                      No courses available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               {form.formState.errors.courseName && (
                 <p className="text-sm text-red-600">{form.formState.errors.courseName.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Batch day pattern</Label>
-              <Select
-                value={batchDay || undefined}
-                onValueChange={v => form.setValue("batchDay", v, { shouldValidate: true })}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Select pattern" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BATCH_DAY_OPTIONS.map(d => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.batchDay && (
-                <p className="text-sm text-red-600">{form.formState.errors.batchDay.message}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -288,18 +302,29 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
                 <p className="text-sm text-red-600">{form.formState.errors.batchTime.message}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label>Start month</Label>
-              <Input type="month" className="rounded-xl" {...form.register("startMonth")} />
-              {form.formState.errors.startMonth && (
-                <p className="text-sm text-red-600">{form.formState.errors.startMonth.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>End month</Label>
-              <Input type="month" className="rounded-xl" {...form.register("endMonth")} />
-              {form.formState.errors.endMonth && (
-                <p className="text-sm text-red-600">{form.formState.errors.endMonth.message}</p>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Batch days</Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {WEEKDAY_OPTIONS.map(day => (
+                  <label
+                    key={day}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm hover:border-slate-400 hover:bg-slate-100 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedBatchDays.includes(day)}
+                      onCheckedChange={checked => {
+                        const nextDays = checked
+                          ? [...selectedBatchDays, day]
+                          : selectedBatchDays.filter(d => d !== day);
+                        form.setValue("batchDay", nextDays.join(", "), { shouldValidate: true });
+                      }}
+                    />
+                    <span>{day}</span>
+                  </label>
+                ))}
+              </div>
+              {form.formState.errors.batchDay && (
+                <p className="text-sm text-red-600">{form.formState.errors.batchDay.message}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -321,34 +346,6 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
               <Textarea rows={3} className="rounded-xl resize-none" {...form.register("description")} />
             </div>
           </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-display font-semibold text-lg">Students in this batch</h2>
-            <Button type="button" variant="secondary" className="rounded-xl" onClick={() => setStudentModal(true)}>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Add New Student
-            </Button>
-          </div>
-          {fields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No students added yet. You can add multiple entries (including duplicates).</p>
-          ) : (
-            <ul className="space-y-2">
-              {fields.map((f, idx) => (
-                <li
-                  key={f.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm"
-                >
-                  <span className="font-medium text-slate-900">{form.watch(`students.${idx}.studentName`)}</span>
-                  <span className="text-muted-foreground">{form.watch(`students.${idx}.studentEmail`)}</span>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => remove(idx)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
@@ -387,6 +384,34 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
               ))}
             </div>
           </ScrollArea>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-display font-semibold text-lg">Students in this batch</h2>
+            <Button type="button" variant="secondary" className="rounded-xl" onClick={() => setStudentModal(true)}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add New Student
+            </Button>
+          </div>
+          {fields.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No students added yet. You can add multiple entries (including duplicates).</p>
+          ) : (
+            <ul className="space-y-2">
+              {fields.map((f, idx) => (
+                <li
+                  key={f.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm"
+                >
+                  <span className="font-medium text-slate-900">{form.watch(`students.${idx}.studentName`)}</span>
+                  <span className="text-muted-foreground">{form.watch(`students.${idx}.studentEmail`)}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => remove(idx)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="flex gap-3">

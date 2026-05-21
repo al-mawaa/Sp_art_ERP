@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, ClipboardCheck, Users as UsersIcon, Check, X, Plus, CalendarOff } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
@@ -141,18 +141,72 @@ export function TeacherLeave() {
   );
 }
 
+type TeacherClasses = {
+  assignedBatches: string;
+  courseName: string;
+  className: string;
+  batchDetails: string;
+  classes: string[];
+};
+
 export function TeacherMyClasses() {
+  const [profile, setProfile] = useState<TeacherClasses | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        const res = await fetch("/api/teacher/profile", { credentials: "include" });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error || "Failed to load classes");
+        }
+
+        if (!isMounted) return;
+        setProfile({
+          assignedBatches: json.data.profile.assignedBatches ?? "",
+          courseName: json.data.profile.courseName ?? "",
+          className: json.data.profile.className ?? "",
+          batchDetails: json.data.profile.batchDetails ?? "",
+          classes: json.data.profile.classes ?? [],
+        });
+      } catch (error) {
+        console.error("Failed to load teacher classes", error);
+        if (isMounted) {
+          setProfile({ assignedBatches: "", courseName: "", className: "", batchDetails: "", classes: [] });
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <PageHeader title="My Classes" subtitle="Your teaching schedule" />
       <div className="card-soft divide-y divide-border/60">
-        {todaysClasses.map(c => (
-          <div key={c.id} className="p-4 flex items-center gap-4">
-            <div className="rounded-lg gradient-primary text-white px-3 py-2 font-bold text-sm">{c.time}</div>
-            <div className="flex-1"><div className="font-bold">{c.subject}</div><div className="text-xs text-muted-foreground">{c.className}</div></div>
-            <span className="text-sm font-semibold text-muted-foreground">{c.students} students</span>
-          </div>
-        ))}
+        {loading ? (
+          <div className="p-4 text-sm text-muted-foreground">Loading classes…</div>
+        ) : profile?.classes?.length ? (
+          profile.classes.map((className, index) => (
+            <div key={`${className}-${index}`} className="p-4 flex items-center gap-4">
+              <div className="rounded-lg gradient-primary text-white px-3 py-2 font-bold text-sm">{index + 1}</div>
+              <div className="flex-1">
+                <div className="font-bold">{className}</div>
+                <div className="text-xs text-muted-foreground">{profile.courseName || profile.className || profile.batchDetails || profile.assignedBatches}</div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-4 text-sm text-muted-foreground">No classes assigned yet.</div>
+        )}
       </div>
     </div>
   );
