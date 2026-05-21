@@ -1,12 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Teacher, { type TeacherDocument } from "@/lib/models/Teacher";
-import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
-import { toTeacherJson } from "@/lib/serializers/teacherSerialize";
+import SeniorTeacher from "@/lib/models/SeniorTeacher";
+import { getBatchAccess } from "@/lib/auth/require-batch-access";
 
 export const runtime = "nodejs";
 
 const PAGE_SIZE = 10;
+
+function formatDate(value: Date | string | undefined): string {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toISOString().slice(0, 10);
+}
+
+function toTeacherJson(doc: TeacherDocument) {
+  return {
+    id: doc._id.toString(),
+    fullName: doc.fullName,
+    email: doc.email,
+    phone: doc.phone ?? "",
+    gender: doc.gender ?? "",
+    age: doc.age ?? null,
+    specialization: doc.specialization,
+    subject: doc.currentSubjectCourse ?? "",
+    experience: doc.experience,
+    qualification: doc.qualification ?? "",
+    joiningDate: formatDate(doc.joiningDate ?? doc.createdAt),
+    address: doc.address ?? "",
+    profileImage: doc.photo ?? "",
+    salary: doc.salary ?? null,
+    status: doc.status,
+    teacherId: doc.badgeId ?? "",
+    role: doc.role ?? "",
+    createdAt: doc.createdAt.toISOString(),
+    updatedAt: doc.updatedAt.toISOString(),
+  };
+}
 
 function applyExperienceFilter(filter: Record<string, unknown>, experience: string) {
   if (!experience || experience === "All") return;
@@ -52,32 +84,41 @@ function buildFilter(params: {
   return filter;
 }
 
-function apiError(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback;
-  const isMongo =
-    message.includes("MongoServerSelectionError") ||
-    message.includes("ENOTFOUND") ||
-    message.includes("ETIMEDOUT") ||
-    message.includes("timed out");
-  return NextResponse.json(
-    {
-      success: false,
-      error: isMongo
-        ? "Cannot reach MongoDB. Check your internet, Atlas IP whitelist, and MONGODB_URI in .env."
-        : message || fallback,
-    },
-    { status: isMongo ? 503 : 500 },
-  );
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireSeniorTeacherFromRequest(request);
-    if (!auth.ok) return auth.response;
+    const access = await getBatchAccess(request);
+    if (!access) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
     await dbConnect();
 
+    if (access.kind === "senior") {
+      const senior = await SeniorTeacher.findById(access.seniorTeacherId);
+      if (!senior) {
+        return NextResponse.json({ success: false, error: "Senior teacher not found" }, { status: 404 });
+      }
+    }
+
     const { searchParams } = new URL(request.url);
+    if (searchParams.get("brief") === "1") {
+      const teachers = await Teacher.find({ isSenior: { $ne: true }, status: "Active" })
+        .select("fullName email")
+        .sort({ fullName: 1 })
+        .limit(500)
+        .lean();
+      return NextResponse.json({
+        success: true,
+        data: {
+          teachers: teachers.map(t => ({
+            id: t._id.toString(),
+            fullName: t.fullName,
+            email: t.email,
+          })),
+        },
+      });
+    }
+
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "All";
@@ -93,8 +134,7 @@ export async function GET(request: NextRequest) {
       Teacher.find(filter)
         .sort({ createdAt: -1 })
         .skip((page - 1) * PAGE_SIZE)
-        .limit(PAGE_SIZE)
-        .lean(),
+        .limit(PAGE_SIZE),
       Teacher.distinct("currentSubjectCourse", filter),
       Teacher.distinct("specialization", filter),
     ]);
@@ -104,16 +144,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        teachers: teachers.map(doc => toTeacherJson(doc as TeacherDocument)),
+        teachers: teachers.map(toTeacherJson),
         pagination: { page, limit: PAGE_SIZE, total, totalPages },
         filterOptions: {
-          subjects: (subjectOptions as string[]).filter(Boolean).sort(),
-          specializations: (specializationOptions as string[]).filter(Boolean).sort(),
+          subjects: subjectOptions.filter(Boolean).sort() as string[],
+          specializations: specializationOptions.filter(Boolean).sort() as string[],
         },
       },
     });
   } catch (error) {
     console.error("[senior-teacher/teachers GET]", error);
-    return apiError(error, "Failed to load teachers");
+    return NextResponse.json({ success: false, error: "Failed to load teachers" }, { status: 500 });
   }
 }

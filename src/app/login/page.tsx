@@ -11,9 +11,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { setAdminSessionToken } from "@/lib/auth/admin-session-client";
 
 type RoleOption = { id: Role; title: string; desc: string; icon: React.ComponentType<{className?: string}>; gradient: string; demoEmail: string };
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "anjali@littlebrushes.in";
+const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "anjali@littlebrushes.in").toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "demo1234";
 
 const ROLES: RoleOption[] = [
@@ -74,9 +75,31 @@ export default function Login() {
         return;
       }
 
-    if (role === "admin" && (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD)) {
-      return toast.error("Invalid admin credentials");
-    }
+      if (role === "admin") {
+        const emailNorm = email.trim().toLowerCase();
+        if (emailNorm !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+          return toast.error("Invalid admin credentials");
+        }
+
+        const sessionRes = await fetch("/api/admin/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: emailNorm, password }),
+        });
+        const sessionData = await sessionRes.json().catch(() => ({}));
+        if (!sessionRes.ok) {
+          throw new Error(sessionData?.error || "Admin session could not be created");
+        }
+        if (sessionData?.data?.token) {
+          setAdminSessionToken(sessionData.data.token);
+        }
+
+        login(role, emailNorm);
+        toast.success(`Welcome, ${ROLES.find(r => r.id === role)?.title}!`);
+        router.push(`/${role}`);
+        return;
+      }
 
       login(role, email);
       toast.success(`Welcome, ${ROLES.find(r => r.id === role)?.title}!`);

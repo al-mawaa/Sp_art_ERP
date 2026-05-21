@@ -7,10 +7,11 @@ import { Bell, ChevronDown, LogOut, Menu, Palette, User, X, type LucideIcon } fr
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
-import { useAuth, ROLE_LABELS } from "@/contexts/AuthContext";
+import { useAuth, ROLE_LABELS, roleHome } from "@/contexts/AuthContext";
 import { Role } from "@/data/mockData";
 import { notifications } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import { clearAdminSessionToken } from "@/lib/auth/admin-session-client";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -52,6 +53,14 @@ export function RoleLayout({ navItems, role, children }: { navItems: NavItem[]; 
         await fetch("/api/senior-teacher/logout", { method: "POST", credentials: "include" });
       } catch {
         /* clear client session anyway */
+      }
+    }
+    if (role === "admin") {
+      clearAdminSessionToken();
+      try {
+        await fetch("/api/admin/session", { method: "DELETE", credentials: "include" });
+      } catch {
+        /* ignore */
       }
     }
     logout();
@@ -217,6 +226,44 @@ export function RoleLayout({ navItems, role, children }: { navItems: NavItem[]; 
   );
 }
 
+export function RequireRoles({ roles, children }: { roles: Role[]; children: ReactNode }) {
+  const { user, hydrated } = useAuth();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (!hydrated) return;
+
+    if (!user) {
+      console.log("[RequireRoles] no user → /login", { pathname: window.location.pathname, roles });
+      router.push("/login");
+      return;
+    }
+
+    if (!roles.includes(user.role)) {
+      const home = roleHome(user.role);
+      console.log("[RequireRoles] role mismatch → redirect", {
+        userRole: user.role,
+        allowed: roles,
+        home,
+        pathname: window.location.pathname,
+      });
+      router.push(home);
+    }
+  }, [user, roles, router, hydrated]);
+
+  if (!mounted || !hydrated || !user) {
+    return null;
+  }
+
+  if (!roles.includes(user.role)) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
 export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
   const { user, hydrated } = useAuth();
   const router = useRouter();
@@ -227,12 +274,20 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
     if (!hydrated) return;
 
     if (!user) {
+      console.log("[RequireRole] no user → /login", { required: role, pathname: window.location.pathname });
       router.push("/login");
       return;
     }
 
     if (user.role !== role) {
-      router.push(user.role === "student" ? "/student/dashboard" : `/${user.role}`);
+      const home = roleHome(user.role);
+      console.log("[RequireRole] role mismatch → redirect", {
+        userRole: user.role,
+        required: role,
+        home,
+        pathname: window.location.pathname,
+      });
+      router.push(home);
     }
   }, [user, role, router, hydrated]);
 
