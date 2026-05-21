@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import Teacher from '@/lib/models/Teacher';
 import SeniorTeacher from '@/lib/models/SeniorTeacher';
@@ -10,13 +9,20 @@ import {
   portalSessionCookieOptions,
   clearSessionCookieOptions,
 } from '@/lib/auth/portal-session';
-import { findCredentialByEmail } from '@/lib/auth/findCredential';
+import { findCredentialByLogin } from '@/lib/auth/findCredential';
 import { normalizeEmail } from '@/lib/auth/normalizeEmail';
+import { verifyCredentialPassword } from '@/lib/auth/verifyCredentialPassword';
+import { resolveLoginRole } from '@/lib/auth/resolveLoginRole';
 
 function clearOtherPortalSessions(res: NextResponse) {
   res.cookies.set(TEACHER_SESSION_COOKIE, '', clearSessionCookieOptions());
   res.cookies.set(SENIOR_TEACHER_SESSION_COOKIE, '', clearSessionCookieOptions());
   res.cookies.set(STUDENT_SESSION_COOKIE, '', clearSessionCookieOptions());
+}
+
+function emailRegex(emailNorm: string) {
+  const esc = emailNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { $regex: new RegExp(`^${esc}$`, 'i') };
 }
 
 export const runtime = 'nodejs';
@@ -42,43 +48,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This role is not supported for database login yet' }, { status: 400 });
     }
 
-    const emailNorm = normalizeEmail(String(email));
-    const credential = await findCredentialByEmail(emailNorm);
-    if (!credential) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    if (expectedRole === 'student') {
+      return NextResponse.json({ error: 'Use the Student login flow for student accounts' }, { status: 400 });
     }
 
-    if (!credential.passwordHash) {
+    const credential = await findCredentialByLogin(String(email));
+    if (!credential) {
       return NextResponse.json(
-        { error: 'Account password is not set. Ask admin to reset your credential password.' },
+        {
+          error:
+            'No account found for this email. Ask admin to create your credential under Admin → Credentials (Senior Teachers tab).',
+        },
         { status: 401 },
       );
     }
 
-    if (credential.role !== expectedRole) {
-      return NextResponse.json({ error: 'Role does not match the selected login type' }, { status: 403 });
-    }
-
     if (credential.accountStatus !== 'Active') {
-      return NextResponse.json({ error: 'Account is inactive' }, { status: 403 });
+      return NextResponse.json({ error: 'Account is inactive. Contact admin to activate your credential.' }, { status: 403 });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, credential.passwordHash);
-    if (!isPasswordValid) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    const passwordOk = await verifyCredentialPassword(credential, String(password));
+    if (!passwordOk) {
+      return NextResponse.json(
+        {
+          error:
+            'Incorrect password. Use the password from the welcome email, or ask admin to reset it under Credentials.',
+        },
+        { status: 401 },
+      );
     }
+
+    const roleCheck = await resolveLoginRole(
+      credential,
+      expectedRole as 'teacher' | 'senior_teacher',
+    );
+    if (roleCheck.ok === false) return roleCheck.response;
+
+    const cred = roleCheck.credential;
+    const credEmail = normalizeEmail(cred.email);
 
     if (expectedRole === 'teacher') {
-      const credEmail = normalizeEmail(credential.email);
-      const esc = credEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const teacher = await Teacher.findOne({
-        email: { $regex: new RegExp(`^${esc}$`, 'i') },
-      });
+      const teacher = await Teacher.findOne({ email: emailRegex(credEmail) });
       if (!teacher) {
         return NextResponse.json(
           {
             error:
-              'No teacher record found for this email. Ask admin to add you under Teachers with the same email as your login.',
+              'No teacher profile found for this email. Ask admin to add you under Teachers with the same email as your credential.',
           },
           { status: 404 },
         );
@@ -86,8 +101,8 @@ export async function POST(request: NextRequest) {
 
       const res = NextResponse.json({
         user: {
-          email: credential.email,
-          name: credential.name,
+          email: cred.email,
+          name: cred.name,
           role,
         },
       });
@@ -97,25 +112,43 @@ export async function POST(request: NextRequest) {
     }
 
     if (expectedRole === 'senior_teacher') {
-      const credEmail = normalizeEmail(credential.email);
-      const esc = credEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const senior = await SeniorTeacher.findOne({
-        email: { $regex: new RegExp(`^${esc}$`, 'i') },
-      });
+      let senior = await SeniorTeacher.findOne({ email: emailRegex(credEmail) });
       if (!senior) {
-        return NextResponse.json(
-          {
-            error:
-              'No senior teacher record found for this email. Ask admin to add you under Senior Teachers with the same email as your login.',
-          },
-          { status: 404 },
-        );
+        try {
+          const badgeId = `SRT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+          senior = await SeniorTeacher.create({
+            fullName: cred.name,
+            badgeId,
+            email: credEmail,
+            phone: cred.mobileNumber ?? 'Not provided',
+            specialization: 'General Art',
+            yearsOfExperience: 1,
+            role: 'Senior Teacher',
+            qualification: 'Art Education',
+            address: 'Not provided',
+            joiningDate: new Date(),
+            salary: 0,
+            bio: 'Auto-created on first login',
+            profileImage: '',
+            status: 'Active',
+            assignedClasses: 0,
+          });
+        } catch (e) {
+          console.error('[login] auto-create senior teacher failed', e);
+          return NextResponse.json(
+            {
+              error:
+                'No senior teacher profile found for this email. Ask admin to add you under Senior Teachers with the same email as your credential.',
+            },
+            { status: 404 },
+          );
+        }
       }
 
       const res = NextResponse.json({
         user: {
-          email: credential.email,
-          name: credential.name,
+          email: cred.email,
+          name: cred.name,
           role,
         },
       });
@@ -124,13 +157,7 @@ export async function POST(request: NextRequest) {
       return res;
     }
 
-    return NextResponse.json({
-      user: {
-        email: credential.email,
-        name: credential.name,
-        role,
-      },
-    });
+    return NextResponse.json({ error: 'Unsupported role' }, { status: 400 });
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

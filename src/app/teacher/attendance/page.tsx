@@ -32,16 +32,19 @@ export default function TeacherAttendancePage() {
         });
 
         if (!response.ok) {
-          throw new Error("Unable to load attendance batches");
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || `HTTP ${response.status}: Unable to load attendance batches`;
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
         setBatches(data.batches || []);
       } catch (error) {
-        console.error(error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to load attendance batches.";
+        console.error("Fetch batches error:", errorMessage);
         toast({
           title: "Error",
-          description: "Failed to load attendance batches.",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {

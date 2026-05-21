@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { useTeacherSessionGuard } from "@/components/teacher/useTeacherSessionGuard";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -30,10 +31,22 @@ const teacherNav: NavItem[] = [
 ];
 
 export default function TeacherLayout({ children }: { children: ReactNode }) {
+  const { sessionOk, checking } = useTeacherSessionGuard();
+
   return (
     <RequireRole role="teacher">
       <RoleLayout navItems={teacherNav} role="teacher">
-        {children}
+        {checking ? (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+            Verifying teacher session…
+          </div>
+        ) : sessionOk ? (
+          children
+        ) : (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground px-6 text-center">
+            Redirecting to login…
+          </div>
+        )}
       </RoleLayout>
     </RequireRole>
   );

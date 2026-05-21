@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ClipboardCheck, CalendarOff, CalendarDays, Users, Check, X, Plus } from "lucide-react";
+import { ClipboardCheck, CalendarDays, Users, Check, X, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { StatusPill } from "@/components/shared/StatusPill";
@@ -18,16 +18,13 @@ export { Chat as ChatPage } from "@/pages/shared/Chat";
 
 export function SeniorDashboard() {
   const slots = useStore(s => s.slots);
-  const leaves = useStore(s => s.leaves);
   const teachers = useStore(s => s.teachers);
   const pendingSlots = slots.filter(r => r.status === "Pending").length;
-  const pendingLeaves = leaves.filter(l => l.status === "Pending").length;
   return (
     <div className="space-y-6">
       <PageHeader title="Senior Teacher Dashboard" subtitle="Approvals and oversight" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Pending Slot Approvals" value={pendingSlots} icon={ClipboardCheck} tone="warning" />
-        <StatCard label="Pending Leaves" value={pendingLeaves} icon={CalendarOff} tone="destructive" />
         <StatCard label="Classes Today" value={todaysClasses.length} icon={CalendarDays} tone="primary" />
         <StatCard label="My Teachers" value={teachers.length} icon={Users} tone="success" />
       </div>

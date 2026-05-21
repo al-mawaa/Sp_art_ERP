@@ -85,61 +85,7 @@ export function TeacherAttendance() {
   return <TeacherAttendancePage />;
 }
 
-export function TeacherLeave() {
-  const leaveRequests = useStore(s => s.leaves);
-  const [form, setForm] = useState({ type: "Casual", from: "", to: "", reason: "" });
-  return (
-    <div className="space-y-6">
-      <PageHeader title="My Leaves" subtitle="Apply and track" />
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="space-y-3">
-          <div className="card-soft p-5">
-            <div className="text-sm font-semibold text-muted-foreground mb-2">Leave balance</div>
-            <div className="space-y-2">
-              {[{k:"Casual", v:6, c:"text-info"},{k:"Sick", v:8, c:"text-success"},{k:"Personal", v:3, c:"text-secondary"}].map(b => (
-                <div key={b.k} className="flex items-center justify-between p-2 rounded-lg bg-muted/40"><span className="font-semibold text-sm">{b.k}</span><span className={`font-display font-bold text-xl ${b.c}`}>{b.v}</span></div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="lg:col-span-2 card-soft p-5">
-          <h3 className="font-display font-bold mb-3">Apply for leave</h3>
-          <form className="space-y-3" onSubmit={e => {
-            e.preventDefault();
-            if (!form.from || !form.to) { toast.error("Pick dates"); return; }
-            actions.addLeave({ staff: "Sneha Kulkarni", type: form.type, from: form.from, to: form.to, reason: form.reason || "—" });
-            toast.success("Leave request submitted!");
-            setForm({ type: "Casual", from: "", to: "", reason: "" });
-          }}>
-            <div className="space-y-1.5">
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Casual">Casual</SelectItem><SelectItem value="Sick">Sick</SelectItem><SelectItem value="Personal">Personal</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>From</Label><Input type="date" className="rounded-xl" value={form.from} onChange={e => setForm(f => ({ ...f, from: e.target.value }))} /></div>
-              <div className="space-y-1.5"><Label>To</Label><Input type="date" className="rounded-xl" value={form.to} onChange={e => setForm(f => ({ ...f, to: e.target.value }))} /></div>
-            </div>
-            <div className="space-y-1.5"><Label>Reason</Label><Textarea rows={3} className="rounded-xl" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} /></div>
-            <Button type="submit" className="w-full rounded-xl gradient-primary text-white border-0"><Plus className="w-4 h-4 mr-1" />Submit</Button>
-          </form>
-        </div>
-      </div>
-      <div>
-        <h3 className="font-display font-bold text-lg mb-3">Leave history</h3>
-        <div className="card-soft overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-left">From</th><th className="px-3 py-2 text-left">To</th><th className="px-3 py-2 text-left">Reason</th><th className="px-3 py-2 text-left">Status</th></tr></thead>
-            <tbody>
-              {leaveRequests.map(l => <tr key={l.id} className="border-t border-border/60"><td className="px-3 py-2">{l.type}</td><td className="px-3 py-2">{l.from}</td><td className="px-3 py-2">{l.to}</td><td className="px-3 py-2">{l.reason}</td><td className="px-3 py-2"><StatusPill status={l.status} /></td></tr>)}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
+export { TeacherLeavePage as TeacherLeave } from "@/components/teacher/TeacherLeavePage";
 
 export function TeacherMyClasses() {
   return (

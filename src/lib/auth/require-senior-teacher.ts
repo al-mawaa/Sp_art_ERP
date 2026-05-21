@@ -7,7 +7,14 @@ export async function requireSeniorTeacherFromRequest(request: NextRequest) {
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     return {
       ok: false as const,
-      response: NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json(
+        {
+          success: false,
+          error:
+            "Not signed in as a senior teacher. Log out, then sign in at Login → Senior Teacher.",
+        },
+        { status: 401 },
+      ),
     };
   }
   return { ok: true as const, seniorTeacher: { id } };

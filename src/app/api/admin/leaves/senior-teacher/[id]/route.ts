@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
+import dbConnect from "@/lib/mongodb";
+import SeniorTeacherLeave from "@/lib/models/SeniorTeacherLeave";
+import { requireAdminFromRequest } from "@/lib/auth/require-admin";
+import { deductSeniorBalance, serializeSeniorLeave } from "@/lib/leave/seniorTeacherUtils";
+import { sendSeniorLeaveStatusEmail } from "@/lib/leave/leaveEmail";
+
+export const runtime = "nodejs";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const auth = await requireAdminFromRequest(request);
+    if (!auth.ok) return auth.response;
+
+    const { id } = await context.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
+    }
+
+    await dbConnect();
+    const doc = await SeniorTeacherLeave.findById(id);
+    if (!doc) {
+      return NextResponse.json({ success: false, error: "Leave not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: { leave: serializeSeniorLeave(doc) } });
+  } catch (e) {
+    console.error("[admin/leaves/senior-teacher/[id] GET]", e);
+    return NextResponse.json({ success: false, error: "Failed to load leave" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const auth = await requireAdminFromRequest(request);
+    if (!auth.ok) return auth.response;
+
+    const { id } = await context.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const action = (body.action || body.status || "").trim();
+    const adminRemark = (body.adminRemark || body.remarks || "").trim();
+
+    let newStatus: "Approved" | "Rejected" | null = null;
+    if (action === "approve" || action === "Approved") newStatus = "Approved";
+    if (action === "reject" || action === "Rejected") newStatus = "Rejected";
+
+    if (!newStatus) {
+      return NextResponse.json({ success: false, error: "action must be approve or reject" }, { status: 400 });
+    }
+
+    await dbConnect();
+    const doc = await SeniorTeacherLeave.findById(id);
+    if (!doc) {
+      return NextResponse.json({ success: false, error: "Leave not found" }, { status: 404 });
+    }
+
+    if (doc.status !== "Pending") {
+      return NextResponse.json(
+        { success: false, error: `Leave is already ${doc.status}` },
+        { status: 409 },
+      );
+    }
+
+    if (newStatus === "Approved") {
+      const deduct = await deductSeniorBalance(
+        doc.seniorTeacherId.toString(),
+        doc.leaveType,
+        doc.daysCount,
+      );
+      if (!deduct.ok) {
+        return NextResponse.json({ success: false, error: deduct.message }, { status: 400 });
+      }
+    }
+
+    doc.status = newStatus;
+    doc.adminRemark = adminRemark;
+    await doc.save();
+
+    try {
+      await sendSeniorLeaveStatusEmail(
+        doc.seniorTeacherEmail,
+        {
+          seniorTeacherName: doc.seniorTeacherName,
+          leaveType: doc.leaveType,
+          fromDate: doc.fromDate,
+          toDate: doc.toDate,
+          reason: doc.reason,
+          status: doc.status,
+          adminRemark: doc.adminRemark,
+        },
+        newStatus === "Approved",
+      );
+    } catch (err) {
+      console.error("[admin/leaves/senior-teacher email]", err);
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { leave: serializeSeniorLeave(doc) },
+      message: `Leave ${newStatus.toLowerCase()}`,
+    });
+  } catch (e) {
+    console.error("[admin/leaves/senior-teacher/[id] PATCH]", e);
+    return NextResponse.json({ success: false, error: "Failed to update leave" }, { status: 500 });
+  }
+}
