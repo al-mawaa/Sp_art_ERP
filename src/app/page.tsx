@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useAuth, roleHome } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { roleHome } from "@/contexts/AuthContext.exports";
 import { useEffect } from "react";
 
 export default function Home() {

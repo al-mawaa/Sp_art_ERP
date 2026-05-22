@@ -119,7 +119,7 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
         const json = await res.json();
         if (res.ok && Array.isArray(json.courses)) {
           const options = Array.from(new Set<string>(json.courses
-            .map((course: any) => course.courseTitle)
+            .map((course: { courseTitle?: string }) => course.courseTitle)
             .filter((title: unknown): title is string => typeof title === "string")));
           const currentCourse = form.getValues("courseName");
           if (currentCourse && !options.includes(currentCourse)) {
