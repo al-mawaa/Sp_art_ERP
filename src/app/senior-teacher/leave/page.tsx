@@ -1,5 +1,5 @@
-import { TeacherLeave } from "@/pages/teacher/TeacherPages";
+import { SeniorTeacherLeavePage } from "@/components/senior-teacher/SeniorTeacherLeavePage";
 
-export default function SeniorTeacherLeavePage() {
-  return <TeacherLeave />;
+export default function SeniorTeacherLeaveRoute() {
+  return <SeniorTeacherLeavePage />;
 }

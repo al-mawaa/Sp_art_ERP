@@ -1,5 +1,5 @@
-import { LeaveApprovals } from "@/pages/senior-teacher/SeniorTeacherPages";
+import { redirect } from "next/navigation";
 
-export default function LeaveApprovalsPage() {
-  return <LeaveApprovals />;
+export default function SeniorTeacherLeaveApprovalsRedirect() {
+  redirect("/senior-teacher/leave");
 }

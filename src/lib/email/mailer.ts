@@ -10,8 +10,14 @@ export type MailPayload = {
 export function createMailTransport() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER || process.env.GMAIL_USER;
-  const pass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
+  const user =
+    process.env.SMTP_USER ||
+    process.env.EMAIL_USER ||
+    process.env.GMAIL_USER;
+  const pass =
+    process.env.SMTP_PASS ||
+    process.env.EMAIL_PASSWORD ||
+    process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) {
     return null;
   }
@@ -28,7 +34,12 @@ export async function sendTransactionalEmail(payload: MailPayload): Promise<void
   if (!transport) {
     throw new Error("Email is not configured (set SMTP_USER/SMTP_PASS or GMAIL_USER/GMAIL_APP_PASSWORD)");
   }
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || process.env.GMAIL_USER;
+  const from =
+    process.env.SMTP_FROM ||
+    process.env.EMAIL_FROM ||
+    process.env.SMTP_USER ||
+    process.env.EMAIL_USER ||
+    process.env.GMAIL_USER;
   await transport.sendMail({
     from: `"Little Brushes Studio" <${from}>`,
     to: payload.to,

@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import {
-  LayoutDashboard, ClipboardCheck, CalendarOff, Palette, CalendarDays, MessageSquare, TrendingUp, ClipboardList
+  LayoutDashboard, ClipboardCheck, Palette, CalendarDays, MessageSquare, TrendingUp, ClipboardList
 } from "lucide-react";
 import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
 import { RequireRole } from "@/components/layouts/RoleLayout";
@@ -14,7 +14,6 @@ const seniorNav: NavItem[] = [
   { to: "/admin/senior-teacher/drawing-tests", label: "Drawing Tests", icon: Palette },
   { to: "/admin/senior-teacher/progress", label: "Student Progress", icon: TrendingUp },
   { to: "/admin/senior-teacher/slot-requests", label: "Slot Requests", icon: ClipboardList },
-  { to: "/admin/senior-teacher/leave", label: "Leave", icon: CalendarOff },
   { to: "/admin/senior-teacher/chat", label: "Chat", icon: MessageSquare },
 ];
 

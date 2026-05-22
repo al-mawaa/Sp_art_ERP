@@ -31,21 +31,9 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  if (
-    pathname.startsWith("/senior-teacher") &&
-    !pathname.startsWith("/senior-teacher/batches") &&
-    hasAdminSession(request) &&
-    !hasSeniorSession(request)
-  ) {
-    console.log("[middleware] admin-only session on senior-teacher route → /admin", pathname);
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/senior-teacher/batches/:path*", "/senior-teacher/:path*"],
+  matcher: ["/senior-teacher/batches/:path*"],
 };

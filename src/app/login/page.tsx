@@ -66,7 +66,8 @@ export default function Login() {
 
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data?.error || `${ROLES.find(r => r.id === role)?.title} login failed`);
+          const msg = data?.error || `${ROLES.find(r => r.id === role)?.title} login failed`;
+          throw new Error(msg);
         }
 
         login(role, email, data.user.name);
