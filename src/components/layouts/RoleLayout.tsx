@@ -7,7 +7,8 @@ import { Bell, ChevronDown, LogOut, Menu, Palette, User, X, type LucideIcon } fr
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
-import { useAuth, ROLE_LABELS, roleHome } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { ROLE_LABELS, roleHome } from "@/contexts/AuthContext.exports";
 import { Role } from "@/data/mockData";
 import { notifications } from "@/data/mockData";
 import { cn } from "@/lib/utils";

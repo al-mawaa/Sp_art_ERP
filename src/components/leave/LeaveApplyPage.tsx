@@ -80,7 +80,7 @@ export function LeaveApplyPage({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, loginRoleLabel, router]);
+  }, [apiPath, loginRoleLabel, router, handleAuthError]);
 
   useEffect(() => {
     void load();
