@@ -43,9 +43,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
     }
 
-    const body = await request.json();
-    const action = (body.action || body.status || "").trim();
-    const adminRemark = (body.adminRemark || body.remarks || "").trim();
+    let body: Record<string, unknown> = {};
+    try {
+      const text = await request.text();
+      if (text.trim()) body = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ success: false, error: "Invalid JSON body" }, { status: 400 });
+    }
+    const action = String(body.action ?? body.status ?? "").trim();
+    const adminRemark = String(body.adminRemark ?? body.remarks ?? "").trim();
 
     let newStatus: "Approved" | "Rejected" | null = null;
     if (action === "approve" || action === "Approved") newStatus = "Approved";
