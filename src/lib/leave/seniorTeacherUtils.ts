@@ -4,7 +4,7 @@ import SeniorTeacherLeaveBalance, {
   DEFAULT_SENIOR_LEAVE_BALANCE,
 } from "@/lib/models/SeniorTeacherLeaveBalance";
 import mongoose from "mongoose";
-import { countLeaveDays, balanceKeyForType } from "@/lib/leave/utils";
+import { countLeaveDays } from "@/lib/leave/utils";
 
 export { countLeaveDays };
 
@@ -41,20 +41,8 @@ export async function getOrCreateSeniorBalance(seniorTeacherId: string) {
   return balance;
 }
 
-export async function deductSeniorBalance(
-  seniorTeacherId: string,
-  leaveType: LeaveType,
-  days: number,
-) {
+/** Balance deduction disabled — leave days are not capped. Kept for API compatibility. */
+export async function deductSeniorBalance(seniorTeacherId: string, _leaveType: LeaveType, _days: number) {
   const balance = await getOrCreateSeniorBalance(seniorTeacherId);
-  const key = balanceKeyForType(leaveType);
-  if (balance[key] < days) {
-    return {
-      ok: false as const,
-      message: `Insufficient ${leaveType} leave balance (${balance[key]} days left)`,
-    };
-  }
-  balance[key] -= days;
-  await balance.save();
   return { ok: true as const, balance };
 }

@@ -49,13 +49,8 @@ export function balanceKeyForType(leaveType: LeaveType): "casual" | "sick" | "pe
   return "casual";
 }
 
-export async function deductBalance(teacherId: string, leaveType: LeaveType, days: number) {
+/** Balance deduction disabled — leave days are not capped. Kept for API compatibility. */
+export async function deductBalance(teacherId: string, _leaveType: LeaveType, _days: number) {
   const balance = await getOrCreateBalance(teacherId);
-  const key = balanceKeyForType(leaveType);
-  if (balance[key] < days) {
-    return { ok: false as const, message: `Insufficient ${leaveType} leave balance (${balance[key]} days left)` };
-  }
-  balance[key] -= days;
-  await balance.save();
   return { ok: true as const, balance };
 }

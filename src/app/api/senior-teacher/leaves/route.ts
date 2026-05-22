@@ -3,12 +3,12 @@ import dbConnect from "@/lib/mongodb";
 import SeniorTeacher from "@/lib/models/SeniorTeacher";
 import SeniorTeacherLeave from "@/lib/models/SeniorTeacherLeave";
 import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
+import { validateLeaveDateRange } from "@/lib/leave/dateValidation";
 import {
   countLeaveDays,
   getOrCreateSeniorBalance,
   serializeSeniorLeave,
 } from "@/lib/leave/seniorTeacherUtils";
-import { balanceKeyForType } from "@/lib/leave/utils";
 import { getAdminNotifyEmails, sendSeniorTeacherNewLeaveEmails } from "@/lib/leave/leaveEmail";
 import type { LeaveType } from "@/lib/models/Leave";
 
@@ -54,11 +54,9 @@ export async function POST(request: NextRequest) {
     if (!LEAVE_TYPES.includes(leaveType)) {
       return NextResponse.json({ success: false, error: "Invalid leave type" }, { status: 400 });
     }
-    if (!fromDate || !toDate) {
-      return NextResponse.json({ success: false, error: "From and To dates are required" }, { status: 400 });
-    }
-    if (fromDate > toDate) {
-      return NextResponse.json({ success: false, error: "From date cannot be after To date" }, { status: 400 });
+    const dateCheck = validateLeaveDateRange(fromDate, toDate);
+    if (dateCheck.ok === false) {
+      return NextResponse.json({ success: false, error: dateCheck.error }, { status: 400 });
     }
 
     await dbConnect();
@@ -68,17 +66,6 @@ export async function POST(request: NextRequest) {
     }
 
     const daysCount = countLeaveDays(fromDate, toDate);
-    const balance = await getOrCreateSeniorBalance(auth.seniorTeacher.id);
-    const balanceKey = balanceKeyForType(leaveType);
-    if (balance[balanceKey] < daysCount) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Not enough ${leaveType} leave balance. You have ${balance[balanceKey]} day(s) remaining.`,
-        },
-        { status: 400 },
-      );
-    }
 
     const doc = await SeniorTeacherLeave.create({
       seniorTeacherId: senior._id,

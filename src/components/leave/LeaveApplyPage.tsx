@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { parseJsonResponse } from "@/lib/api/parseJsonResponse";
 import { messageFromUnknown } from "@/lib/errors/messageFromUnknown";
 import { leaveStatusPillClass } from "@/lib/leave/leaveStatusStyles";
+import { PAST_DATE_MESSAGE, todayDateString, validateLeaveDateRange } from "@/lib/leave/dateValidation";
 
 type LeaveRow = {
   id: string;
@@ -53,6 +54,9 @@ export function LeaveApplyPage({
   const [balance, setBalance] = useState<Balance>({ casual: 6, sick: 8, personal: 3 });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const minLeaveDate = todayDateString();
+  const toMinDate =
+    form.from && form.from >= minLeaveDate ? form.from : minLeaveDate;
 
   const handleAuthError = (res: Response) => {
     if (res.status === 401) {
@@ -126,6 +130,11 @@ export function LeaveApplyPage({
                 toast.error("Pick dates");
                 return;
               }
+              const dateCheck = validateLeaveDateRange(form.from, form.to);
+              if (dateCheck.ok === false) {
+                toast.error(dateCheck.error);
+                return;
+              }
               setSubmitting(true);
               try {
                 const res = await fetch(apiPath, {
@@ -171,8 +180,22 @@ export function LeaveApplyPage({
                 <Input
                   type="date"
                   className="rounded-xl"
+                  min={minLeaveDate}
                   value={form.from}
-                  onChange={e => setForm(f => ({ ...f, from: e.target.value }))}
+                  onChange={e => {
+                    const from = e.target.value;
+                    if (from && from < minLeaveDate) {
+                      toast.error(PAST_DATE_MESSAGE);
+                      return;
+                    }
+                    setForm(f => {
+                      let to = f.to;
+                      if (to && (to < from || to < minLeaveDate)) {
+                        to = from >= minLeaveDate ? from : "";
+                      }
+                      return { ...f, from, to };
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-1.5">
@@ -180,8 +203,16 @@ export function LeaveApplyPage({
                 <Input
                   type="date"
                   className="rounded-xl"
+                  min={toMinDate}
                   value={form.to}
-                  onChange={e => setForm(f => ({ ...f, to: e.target.value }))}
+                  onChange={e => {
+                    const to = e.target.value;
+                    if (to && to < minLeaveDate) {
+                      toast.error(PAST_DATE_MESSAGE);
+                      return;
+                    }
+                    setForm(f => ({ ...f, to }));
+                  }}
                 />
               </div>
             </div>
@@ -223,7 +254,6 @@ export function LeaveApplyPage({
                   <th className="px-3 py-2 text-left">Type</th>
                   <th className="px-3 py-2 text-left">From</th>
                   <th className="px-3 py-2 text-left">To</th>
-                  <th className="px-3 py-2 text-left">Reason</th>
                   <th className="px-3 py-2 text-left">Status</th>
                 </tr>
               </thead>
@@ -233,7 +263,6 @@ export function LeaveApplyPage({
                     <td className="px-3 py-2">{l.type}</td>
                     <td className="px-3 py-2">{l.from}</td>
                     <td className="px-3 py-2">{l.to}</td>
-                    <td className="px-3 py-2">{l.reason}</td>
                     <td className="px-3 py-2">
                       <StatusPill status={l.status} className={leaveStatusPillClass(l.status)} />
                     </td>
