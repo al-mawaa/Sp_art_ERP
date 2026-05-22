@@ -47,6 +47,7 @@ function teacherToProfile(teacher: TeacherDocument) {
     qualification: teacher.qualification ?? "",
     bio: teacher.bio ?? "",
     status: teacher.status,
+    classes: teacher.classes ?? [],
   };
 }
 

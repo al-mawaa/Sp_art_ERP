@@ -9,18 +9,6 @@ export const BATCH_DAY_OPTIONS = [
   "Custom / Other",
 ] as const;
 
-export const COURSE_OPTIONS = [
-  "Foundation Art",
-  "Drawing & Sketching",
-  "Watercolour",
-  "Acrylic Painting",
-  "Oil Painting",
-  "Digital Art",
-  "Craft & Mixed Media",
-  "Portfolio Prep",
-  "Other",
-] as const;
-
 export const batchStudentInputSchema = z.object({
   studentName: z.string().trim().min(1, "Student name is required"),
   studentEmail: z
@@ -43,12 +31,12 @@ export const batchWriteSchema = z.object({
   batchCode: z.string().trim().optional(),
   courseName: z.string().trim().min(1, "Course is required"),
   batchTiming: z.string().trim().optional(),
-  batchDay: z.string().trim().min(1, "Batch day is required"),
+  batchDay: z.string().trim().min(1, "Batch schedule is required"),
   batchTime: z.string().trim().min(1, "Batch time is required"),
-  startDate: z.string().trim().optional(),
-  endDate: z.string().trim().optional(),
-  startMonth: z.string().trim().min(1, "Start month is required"),
-  endMonth: z.string().trim().min(1, "End month is required"),
+  startDate: z.string().trim().optional().default(""),
+  endDate: z.string().trim().optional().default(""),
+  startMonth: z.string().trim().optional().default(""),
+  endMonth: z.string().trim().optional().default(""),
   roomNumber: z.string().trim().optional(),
   branch: z.string().trim().min(1, "Branch is required"),
   maxStudents: z.coerce.number().int().min(1).max(500).optional(),
