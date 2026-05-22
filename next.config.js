@@ -1,6 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: "/admin/leaves/senior-teacher",
+        destination: "/admin/leaves",
+        permanent: false,
+      },
+      {
+        source: "/admin/leaves/senior-teacher/:path*",
+        destination: "/admin/leaves",
+        permanent: false,
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: false,
   },
