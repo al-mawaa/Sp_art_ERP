@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
 import { RequireRole } from "@/components/layouts/RoleLayout";
+import { useEnsureAdminSession } from "@/components/admin/useEnsureAdminSession";
 
 const adminNav: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -34,10 +35,16 @@ const adminNav: NavItem[] = [
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const { ready } = useEnsureAdminSession();
+
   return (
     <RequireRole role="admin">
       <RoleLayout navItems={adminNav} role="admin">
-        {children}
+        {ready ? children : (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+            Verifying admin session…
+          </div>
+        )}
       </RoleLayout>
     </RequireRole>
   );

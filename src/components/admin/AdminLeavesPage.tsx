@@ -29,6 +29,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { batchFetch } from "@/lib/batch/batchFetch";
+import { clearAdminSessionToken } from "@/lib/auth/admin-session-client";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { parseJsonResponse } from "@/lib/api/parseJsonResponse";
 import { messageFromUnknown } from "@/lib/errors/messageFromUnknown";
 import { leaveStatusPillClass } from "@/lib/leave/leaveStatusStyles";
@@ -54,6 +57,8 @@ function patchPath(row: LeaveRow) {
 }
 
 export function AdminLeavesPage() {
+  const router = useRouter();
+  const { logout } = useAuth();
   const [rows, setRows] = useState<LeaveRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("All");
@@ -74,6 +79,14 @@ export function AdminLeavesPage() {
         batchFetch(`/api/admin/leaves${params}`),
         batchFetch(`/api/admin/leaves/senior-teacher${params}`),
       ]);
+
+      if (teacherRes.status === 401 || seniorRes.status === 401) {
+        clearAdminSessionToken();
+        logout();
+        toast.error("Admin session expired. Please sign in again.");
+        router.replace("/login");
+        return;
+      }
 
       const teacherJson = await parseJsonResponse<{
         error?: string;
@@ -154,7 +167,7 @@ export function AdminLeavesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, logout, router]);
 
   useEffect(() => {
     void load();
@@ -392,9 +405,6 @@ export function AdminLeavesPage() {
                     <p>
                       {confirmAction.leave.leaveType} — {confirmAction.leave.from} to{" "}
                       {confirmAction.leave.to}.
-                      {confirmAction.action === "approve"
-                        ? " Balance will be deducted automatically."
-                        : " No balance will be deducted."}
                     </p>
                   </>
                 ) : null}

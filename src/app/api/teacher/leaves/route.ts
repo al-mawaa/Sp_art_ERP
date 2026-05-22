@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Teacher from "@/lib/models/Teacher";
 import Leave from "@/lib/models/Leave";
 import { requireTeacherFromRequest } from "@/lib/auth/require-teacher";
+import { validateLeaveDateRange } from "@/lib/leave/dateValidation";
 import {
   countLeaveDays,
   getOrCreateBalance,
@@ -53,11 +54,9 @@ export async function POST(request: NextRequest) {
     if (!LEAVE_TYPES.includes(leaveType)) {
       return NextResponse.json({ success: false, error: "Invalid leave type" }, { status: 400 });
     }
-    if (!fromDate || !toDate) {
-      return NextResponse.json({ success: false, error: "From and To dates are required" }, { status: 400 });
-    }
-    if (fromDate > toDate) {
-      return NextResponse.json({ success: false, error: "From date cannot be after To date" }, { status: 400 });
+    const dateCheck = validateLeaveDateRange(fromDate, toDate);
+    if (dateCheck.ok === false) {
+      return NextResponse.json({ success: false, error: dateCheck.error }, { status: 400 });
     }
 
     await dbConnect();
@@ -67,18 +66,6 @@ export async function POST(request: NextRequest) {
     }
 
     const daysCount = countLeaveDays(fromDate, toDate);
-    const balance = await getOrCreateBalance(auth.teacher.id);
-    const balanceKey =
-      leaveType === "Sick" ? "sick" : leaveType === "Personal" ? "personal" : "casual";
-    if (balance[balanceKey] < daysCount) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Not enough ${leaveType} leave balance. You have ${balance[balanceKey]} day(s) remaining.`,
-        },
-        { status: 400 },
-      );
-    }
 
     const doc = await Leave.create({
       teacherId: teacher._id,
