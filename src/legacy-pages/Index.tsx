@@ -1,7 +1,8 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, roleHome } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { roleHome } from "@/contexts/AuthContext.exports";
 
 export default function Index() {
   const router = useRouter();

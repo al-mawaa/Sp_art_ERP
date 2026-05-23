@@ -7,6 +7,7 @@ import { batchWriteSchema } from "@/lib/validators/batch";
 import { serializeBatch } from "@/lib/serializers/batchSerialize";
 import { applyBatchWriteToDocument } from "@/lib/batch/applyBatchFields";
 import { syncTeacherAssignedBatches, removeBatchFromAllTeachers } from "@/lib/batch/syncTeacherBatches";
+import { applySeniorOwnership, resolveBatchAssignees } from "@/lib/batch/resolveBatchAssignees";
 
 export const runtime = "nodejs";
 
@@ -55,11 +56,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const data = parsed.data;
-    const teacherIds = data.teacherIds
-      .filter(tid => mongoose.Types.ObjectId.isValid(tid))
-      .map(tid => new mongoose.Types.ObjectId(tid));
 
     await dbConnect();
+    const { teacherIds, seniorTeacherIds } = await resolveBatchAssignees(data.teacherIds);
+
     const batch = await Batch.findById(id);
     if (!batch) {
       return NextResponse.json({ success: false, error: "Batch not found" }, { status: 404 });
@@ -67,6 +67,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     applyBatchWriteToDocument(batch, data);
     batch.teacherIds = teacherIds;
+    applySeniorOwnership(batch, seniorTeacherIds, write.access);
     await batch.save();
 
     await syncTeacherAssignedBatches(id, teacherIds.map(t => t.toString()));

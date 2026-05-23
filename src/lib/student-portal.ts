@@ -1,7 +1,8 @@
 import type { HydratedDocument } from "mongoose";
 import bcrypt from "bcryptjs";
-import Credential from "@/lib/models/Credentials";
+import Credential, { type CredentialDocument } from "@/lib/models/Credentials";
 import Student, { type StudentDocument } from "@/lib/models/Student";
+import { verifyCredentialPassword } from "@/lib/auth/verifyCredentialPassword";
 
 export type StudentHydrated = HydratedDocument<StudentDocument>;
 
@@ -100,16 +101,22 @@ export async function authenticateStudentLogin(
   }
 
   if (student.passwordHash) {
-    const valid = await bcrypt.compare(password, student.passwordHash);
-    return valid ? student : null;
+    try {
+      if (await bcrypt.compare(password, student.passwordHash)) return student;
+    } catch {
+      /* fall through to credentials */
+    }
   }
 
-  const credential = await Credential.findOne({ email: normalized, role: "student" });
+  const credential = await Credential.findOne({
+    email: { $regex: new RegExp(`^${escapeRegex(normalized)}$`, "i") },
+    role: "student",
+  });
   if (!credential || credential.accountStatus !== "Active") {
     return null;
   }
 
-  const valid = await bcrypt.compare(password, credential.passwordHash);
+  const valid = await verifyCredentialPassword(credential as CredentialDocument, password);
   if (!valid) return null;
 
   student.passwordHash = credential.passwordHash;

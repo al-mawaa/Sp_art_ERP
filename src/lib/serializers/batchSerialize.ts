@@ -60,6 +60,7 @@ export function serializeBatch(doc: BatchDocument) {
     students: doc.students.map(serializeStudent),
     assignedStudents: doc.students.map(serializeStudent),
     teacherIds,
+    seniorTeacherIds: (doc.seniorTeacherIds ?? []).map((id: mongoose.Types.ObjectId) => id.toString()),
     assignedTeachers: teacherIds,
     teachers,
     totalStudents: doc.students.length,

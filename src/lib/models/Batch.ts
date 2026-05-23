@@ -44,7 +44,10 @@ export interface BatchDocument extends mongoose.Document {
   students: BatchEmbeddedStudent[];
   /** Assigned teachers — query with: teacherIds: loggedInTeacherId */
   teacherIds: mongoose.Types.ObjectId[];
+  /** Assigned senior teachers (separate collection from Teacher) */
+  seniorTeacherIds: mongoose.Types.ObjectId[];
   attendanceSummary: BatchAttendanceSummary;
+  /** Primary owning / assigned senior teacher */
   createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -99,6 +102,7 @@ const BatchSchema = new mongoose.Schema<BatchDocument>(
     description: { type: String, default: "", trim: true },
     students: { type: [BatchStudentSchema], default: [] },
     teacherIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Teacher", index: true }],
+    seniorTeacherIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "SeniorTeacher", index: true }],
     attendanceSummary: {
       type: AttendanceSummarySchema,
       default: () => ({ totalSessions: 0, completedSessions: 0, averageAttendancePercent: 0 }),
@@ -109,6 +113,7 @@ const BatchSchema = new mongoose.Schema<BatchDocument>(
 );
 
 BatchSchema.index({ teacherIds: 1 });
+BatchSchema.index({ seniorTeacherIds: 1 });
 
 const BatchModel =
   (mongoose.models.Batch as mongoose.Model<BatchDocument> | undefined) ??

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import SeniorTeacher from "@/lib/models/SeniorTeacher";
-import SeniorTeacherLeave from "@/lib/models/SeniorTeacherLeave";
+import SeniorTeacherLeave, { type SeniorTeacherLeaveDocument } from "@/lib/models/SeniorTeacherLeave";
 import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
+import { validateLeaveDateRange } from "@/lib/leave/dateValidation";
 import {
   countLeaveDays,
   getOrCreateSeniorBalance,
   serializeSeniorLeave,
 } from "@/lib/leave/seniorTeacherUtils";
-import { balanceKeyForType } from "@/lib/leave/utils";
+import {
+  DUPLICATE_LEAVE_ERROR,
+  createLeaveWithDuplicateProtection,
+} from "@/lib/leave/duplicateLeave.server";
 import { getAdminNotifyEmails, sendSeniorTeacherNewLeaveEmails } from "@/lib/leave/leaveEmail";
 import type { LeaveType } from "@/lib/models/Leave";
 
@@ -54,11 +58,9 @@ export async function POST(request: NextRequest) {
     if (!LEAVE_TYPES.includes(leaveType)) {
       return NextResponse.json({ success: false, error: "Invalid leave type" }, { status: 400 });
     }
-    if (!fromDate || !toDate) {
-      return NextResponse.json({ success: false, error: "From and To dates are required" }, { status: 400 });
-    }
-    if (fromDate > toDate) {
-      return NextResponse.json({ success: false, error: "From date cannot be after To date" }, { status: 400 });
+    const dateCheck = validateLeaveDateRange(fromDate, toDate);
+    if (dateCheck.ok === false) {
+      return NextResponse.json({ success: false, error: dateCheck.error }, { status: 400 });
     }
 
     await dbConnect();
@@ -68,30 +70,34 @@ export async function POST(request: NextRequest) {
     }
 
     const daysCount = countLeaveDays(fromDate, toDate);
-    const balance = await getOrCreateSeniorBalance(auth.seniorTeacher.id);
-    const balanceKey = balanceKeyForType(leaveType);
-    if (balance[balanceKey] < daysCount) {
+
+    const created = await createLeaveWithDuplicateProtection<SeniorTeacherLeaveDocument>(
+      SeniorTeacherLeave,
+      "seniorTeacherId",
+      auth.seniorTeacher.id,
+      { leaveType, fromDate, toDate, reason },
+      storedReason => ({
+        seniorTeacherId: senior._id,
+        seniorTeacherName: senior.fullName,
+        seniorTeacherEmail: (senior.email || "").toLowerCase(),
+        leaveType,
+        fromDate,
+        toDate,
+        reason: storedReason,
+        status: "Pending",
+        adminRemark: "",
+        daysCount,
+      }),
+    );
+
+    if (!created.ok) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `Not enough ${leaveType} leave balance. You have ${balance[balanceKey]} day(s) remaining.`,
-        },
-        { status: 400 },
+        { success: false, error: DUPLICATE_LEAVE_ERROR, code: "DUPLICATE_LEAVE" },
+        { status: 409 },
       );
     }
 
-    const doc = await SeniorTeacherLeave.create({
-      seniorTeacherId: senior._id,
-      seniorTeacherName: senior.fullName,
-      seniorTeacherEmail: (senior.email || "").toLowerCase(),
-      leaveType,
-      fromDate,
-      toDate,
-      reason: reason || "—",
-      status: "Pending",
-      adminRemark: "",
-      daysCount,
-    });
+    const doc = created.doc;
 
     const notifyEmails = [...getAdminNotifyEmails()];
     const emailFields = {

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import SeniorTeacherLeave from "@/lib/models/SeniorTeacherLeave";
 import { requireAdminFromRequest } from "@/lib/auth/require-admin";
-import { deductSeniorBalance, serializeSeniorLeave } from "@/lib/leave/seniorTeacherUtils";
+import { serializeSeniorLeave } from "@/lib/leave/seniorTeacherUtils";
 import { sendSeniorLeaveStatusEmail } from "@/lib/leave/leaveEmail";
 
 export const runtime = "nodejs";
@@ -72,17 +72,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         { success: false, error: `Leave is already ${doc.status}` },
         { status: 409 },
       );
-    }
-
-    if (newStatus === "Approved") {
-      const deduct = await deductSeniorBalance(
-        doc.seniorTeacherId.toString(),
-        doc.leaveType,
-        doc.daysCount,
-      );
-      if (!deduct.ok) {
-        return NextResponse.json({ success: false, error: deduct.message }, { status: 400 });
-      }
     }
 
     doc.status = newStatus;

@@ -603,6 +603,7 @@ const SidebarMenuSubButton = React.forwardRef<
         size === "sm" && "text-xs",
         size === "md" && "text-sm",
         "group-data-[collapsible=icon]:hidden",
+        // eslint-disable-next-line react-refresh/only-export-components
         className,
       )}
       {...props}
@@ -628,12 +629,6 @@ export {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
-  SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar,
 };
+// Only export components from this file. Use sidebar-exports.ts for named exports.

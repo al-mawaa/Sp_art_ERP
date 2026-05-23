@@ -1,5 +1,5 @@
-import { BatchesListPage } from "@/components/senior-teacher/batches/BatchesListPage";
+import { SeniorTeacherBatchesPage } from "@/components/senior-teacher/SeniorTeacherBatchesPage";
 
 export default function BatchesPage() {
-  return <BatchesListPage />;
+  return <SeniorTeacherBatchesPage />;
 }

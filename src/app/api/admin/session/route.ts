@@ -40,5 +40,8 @@ export async function DELETE() {
 export async function GET(request: NextRequest) {
   const token = getAdminSessionTokenFromRequest(request);
   const ok = verifyAdminSessionToken(token);
-  return NextResponse.json({ success: true, data: { authenticated: ok } });
+  return NextResponse.json({
+    success: true,
+    data: { authenticated: ok, token: ok ? token : undefined },
+  });
 }
