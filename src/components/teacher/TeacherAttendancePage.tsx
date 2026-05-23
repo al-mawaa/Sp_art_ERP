@@ -104,12 +104,19 @@ export function TeacherAttendancePage() {
                   <div>{batch.totalStudents} {batch.totalStudents === 1 ? "Student" : "Students"}</div>
                 </div>
 
-                <div className="flex justify-end pt-2">
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
                   <Button
                     onClick={() => router.push(`/teacher/attendance/${batch._id}`)}
                     className="rounded-full bg-gradient-to-r from-primary to-secondary text-white px-5 py-2 shadow-md hover:scale-[1.01] transition-transform"
                   >
                     Take Attendance
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/teacher/attendance-report/${batch._id}`)}
+                    className="rounded-full border border-slate-200 bg-white px-5 py-2 text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    Attendance Report
                   </Button>
                 </div>
               </CardContent>
