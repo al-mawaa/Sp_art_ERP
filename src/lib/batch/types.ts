@@ -33,6 +33,7 @@ export type SerializedBatch = {
   students: SerializedBatchStudent[];
   assignedStudents: SerializedBatchStudent[];
   teacherIds: string[];
+  seniorTeacherIds?: string[];
   assignedTeachers: string[];
   teachers?: SerializedTeacherMini[];
   totalStudents: number;

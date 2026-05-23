@@ -79,12 +79,13 @@ export async function buildAttendanceReports(access: BatchAccess, query: ReportQ
 
   if (!batchIds.length) return emptyPayload;
 
-  const attendanceMatch = {
+  const attendanceMatch: Record<string, unknown> = {
     batchId: { $in: batchIds },
     attendanceDate: { $gte: from, $lte: to },
   };
 
   if (type === "teacher") {
+    attendanceMatch.role = { $in: ["teacher", null] };
     const [statusAgg, dailyAgg, records] = await Promise.all([
       TeacherAttendance.aggregate<{ _id: string; count: number }>([
         { $match: attendanceMatch },

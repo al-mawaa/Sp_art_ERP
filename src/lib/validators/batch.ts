@@ -10,6 +10,8 @@ export const BATCH_DAY_OPTIONS = [
 ] as const;
 
 export const batchStudentInputSchema = z.object({
+  /** MongoDB Student _id — stored on embedded roster for portal matching */
+  studentId: z.string().trim().optional(),
   studentName: z.string().trim().min(1, "Student name is required"),
   studentEmail: z
     .string()

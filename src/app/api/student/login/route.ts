@@ -57,6 +57,18 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("[student/login]", error);
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message.includes("querySrv") ||
+      message.includes("ECONNREFUSED") ||
+      message.includes("MongoServerSelection") ||
+      message.includes("whitelist")
+    ) {
+      return apiError(
+        "Cannot reach MongoDB. Add your IP in Atlas Network Access, or set MONGODB_URI_DIRECT in .env (standard connection string from Atlas).",
+        503,
+      );
+    }
     return apiError("Login failed", 500);
   }
 }

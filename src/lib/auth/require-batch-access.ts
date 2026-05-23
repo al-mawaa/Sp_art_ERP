@@ -5,6 +5,18 @@ import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teach
 import { requireTeacherFromRequest } from "@/lib/auth/require-teacher";
 import Batch from "@/lib/models/Batch";
 
+/**
+ * For /api/senior-teacher/* routes: prefer senior teacher session over admin token
+ * so list + attendance use the same scoped batches.
+ */
+export async function getSeniorTeacherPortalAccess(request: NextRequest): Promise<BatchAccess | null> {
+  const st = await requireSeniorTeacherFromRequest(request);
+  if (st.ok) {
+    return { kind: "senior", seniorTeacherId: st.seniorTeacher.id };
+  }
+  return getBatchAccess(request);
+}
+
 export type BatchAccess =
   | { kind: "admin" }
   | { kind: "senior"; seniorTeacherId: string }

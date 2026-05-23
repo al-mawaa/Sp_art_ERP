@@ -1,11 +1,5 @@
-import { AttendanceReportsPage } from "@/components/attendance/AttendanceReportsPage";
+import { AdminAttendanceHubPage } from "@/components/attendance/AdminAttendanceHubPage";
 
 export default function AdminAttendancePage() {
-  return (
-    <AttendanceReportsPage
-      portal="admin"
-      title="Attendance analytics"
-      subtitle="Global attendance reports across all batches and teachers."
-    />
-  );
+  return <AdminAttendanceHubPage />;
 }

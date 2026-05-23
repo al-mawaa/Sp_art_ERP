@@ -2,12 +2,16 @@ import mongoose from "mongoose";
 import type { BatchAccess } from "@/lib/auth/require-batch-access";
 import Batch from "@/lib/models/Batch";
 
-/** Batch filter for senior teacher scope (matches batch list). */
+/** Batch filter for senior teacher scope (matches batch list + attendance). */
 export function seniorBatchScopeFilter(seniorTeacherId: string): Record<string, unknown> {
   const seniorOid = new mongoose.Types.ObjectId(seniorTeacherId);
   return {
     $or: [
       { createdBy: seniorOid },
+      { createdBy: seniorTeacherId },
+      { seniorTeacherIds: seniorOid },
+      /** Legacy: senior id was stored in teacherIds before split */
+      { teacherIds: seniorOid },
       { createdBy: { $exists: false } },
       { createdBy: null },
     ],

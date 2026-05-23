@@ -1,4 +1,4 @@
-import mongoose, { type Model } from "mongoose";
+import mongoose from "mongoose";
 import { normalizeLeaveReason } from "@/lib/leave/normalizeLeaveReason";
 import {
   DUPLICATE_LEAVE_RECENT_MS,
@@ -17,10 +17,12 @@ export function isMongoDuplicateKeyError(err: unknown): boolean {
   );
 }
 
-type DuplicateLeaveDoc = {
-  _id: unknown;
-  status: string;
-  createdAt?: Date;
+/** Minimal model surface for duplicate checks (avoids strict mongoose generic unions). */
+type LeaveDuplicateModel = {
+  findOne(filter: Record<string, unknown>): {
+    select(fields: string): { lean(): Promise<{ _id?: unknown } | null> };
+  };
+  create(doc: Record<string, unknown>): Promise<unknown>;
 };
 
 /**
@@ -28,7 +30,7 @@ type DuplicateLeaveDoc = {
  * same type, dates, reason, and either Pending or created within the recent window.
  */
 export async function hasDuplicateLeaveRequest(
-  model: Model<DuplicateLeaveDoc>,
+  model: LeaveDuplicateModel,
   userIdField: "teacherId" | "seniorTeacherId",
   userId: string,
   input: LeaveDuplicateInput & { leaveType: LeaveType },
@@ -61,8 +63,8 @@ export type CreateLeaveResult<T> =
 /**
  * Check-then-create with MongoDB duplicate-key fallback for concurrent POSTs.
  */
-export async function createLeaveWithDuplicateProtection<T extends DuplicateLeaveDoc>(
-  model: Model<T>,
+export async function createLeaveWithDuplicateProtection<T>(
+  model: LeaveDuplicateModel,
   userIdField: "teacherId" | "seniorTeacherId",
   userId: string,
   input: LeaveDuplicateInput & { leaveType: LeaveType },

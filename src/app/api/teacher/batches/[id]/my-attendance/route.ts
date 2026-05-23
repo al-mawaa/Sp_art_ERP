@@ -44,6 +44,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       Batch.findById(batchId).select("batchName courseName batchTiming batchDay batchTime"),
       Teacher.findById(auth.teacher.id).select("fullName email"),
       TeacherAttendance.findOne({
+        role: "teacher",
         teacherId: new mongoose.Types.ObjectId(auth.teacher.id),
         batchId: new mongoose.Types.ObjectId(batchId),
         attendanceDate,
@@ -116,7 +117,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const teacherOid = new mongoose.Types.ObjectId(auth.teacher.id);
     const batchOid = new mongoose.Types.ObjectId(batchId);
 
+    const batch = await Batch.findById(batchId).select("batchName").lean();
+    if (!batch) {
+      return NextResponse.json({ success: false, error: "Batch not found" }, { status: 404 });
+    }
+
     const existing = await TeacherAttendance.findOne({
+      role: "teacher",
       teacherId: teacherOid,
       batchId: batchOid,
       attendanceDate,
@@ -135,7 +142,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const doc = await TeacherAttendance.create({
       teacherId: teacherOid,
+      role: "teacher",
       batchId: batchOid,
+      batchName: batch.batchName,
       attendanceDate,
       status: parsed.data.status,
       remarks: parsed.data.remarks ?? "",
