@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { CalendarDays, Wallet, Award, Clock, CreditCard, Download, Send, AlarmClock } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
@@ -14,7 +15,7 @@ import { useStore, actions, type Student } from "@/store/dataStore";
 import { CertificatePreview } from "@/pages/admin/Certificates";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSunday } from "date-fns";
 import { toast } from "sonner";
-export { ChatPage } from "@/pages/senior-teacher/SeniorTeacherPages";
+export { ChatPage } from "@/legacy-pages/senior-teacher/SeniorTeacherPages";
 
 function useMe() {
   const students = useStore(s => s.students);
@@ -90,6 +91,28 @@ export function StudentDashboard() {
   );
 }
 
+interface StudentAttendanceBatch {
+  batchId: string;
+  batchName: string;
+  courseName?: string;
+  batchDay?: string;
+  batchTime?: string;
+  batchTiming?: string;
+}
+
+interface StudentAttendanceRecord {
+  batchId: string;
+  studentName?: string;
+  date: string | Date;
+  status: "Present" | "Absent" | "Late" | string;
+}
+
+interface StudentAttendanceData {
+  success?: boolean;
+  allocatedBatches?: StudentAttendanceBatch[];
+  records?: StudentAttendanceRecord[];
+}
+
 export function MyClassesStudent() {
   return (
     <div className="space-y-6">
@@ -146,42 +169,363 @@ export function RequestSlot() {
 }
 
 export function StudentAttendance() {
-  const me = useMe();
-  const att = makeAttendance(0);
-  const map = Object.fromEntries(att.map(a => [a.date, a.status]));
-  const today = new Date();
-  const days = eachDayOfInterval({ start: startOfMonth(today), end: endOfMonth(today) });
-  const pct = Math.round(att.filter(a => a.status === "Present").length / att.length * 100);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const batchIdFromUrl = searchParams.get("batchId");
+  
+  const [batches, setBatches] = useState<StudentAttendanceBatch[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(batchIdFromUrl);
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [loading, setLoading] = useState(true);
+  const [attendanceData, setAttendanceData] = useState<StudentAttendanceData | null>(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
 
+  // Initial fetch of batches and attendance
+  useEffect(() => {
+    const fetchBatchesAndAttendance = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/student/attendance/report?month=${month}`, { credentials: "include" });
+        const data = await res.json();
+        console.log("[StudentAttendance] API Response:", data);
+        
+        if (data.success && data.allocatedBatches) {
+          setBatches(data.allocatedBatches);
+          setAttendanceData(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch batches:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBatchesAndAttendance();
+  }, [month]);
+
+  useEffect(() => {
+    if (batchIdFromUrl && batches.length > 0) {
+      setSelectedBatchId(batchIdFromUrl);
+    }
+  }, [batchIdFromUrl, batches]);
+
+  const handleAttendanceReportClick = (batchId: string) => {
+    setSelectedBatchId(batchId);
+    router.push(`?batchId=${encodeURIComponent(batchId)}`, { scroll: false });
+  };
+
+  const handleMonthChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMonth = e.target.value;
+    setMonth(newMonth);
+  };
+
+  const handleBackClick = () => {
+    setSelectedBatchId(null);
+    router.push("/student/attendance", { scroll: false });
+  };
+
+  // If batch selected and attendance data loaded, show calendar
+  if (selectedBatchId && attendanceData) {
+    return <StudentAttendanceCalendar 
+      batchId={selectedBatchId}
+      month={month}
+      onMonthChange={handleMonthChange}
+      onBackClick={handleBackClick}
+      attendanceData={attendanceData}
+    />;
+  }
+
+  // Otherwise show batch cards
   return (
     <div className="space-y-6">
-      <PageHeader title="My Attendance" subtitle={format(today,"MMMM yyyy")} />
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 card-soft p-5">
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-muted-foreground mb-2">
-            {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => <div key={d}>{d}</div>)}
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: days[0].getDay() }).map((_, i) => <div key={i} />)}
-            {days.map(d => {
-              const key = format(d, "yyyy-MM-dd");
-              const st = map[key];
-              const cls = st === "Present" ? "bg-success text-success-foreground" : st === "Late" ? "bg-warning text-warning-foreground" : st === "Absent" ? "bg-destructive text-destructive-foreground" : isSunday(d) ? "bg-muted text-muted-foreground" : "bg-muted/40";
-              return <div key={key} className={`aspect-square rounded-lg grid place-items-center text-sm font-bold ${cls}`}>{format(d,"d")}</div>;
-            })}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">My Attendance</h1>
+        <p className="text-muted-foreground mt-2">Select a batch to view your attendance report</p>
+      </div>
+      
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-64 rounded-3xl bg-gradient-to-br from-slate-200 to-slate-100 animate-pulse" />
+          ))}
+        </div>
+      ) : batches.length === 0 ? (
+        <div className="rounded-3xl bg-white border border-slate-200 p-8 text-center shadow-sm">
+          <p className="text-slate-700 font-medium">No batches allocated yet</p>
+          <p className="text-sm text-muted-foreground mt-2">Once your batches are allocated, you can view your attendance here.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {batches.map((batch) => (
+            <div key={batch.batchId} className="rounded-3xl bg-white border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">{batch.batchName}</h2>
+                  <p className="text-sm text-muted-foreground mt-1">{batch.courseName || "Course"}</p>
+                </div>
+                
+                <div className="space-y-3 text-sm text-slate-700">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📅</span>
+                    <span>{batch.batchDay || "Days not specified"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🕐</span>
+                    <span>{batch.batchTime || batch.batchTiming || "Timing not specified"}</span>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => handleAttendanceReportClick(batch.batchId)}
+                  className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold py-2.5 shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+                >
+                  📊 View Attendance
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StudentAttendanceCalendar({ 
+  batchId, 
+  month, 
+  onMonthChange, 
+  onBackClick, 
+  attendanceData 
+}: {
+  batchId: string;
+  month: string;
+  onMonthChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBackClick: () => void;
+  attendanceData: StudentAttendanceData;
+}) {
+  // Filter attendance records for this batch only
+  const normalizedBatchId = String(batchId).trim();
+  const batchRecords = (attendanceData.records || []).filter((r: StudentAttendanceRecord) => {
+    const recordBatchId = String(r.batchId || '').trim();
+    return recordBatchId === normalizedBatchId;
+  });
+  
+  console.log("[StudentAttendanceCalendar] batchId (normalized):", normalizedBatchId);
+  console.log("[StudentAttendanceCalendar] All records count:", attendanceData.records?.length || 0);
+  console.log("[StudentAttendanceCalendar] Record batchIds:", (attendanceData.records || []).map((r: StudentAttendanceRecord) => r.batchId));
+  console.log("[StudentAttendanceCalendar] Filtered records for batch:", batchRecords);
+  
+  // Create a map of date -> status for quick lookup
+  const attendanceMap: Record<string, string> = {};
+  batchRecords.forEach((record: StudentAttendanceRecord) => {
+    const dateStr = record.date instanceof Date 
+      ? record.date.toISOString().split("T")[0]
+      : typeof record.date === "string" 
+        ? record.date.split("T")[0]
+        : String(record.date);
+    attendanceMap[dateStr] = record.status;
+    console.log(`[StudentAttendanceCalendar] Mapped date ${dateStr} -> status ${record.status}`);
+  });
+  
+  const [year, monthNumber] = month.split("-").map(Number);
+  const firstDay = new Date(year, monthNumber - 1, 1).getDay();
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const emptyDays = Array.from({ length: firstDay });
+
+  const summary = {
+    present: batchRecords.filter((r: StudentAttendanceRecord) => r.status === "Present").length,
+    absent: batchRecords.filter((r: StudentAttendanceRecord) => r.status === "Absent").length,
+    late: batchRecords.filter((r: StudentAttendanceRecord) => r.status === "Late").length,
+    total: batchRecords.length,
+  };
+  
+  const percentage = summary.total > 0 ? Math.round((summary.present / summary.total) * 100) : 0;
+
+  const getDateClass = (day: number) => {
+    const dateStr = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const status = attendanceMap[dateStr];
+    
+    if (status === "Present") return "bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:shadow-emerald-300";
+    if (status === "Late") return "bg-amber-500 text-white shadow-lg shadow-amber-200 hover:shadow-amber-300";
+    if (status === "Absent") return "bg-red-500 text-white shadow-lg shadow-red-200 hover:shadow-red-300";
+    return "bg-slate-100 text-slate-400 border border-slate-200";
+  };
+
+  const selectedBatch = attendanceData.allocatedBatches?.find((b: StudentAttendanceBatch) => b.batchId === batchId);
+  const studentName = batchRecords.length > 0 ? batchRecords[0]?.studentName : "Student";
+  
+  const monthLabel = new Date(year, monthNumber - 1, 1).toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Premium Header Section */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-3xl blur-xl"></div>
+          <div className="relative bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={onBackClick} 
+                  className="rounded-xl hover:bg-slate-100 transition-colors"
+                >
+                  ← Back
+                </Button>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] font-bold text-blue-600 mb-1">Attendance Report</p>
+                  <h1 className="text-4xl font-bold text-slate-900 mb-2">{selectedBatch?.batchName}</h1>
+                  <div className="flex items-center gap-3 text-slate-600">
+                    <span className="text-sm">{selectedBatch?.courseName}</span>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span className="text-sm font-semibold">📚 {selectedBatch?.batchDay}</span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                      {studentName?.charAt(0)?.toUpperCase()}
+                    </div>
+                    <span className="font-semibold text-slate-900">{studentName}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-xs uppercase tracking-[0.12em] font-semibold text-slate-600 block">Select Month</label>
+                <input 
+                  type="month" 
+                  value={month} 
+                  onChange={onMonthChange}
+                  className="px-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="space-y-3">
-          <div className="card-soft p-5 text-center">
-            <div className="text-xs text-muted-foreground font-semibold">Monthly attendance</div>
-            <div className="font-display font-bold text-5xl text-success mt-2">{pct}%</div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Classes */}
+          <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-shadow border border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.1em] font-semibold text-slate-500 mb-2">Total Classes</p>
+                <p className="text-4xl font-bold text-slate-900">{summary.total}</p>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-2xl">📅</div>
+            </div>
           </div>
-          <div className="card-soft p-4 space-y-2 text-sm">
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-success" /> Present</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-warning" /> Late</div>
-            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-destructive" /> Absent</div>
+
+          {/* Present Days */}
+          <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-shadow border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.1em] font-semibold text-emerald-600 mb-2">Present Days</p>
+                <p className="text-4xl font-bold text-emerald-700">{summary.present}</p>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-2xl">✓</div>
+            </div>
+          </div>
+
+          {/* Absent Days */}
+          <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-shadow border border-red-200 bg-gradient-to-br from-red-50 to-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.1em] font-semibold text-red-600 mb-2">Absent Days</p>
+                <p className="text-4xl font-bold text-red-700">{summary.absent}</p>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center text-2xl">✗</div>
+            </div>
+          </div>
+
+          {/* Attendance Percentage */}
+          <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-shadow border border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.1em] font-semibold text-blue-600 mb-2">Attendance %</p>
+                <p className="text-4xl font-bold text-blue-700">{percentage}%</p>
+              </div>
+              <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-2xl">📊</div>
+            </div>
           </div>
         </div>
+
+        {/* Premium Calendar Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-lg">
+          <h2 className="text-2xl font-bold text-slate-900 mb-8">{monthLabel} Calendar</h2>
+          
+          {/* Calendar Grid */}
+          <div className="space-y-6">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-3">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                <div key={day} className="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-3 border-b-2 border-slate-200">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-3">
+              {emptyDays.map((_, i) => (
+                <div key={`empty-${i}`} className="aspect-square" />
+              ))}
+              {days.map(day => {
+                const dateStr = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const status = attendanceMap[dateStr];
+                const cls = getDateClass(day);
+                const statusLabel = status === "Present" ? "P" : status === "Absent" ? "A" : status === "Late" ? "L" : "";
+                
+                return (
+                  <div 
+                    key={dateStr} 
+                    className={`
+                      aspect-square rounded-2xl flex flex-col items-center justify-center 
+                      font-semibold text-sm transition-all duration-300 
+                      hover:scale-110 cursor-pointer group
+                      ${cls}
+                      ${status ? "shadow-md" : ""}
+                    `}
+                  >
+                    <div className={`text-xl font-bold ${!status ? 'text-slate-400' : ''}`}>{day}</div>
+                    {statusLabel && <div className="text-xs font-bold mt-1 opacity-90">{statusLabel}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Legend Section */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-lg">
+          <h3 className="text-lg font-bold text-slate-900 mb-6">Legend</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500 shadow-md"></div>
+              <span className="text-sm font-semibold text-slate-700">Present</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-lg bg-red-500 shadow-md"></div>
+              <span className="text-sm font-semibold text-slate-700">Absent</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-lg bg-amber-500 shadow-md"></div>
+              <span className="text-sm font-semibold text-slate-700">Late</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 border-2 border-slate-300"></div>
+              <span className="text-sm font-semibold text-slate-700">No Class</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

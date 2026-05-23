@@ -51,9 +51,9 @@ function batchToFormInput(b: SerializedBatch): BatchWriteInput {
     branch: b.branch,
     batchCapacity: b.batchCapacity,
     description: b.description || "",
-    teacherIds: [...(b.teacherIds || []), ...(b.seniorTeacherIds || [])],
+    teacherIds: b.teacherIds || [],
     students: b.students.map(s => ({
-      studentId: s.id,
+      studentId: s.id || "",
       studentName: s.studentName,
       studentEmail: s.studentEmail || "",
       phone: s.phone || "",
@@ -119,10 +119,12 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
         const res = await fetch("/api/courses");
         const json = await res.json();
         if (res.ok && Array.isArray(json.courses)) {
-          const options = Array.from(
-            new Set<string>(
-              (json.courses as { courseTitle?: string }[])
-                .map(course => course.courseTitle)
+          const options: string[] = Array.from(
+            new Set(
+              json.courses
+                .map((course): string | undefined =>
+                  course && typeof course.courseTitle === "string" ? course.courseTitle : undefined,
+                )
                 .filter((title): title is string => typeof title === "string"),
             ),
           );
@@ -201,7 +203,7 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
         continue;
       }
       append({
-        studentId: s.id,
+        studentId: sid,
         studentName: s.name || s.fullName || "",
         studentEmail: s.email || "",
         phone: s.phone || "",

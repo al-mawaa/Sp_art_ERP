@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
 import type { BatchWriteInput } from "@/lib/validators/batch";
 import type { BatchDocument } from "@/lib/models/Batch";
+import mongoose from "mongoose";
 
 export function generateBatchCode(batchName: string): string {
   const slug = batchName
@@ -35,7 +35,7 @@ export function applyBatchWriteToDocument(batch: BatchDocument, data: BatchWrite
   batch.set(
     "students",
     data.students.map(s => {
-      const row: Record<string, unknown> = {
+      const studentObj: Record<string, unknown> = {
         studentName: s.studentName,
         studentEmail: s.studentEmail || "",
         phone: s.phone || "",
@@ -45,11 +45,10 @@ export function applyBatchWriteToDocument(batch: BatchDocument, data: BatchWrite
         startMonth: s.startMonth || "",
         endMonth: s.endMonth || "",
       };
-      const sid = (s as { studentId?: string }).studentId?.trim();
-      if (sid && mongoose.Types.ObjectId.isValid(sid)) {
-        row._id = new mongoose.Types.ObjectId(sid);
+      if (s.studentId && mongoose.Types.ObjectId.isValid(s.studentId)) {
+        studentObj.studentId = new mongoose.Types.ObjectId(s.studentId);
       }
-      return row;
+      return studentObj;
     }),
   );
 }
