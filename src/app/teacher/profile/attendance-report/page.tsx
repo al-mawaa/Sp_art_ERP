@@ -63,7 +63,7 @@ export default function TeacherAttendanceReportPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Attendance Report</h1>
-          <p className="text-sm text-muted-foreground">{user?.name || user?.fullName || user?.email}</p>
+          <p className="text-sm text-muted-foreground">{user?.name || user?.email}</p>
         </div>
         <div className="flex items-center gap-2">
           <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="rounded-xl" />

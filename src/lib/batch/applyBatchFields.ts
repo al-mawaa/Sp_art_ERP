@@ -35,7 +35,7 @@ export function applyBatchWriteToDocument(batch: BatchDocument, data: BatchWrite
   batch.set(
     "students",
     data.students.map(s => {
-      const studentObj: any = {
+      const studentObj: Record<string, unknown> = {
         studentName: s.studentName,
         studentEmail: s.studentEmail || "",
         phone: s.phone || "",

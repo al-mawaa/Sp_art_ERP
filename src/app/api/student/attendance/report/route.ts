@@ -63,23 +63,37 @@ export async function GET(req: NextRequest) {
     console.log(`[ATTENDANCE] Student email: ${studentEmail}`);
 
     // Fetch attendance records for logged-in student in this month
-    const attendanceRecords = await TeacherStudentAttendanceModel.find({
-      "students.studentId": objectStudentId,
+    // Fetch all records first, then filter in application to handle both ObjectId and string formats
+    const allAttendanceRecords = await TeacherStudentAttendanceModel.find({
       date: { $gte: startDate, $lt: endDate },
     })
       .select("date batchId batchName courseName students")
       .lean();
 
+    // Filter for this student - use EMAIL as primary match (more reliable than ID)
+    const studentEmailLower = studentEmail.toLowerCase();
+    const attendanceRecords = allAttendanceRecords.filter((record) =>
+      ((record.students as AttendanceStudent[]) || []).some(
+        (s: AttendanceStudent) =>
+          s.studentEmail?.toLowerCase?.() === studentEmailLower
+      )
+    );
+
     // Extract only logged-in student attendance from each record
     const studentAttendance = attendanceRecords
-      .map((record: any) => {
-        const found = (record.students || []).find((s: AttendanceStudent) => s.studentId?.toString() === objectStudentId.toString());
+      .map((record) => {
+        // Find student in the students array - use EMAIL to match
+        const found = ((record.students as AttendanceStudent[]) || []).find((s: AttendanceStudent) => {
+          return s.studentEmail?.toLowerCase?.() === studentEmailLower;
+        });
+        
         return {
           date: record.date instanceof Date ? record.date.toISOString().slice(0, 10) : String(record.date),
           batchId: record.batchId?.toString?.() ?? null,
           batchName: record.batchName,
           courseName: record.courseName,
-          status: found ? found.status : "Absent",
+          studentName: found?.studentName || "Student",
+          status: found?.status || "Absent",
           remark: found?.remark || "",
         };
       })
@@ -87,7 +101,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch batches allocated to student (from batches collection)
     // Try multiple queries to find batches. Use case-insensitive email match as fallback.
-    const orClauses: any[] = [
+    const orClauses: Record<string, unknown>[] = [
       // Query by studentId (most reliable)
       { "students.studentId": objectStudentId },
     ];
@@ -100,20 +114,25 @@ export async function GET(req: NextRequest) {
       orClauses.push({ "students.studentEmail": { $regex: `^${escapeRegex(studentEmail)}$`, $options: "i" } });
     }
 
-    let allocatedBatches = await BatchModel.find({ $or: orClauses })
+    // Batch lookup: also include string-stored studentId values to be robust
+    const batchOrClauses = [...orClauses, { "students.studentId": objectStudentId.toString() }];
+
+    let allocatedBatches = await BatchModel.find({ $or: batchOrClauses })
       .select("batchName courseName batchTiming batchDay batchTime _id students")
       .lean();
 
     // Remove duplicates by batchId
     const seenIds = new Set<string>();
-    allocatedBatches = allocatedBatches.filter((batch: BatchDocument | any) => {
+    allocatedBatches = allocatedBatches.filter((batch: BatchDocument) => {
       const batchId = (batch._id as mongoose.Types.ObjectId).toString();
       if (seenIds.has(batchId)) return false;
       seenIds.add(batchId);
       return true;
     });
 
-    console.log(`[BATCHES] Total batches found: ${allocatedBatches.length} (studentId: ${allocatedBatches.filter((b: BatchDocument | any) => (b.students || []).some((s: any) => (s.studentId as mongoose.Types.ObjectId)?.toString() === objectStudentId.toString())).length}, email: ${studentEmail ? allocatedBatches.filter((b: BatchDocument | any) => (b.students || []).some((s: any) => (s.studentEmail as string)?.toLowerCase() === studentEmail)).length : 0})`);
+    const studentIdCountStr = allocatedBatches.filter((b: BatchDocument) => (b.students || []).some((s) => (s.studentId as mongoose.Types.ObjectId)?.toString() === objectStudentId.toString())).length;
+    const emailCountStr = studentEmail ? allocatedBatches.filter((b: BatchDocument) => (b.students || []).some((s) => (s.studentEmail as string)?.toLowerCase() === studentEmail)).length : 0;
+    console.log(`[BATCHES] Total batches found: ${allocatedBatches.length} (studentId: ${studentIdCountStr}, email: ${emailCountStr})`);
 
     // If no batches found, log for debugging
     if (allocatedBatches.length === 0 && studentEmail) {
@@ -128,8 +147,8 @@ export async function GET(req: NextRequest) {
         .limit(5);
       
       console.log(`[BATCHES] Sample batches in database:`);
-      allBatches.forEach((batch: any) => {
-        const studentIds = (batch.students || []).map((s: any) => ({
+      allBatches.forEach((batch: BatchDocument) => {
+        const studentIds = (batch.students || []).map((s) => ({
           studentId: (s.studentId as mongoose.Types.ObjectId)?.toString() || "null",
           studentName: s.studentName,
           studentEmail: s.studentEmail,
