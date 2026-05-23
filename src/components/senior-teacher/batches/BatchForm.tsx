@@ -51,8 +51,9 @@ function batchToFormInput(b: SerializedBatch): BatchWriteInput {
     branch: b.branch,
     batchCapacity: b.batchCapacity,
     description: b.description || "",
-    teacherIds: b.teacherIds || [],
+    teacherIds: [...(b.teacherIds || []), ...(b.seniorTeacherIds || [])],
     students: b.students.map(s => ({
+      studentId: s.id,
       studentName: s.studentName,
       studentEmail: s.studentEmail || "",
       phone: s.phone || "",
@@ -200,6 +201,7 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
         continue;
       }
       append({
+        studentId: s.id,
         studentName: s.name || s.fullName || "",
         studentEmail: s.email || "",
         phone: s.phone || "",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Teacher from "@/lib/models/Teacher";
-import Leave from "@/lib/models/Leave";
+import Leave, { type LeaveDocument } from "@/lib/models/Leave";
 import { requireTeacherFromRequest } from "@/lib/auth/require-teacher";
 import { validateLeaveDateRange } from "@/lib/leave/dateValidation";
 import {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     const daysCount = countLeaveDays(fromDate, toDate);
 
-    const created = await createLeaveWithDuplicateProtection(
+    const created = await createLeaveWithDuplicateProtection<LeaveDocument>(
       Leave,
       "teacherId",
       auth.teacher.id,

@@ -1,11 +1,17 @@
-import { AttendanceReportsPage } from "@/components/attendance/AttendanceReportsPage";
+"use client";
 
-export default function SeniorTeacherAttendancePage() {
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+/** Attendance is marked from Batches (same flow as teachers). */
+export default function SeniorTeacherAttendanceRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/senior-teacher/batches");
+  }, [router]);
   return (
-    <AttendanceReportsPage
-      portal="senior"
-      title="Attendance reports"
-      subtitle="View batch and student attendance marked by your teachers."
-    />
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+      Redirecting to batches…
+    </div>
   );
 }

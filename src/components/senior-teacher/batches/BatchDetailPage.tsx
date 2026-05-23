@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Download, Users, Calendar, MapPin, BookOpen, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SerializedBatch } from "@/lib/batch/types";
@@ -68,45 +67,47 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
   const timing = batch.batchTiming || `${batch.batchDay} · ${batch.batchTime}`;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex flex-wrap items-start gap-3">
-        <Button variant="ghost" size="icon" className="rounded-xl shrink-0" asChild>
-          <Link href={backList}>
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-        </Button>
-        <PageHeader
-          title={batch.batchName}
-          subtitle={`${batch.courseName} · ${timing}`}
-          action={
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="rounded-xl"
-                type="button"
-                onClick={() => {
-                  if (!openBatchPrintExport(batch)) toast.error("Allow pop-ups to export");
-                  else toast.message("Choose “Save as PDF” in the print dialog");
-                }}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export PDF
-              </Button>
-              {canWrite && (
-                <Button asChild className="rounded-xl gradient-primary text-white border-0">
-                  <Link href={routes.edit(batch.id)}>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit
-                  </Link>
-                </Button>
-              )}
-            </div>
-          }
-        />
+    <div className="space-y-6 w-full">
+      <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Button variant="ghost" size="icon" className="rounded-xl shrink-0" asChild>
+            <Link href={backList}>
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-[22px]">
+              {batch.batchName}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">{batch.courseName} · {timing}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            type="button"
+            onClick={() => {
+              if (!openBatchPrintExport(batch)) toast.error("Allow pop-ups to export");
+              else toast.message("Choose “Save as PDF” in the print dialog");
+            }}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export PDF
+          </Button>
+          {canWrite && (
+            <Button asChild className="rounded-xl gradient-primary text-white border-0">
+              <Link href={routes.edit(batch.id)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+      <div className="grid w-full gap-4 lg:grid-cols-2">
+        <div className="min-h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
           <h2 className="font-display font-semibold flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-primary" />
             Batch information
@@ -144,7 +145,7 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+        <div className="min-h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
           <h2 className="font-display font-semibold flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" />
             Teacher attendance

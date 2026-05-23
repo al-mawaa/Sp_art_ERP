@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import SeniorTeacher from "@/lib/models/SeniorTeacher";
-import SeniorTeacherLeave from "@/lib/models/SeniorTeacherLeave";
+import SeniorTeacherLeave, { type SeniorTeacherLeaveDocument } from "@/lib/models/SeniorTeacherLeave";
 import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
 import { validateLeaveDateRange } from "@/lib/leave/dateValidation";
 import {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     const daysCount = countLeaveDays(fromDate, toDate);
 
-    const created = await createLeaveWithDuplicateProtection(
+    const created = await createLeaveWithDuplicateProtection<SeniorTeacherLeaveDocument>(
       SeniorTeacherLeave,
       "seniorTeacherId",
       auth.seniorTeacher.id,

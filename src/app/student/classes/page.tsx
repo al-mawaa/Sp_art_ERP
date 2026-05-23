@@ -1,5 +1,5 @@
-import { MyClassesStudent } from "@/pages/student/StudentPages";
+import { StudentMyClassesPage } from "@/components/student/StudentMyClassesPage";
 
 export default function StudentClassesPage() {
-  return <MyClassesStudent />;
+  return <StudentMyClassesPage />;
 }

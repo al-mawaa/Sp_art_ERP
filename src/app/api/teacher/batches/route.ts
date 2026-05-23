@@ -10,7 +10,16 @@ import type { TeacherAttendanceDocument } from "@/lib/models/TeacherAttendance";
 
 export const runtime = "nodejs";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 500;
+
+function resolvePageSize(searchParams: URLSearchParams) {
+  const requested = parseInt(searchParams.get("limit") || "", 10);
+  if (Number.isFinite(requested) && requested > 0) {
+    return Math.min(requested, MAX_PAGE_SIZE);
+  }
+  return DEFAULT_PAGE_SIZE;
+}
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -26,6 +35,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    const pageSize = resolvePageSize(searchParams);
     const search = (searchParams.get("search") || "").trim();
     const course = (searchParams.get("course") || "").trim();
     const status = (searchParams.get("status") || "All").trim();
@@ -50,13 +60,13 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const skip = (page - 1) * PAGE_SIZE;
+    const skip = (page - 1) * pageSize;
     const [total, rows] = await Promise.all([
       Batch.countDocuments(filter),
       Batch.find(filter)
         .sort({ updatedAt: -1 })
         .skip(skip)
-        .limit(PAGE_SIZE)
+        .limit(pageSize)
         .populate("teacherIds", "fullName email"),
     ]);
 
@@ -64,12 +74,20 @@ export async function GET(request: NextRequest) {
     const today = todayIso();
     const todayRecords = batchIds.length
       ? await TeacherAttendance.find({
+          role: { $in: ["teacher", null] },
           teacherId: teacherOid,
           batchId: { $in: batchIds },
           attendanceDate: today,
         }).lean()
       : [];
     const attendanceByBatch = new Map(todayRecords.map(r => [r.batchId.toString(), r]));
+
+    const emptyToday = {
+      alreadyMarked: false,
+      status: null as string | null,
+      remarks: "",
+      record: null,
+    };
 
     const batches = rows.map(d => {
       const base = serializeBatch(d as BatchDocument);
@@ -83,7 +101,7 @@ export async function GET(request: NextRequest) {
               remarks: rec.remarks ?? "",
               record: serializeTeacherAttendance(rec as unknown as TeacherAttendanceDocument),
             }
-          : { alreadyMarked: false, status: null as string | null, remarks: "", record: null },
+          : emptyToday,
       };
     });
     const courseOptions = await Batch.distinct("courseName", { teacherIds: teacherOid });
@@ -94,9 +112,9 @@ export async function GET(request: NextRequest) {
         batches,
         pagination: {
           page,
-          limit: PAGE_SIZE,
+          limit: pageSize,
           total,
-          totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+          totalPages: Math.max(1, Math.ceil(total / pageSize)),
         },
         filterOptions: {
           courses: (courseOptions as string[]).filter(Boolean).sort(),

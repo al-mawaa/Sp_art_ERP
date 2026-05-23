@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import type { BatchWriteInput } from "@/lib/validators/batch";
 import type { BatchDocument } from "@/lib/models/Batch";
 
@@ -33,15 +34,22 @@ export function applyBatchWriteToDocument(batch: BatchDocument, data: BatchWrite
 
   batch.set(
     "students",
-    data.students.map(s => ({
-      studentName: s.studentName,
-      studentEmail: s.studentEmail || "",
-      phone: s.phone || "",
-      course: s.course || "",
-      batchDay: s.batchDay || "",
-      batchTime: s.batchTime || "",
-      startMonth: s.startMonth || "",
-      endMonth: s.endMonth || "",
-    })),
+    data.students.map(s => {
+      const row: Record<string, unknown> = {
+        studentName: s.studentName,
+        studentEmail: s.studentEmail || "",
+        phone: s.phone || "",
+        course: s.course || "",
+        batchDay: s.batchDay || "",
+        batchTime: s.batchTime || "",
+        startMonth: s.startMonth || "",
+        endMonth: s.endMonth || "",
+      };
+      const sid = (s as { studentId?: string }).studentId?.trim();
+      if (sid && mongoose.Types.ObjectId.isValid(sid)) {
+        row._id = new mongoose.Types.ObjectId(sid);
+      }
+      return row;
+    }),
   );
 }
