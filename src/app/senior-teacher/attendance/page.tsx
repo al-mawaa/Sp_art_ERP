@@ -1,15 +1,17 @@
 "use client";
 
-import { StaffSelfAttendancePage } from "@/components/attendance/StaffSelfAttendancePage";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function SeniorTeacherSelfAttendancePage() {
+/** Attendance is marked from Batches (same flow as teachers). */
+export default function SeniorTeacherAttendanceRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/senior-teacher/batches");
+  }, [router]);
   return (
-    <StaffSelfAttendancePage
-      apiPath="/api/senior-teacher/self-attendance"
-      roleLabel="senior teacher"
-      title="My Attendance"
-      subtitle="Mark day-wise attendance for each assigned batch — today only, one entry per batch per day."
-      batchesHref="/senior-teacher/batches"
-    />
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+      Redirecting to batches…
+    </div>
   );
 }
