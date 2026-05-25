@@ -20,7 +20,6 @@ import { toast } from 'sonner';
 const courseSchema = z.object({
   courseTitle: z.string().min(1, 'Course title is required'),
   courseCode: z.string().min(1, 'Course code is required'),
-  instructor: z.string().optional(),
   duration: z.coerce.number().min(1, 'Duration is required'),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
@@ -73,7 +72,6 @@ export default function AdminCoursesPage() {
     defaultValues: {
       courseTitle: '',
       courseCode: '',
-      instructor: '',
       duration: 1,
       startDate: '',
       endDate: '',
@@ -122,7 +120,6 @@ export default function AdminCoursesPage() {
     form.reset({
       courseTitle: '',
       courseCode: '',
-      instructor: '',
       duration: 1,
       startDate: '',
       endDate: '',
@@ -144,7 +141,6 @@ export default function AdminCoursesPage() {
     form.reset({
       courseTitle: row.courseTitle,
       courseCode: row.courseCode,
-      instructor: row.instructor ?? '',
       duration: row.duration,
       startDate: row.startDate,
       endDate: row.endDate,
@@ -185,7 +181,6 @@ export default function AdminCoursesPage() {
       const payload = {
         courseTitle: values.courseTitle,
         courseCode: values.courseCode,
-        instructor: values.instructor || undefined,
         duration: Number(values.duration),
         startDate: values.startDate,
         endDate: values.endDate,
@@ -212,7 +207,6 @@ export default function AdminCoursesPage() {
         id: result.course.id,
         courseTitle: result.course.courseTitle,
         courseCode: result.course.courseCode,
-        instructor: result.course.instructor,
         duration: result.course.duration,
         startDate: result.course.startDate,
         endDate: result.course.endDate,
@@ -247,7 +241,7 @@ export default function AdminCoursesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Courses"
-        subtitle="Manage course offerings, instructors, and pricing for the academy."
+        subtitle="Manage course offerings and pricing for the academy."
         action={
           <Button onClick={openAddCourse}>
             <Plus className="w-4 h-4" /> Add New Course
@@ -281,7 +275,6 @@ export default function AdminCoursesPage() {
             columns={[
               { key: 'courseTitle', header: 'Course' },
               { key: 'courseCode', header: 'Code' },
-              { key: 'instructor', header: 'Instructor' },
               { key: 'duration', header: 'Duration', render: row => `${row.duration} months` },
               { key: 'startDate', header: 'Start Date', render: row => formatDate(row.startDate) },
               { key: 'endDate', header: 'End Date', render: row => formatDate(row.endDate) },
@@ -305,7 +298,7 @@ export default function AdminCoursesPage() {
               ) },
             ]}
             rows={filteredRows}
-            searchKeys={['courseTitle', 'courseCode', 'instructor']}
+            searchKeys={['courseTitle', 'courseCode']}
             emptyMessage={emptyStateText}
           />
         )}
@@ -327,10 +320,6 @@ export default function AdminCoursesPage() {
                 <Label htmlFor="courseCode">Course Code</Label>
                 <Input id="courseCode" {...form.register('courseCode')} />
                 {form.formState.errors.courseCode && <p className="text-xs text-red-500">{form.formState.errors.courseCode.message}</p>}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="instructor">Instructor</Label>
-                <Input id="instructor" {...form.register('instructor')} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="duration">Duration (months)</Label>
