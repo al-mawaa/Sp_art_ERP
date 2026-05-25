@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, ChevronLeft } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface StudentAttendanceRecord {
@@ -39,7 +39,7 @@ export default function StudentAttendancePreviewPage() {
   const batchId = searchParams.get("batchId") || "";
   const [data, setData] = useState<StudentAttendanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [monthDate] = useState(() => new Date());
+  const [monthDate, setMonthDate] = useState(() => new Date());
 
   useEffect(() => {
     if (!studentId || !batchId) return;
@@ -100,6 +100,10 @@ export default function StudentAttendancePreviewPage() {
 
   const firstDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
   const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+
+  const handleChangeMonth = (offset: number) => {
+    setMonthDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  };
 
   if (!studentId || !batchId) {
     return <div className="p-4">Missing student or batch selection.</div>;
@@ -180,8 +184,24 @@ export default function StudentAttendancePreviewPage() {
         </CardHeader>
         <CardContent className="p-6">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => handleChangeMonth(-1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
               <p className="text-sm font-semibold text-slate-900">{formatMonthLabel(monthDate)}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => handleChangeMonth(1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">
