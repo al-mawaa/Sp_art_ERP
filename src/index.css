@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Razorpay checkout must sit above app modals (Radix dialogs use z-50) */
+.razorpay-container,
+.razorpay-backdrop,
+iframe.razorpay-checkout-frame {
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}
+
 /* Little Brushes Art Academy - Design System
    Modern, professional, refined. All colors HSL.
 */

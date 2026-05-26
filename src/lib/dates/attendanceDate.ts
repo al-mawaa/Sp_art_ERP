@@ -80,6 +80,23 @@ export function isDateBeforeToday(date: string, timeZone: string = APP_TIMEZONE)
   return norm < todayDateString(timeZone);
 }
 
+/**
+ * Stable UTC midnight for a calendar day — used only for legacy Mongo `date` index compatibility.
+ * Does not use local setHours (avoids IST/UTC off-by-one on write).
+ */
+export function dateOnlyToUtcDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+/** UTC range covering one calendar day (for legacy `date` field queries). */
+export function legacyDateDayRange(dateStr: string): { start: Date; end: Date } {
+  const start = dateOnlyToUtcDate(dateStr);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start, end };
+}
+
 /** Read YYYY-MM-DD from new or legacy attendance documents. */
 export function attendanceDateFromDoc(doc: {
   attendanceDate?: string | null;

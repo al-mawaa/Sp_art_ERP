@@ -4,7 +4,7 @@ import dbConnect from "@/lib/mongodb";
 import BatchModel from "@/lib/models/Batch";
 import TeacherStudentAttendanceModel from "@/lib/models/TeacherStudentAttendance";
 import { TEACHER_SESSION_COOKIE } from "@/lib/auth/portal-session";
-import { normalizeDateOnly } from "@/lib/dates/attendanceDate";
+import { legacyDateDayRange, normalizeDateOnly } from "@/lib/dates/attendanceDate";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
@@ -38,11 +38,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ batc
     let attendance = null;
     const attendanceDate = selectedDate ? normalizeDateOnly(selectedDate) : null;
     if (attendanceDate) {
+      const { start: legacyStart, end: legacyEnd } = legacyDateDayRange(attendanceDate);
       attendance = await TeacherStudentAttendanceModel.findOne({
         batchId: batchObjectId,
-        attendanceDate,
+        $or: [
+          { attendanceDate },
+          { date: { $gte: legacyStart, $lt: legacyEnd } },
+        ],
       })
-        .select("students attendanceDate")
+        .select("students attendanceDate date")
         .lean();
     }
 

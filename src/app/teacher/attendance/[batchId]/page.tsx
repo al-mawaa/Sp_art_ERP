@@ -84,12 +84,22 @@ export default function BatchAttendancePage() {
       });
 
       if (data.attendance?.students?.length) {
-        data.attendance.students.forEach((student: { studentId: string; status: "Present" | "Absent"; remark?: string }) => {
-          if (initialRecords[student.studentId]) {
-            initialRecords[student.studentId].status = student.status;
-            initialRecords[student.studentId].remark = student.remark || "";
-          }
-        });
+        data.attendance.students.forEach(
+          (student: {
+            studentId?: string | { toString?: () => string };
+            status: "Present" | "Absent";
+            remark?: string;
+          }) => {
+            const sid =
+              typeof student.studentId === "string"
+                ? student.studentId
+                : student.studentId?.toString?.() ?? "";
+            if (sid && initialRecords[sid]) {
+              initialRecords[sid].status = student.status;
+              initialRecords[sid].remark = student.remark || "";
+            }
+          },
+        );
       }
 
       setAttendanceRecords(initialRecords);

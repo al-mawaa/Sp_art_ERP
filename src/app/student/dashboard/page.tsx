@@ -1,5 +1,5 @@
-import { StudentDashboard } from "@/pages/student/StudentPages";
+import { StudentDashboardDynamic } from "@/components/student/StudentDashboardDynamic";
 
 export default function StudentDashboardPage() {
-  return <StudentDashboard />;
+  return <StudentDashboardDynamic />;
 }

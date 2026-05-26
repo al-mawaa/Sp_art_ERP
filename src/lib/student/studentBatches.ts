@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Batch, { type BatchDocument } from "@/lib/models/Batch";
+import "@/lib/models/Teacher";
 import type { StudentDocument } from "@/lib/models/Student";
 
 export type StudentClassCard = {

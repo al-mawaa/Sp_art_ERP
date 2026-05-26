@@ -17,6 +17,7 @@ const adminNav: NavItem[] = [
   { to: "/admin/admission", label: "Admission", icon: UserPlus },
   { to: "/admin/credentials", label: "Credentials", icon: Shield },
   { to: "/admin/courses", label: "Courses", icon: BookOpen },
+  { to: "/admin/enrollments", label: "Enrollments", icon: CreditCard },
   { to: "/admin/students", label: "Students", icon: Users },
   { to: "/admin/teachers", label: "Teachers", icon: GraduationCap },
   { to: "/admin/senior-teachers", label: "Senior Teachers", icon: GraduationCap },

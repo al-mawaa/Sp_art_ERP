@@ -6,6 +6,8 @@ export interface CourseDocument extends mongoose.Document {
   courseTitle: string;
   courseCode: string;
   instructor?: string;
+  description?: string;
+  thumbnailUrl?: string;
   duration: number;
   startDate: Date;
   endDate: Date;
@@ -24,6 +26,8 @@ const CourseSchema = new mongoose.Schema<CourseDocument>(
     courseTitle: { type: String, required: true },
     courseCode: { type: String, required: true, unique: true, sparse: true },
     instructor: { type: String },
+    description: { type: String, default: "" },
+    thumbnailUrl: { type: String, default: "" },
     duration: { type: Number, required: true, default: 1 },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

@@ -2,14 +2,27 @@
 
 import { ReactNode } from "react";
 import {
-  LayoutDashboard, CalendarDays, Star, ClipboardList, Wallet, Award, MessageSquareHeart, MessageSquare, User
+  LayoutDashboard,
+  CalendarDays,
+  Star,
+  ClipboardList,
+  Wallet,
+  Award,
+  MessageSquareHeart,
+  MessageSquare,
+  User,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
 import { RequireRole } from "@/components/layouts/RoleLayout";
+import { useEnsureStudentSession } from "@/components/student/useEnsureStudentSession";
 
 const studentNav: NavItem[] = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/student/profile", label: "My Profile", icon: User },
+  { to: "/student/courses", label: "Courses", icon: BookOpen },
+  { to: "/student/my-courses", label: "My Courses", icon: GraduationCap },
   { to: "/student/classes", label: "My Classes", icon: CalendarDays },
   { to: "/student/scores", label: "My Scores", icon: Star },
   { to: "/student/request-slot", label: "Request Slot", icon: ClipboardList },
@@ -21,10 +34,16 @@ const studentNav: NavItem[] = [
 ];
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
+  const { ready } = useEnsureStudentSession();
+
   return (
     <RequireRole role="student">
       <RoleLayout navItems={studentNav} role="student">
-        {children}
+        {ready ? children : (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+            Verifying student session…
+          </div>
+        )}
       </RoleLayout>
     </RequireRole>
   );
