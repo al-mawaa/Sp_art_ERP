@@ -5,6 +5,7 @@ export type CourseStatus = 'active' | 'inactive';
 export interface CourseDocument extends mongoose.Document {
   courseTitle: string;
   courseCode: string;
+  image?: string;
   instructor?: string;
   duration: number;
   startDate: Date;
@@ -23,6 +24,7 @@ const CourseSchema = new mongoose.Schema<CourseDocument>(
   {
     courseTitle: { type: String, required: true },
     courseCode: { type: String, required: true, unique: true, sparse: true },
+    image: { type: String },
     instructor: { type: String },
     duration: { type: Number, required: true, default: 1 },
     startDate: { type: Date, required: true },

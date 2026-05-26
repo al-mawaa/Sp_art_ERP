@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { CalendarDays, Plus, Pencil, Trash2, UploadCloud, ImagePlus } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 const courseSchema = z.object({
   courseTitle: z.string().min(1, 'Course title is required'),
   courseCode: z.string().min(1, 'Course code is required'),
+  image: z.string().optional(),
   duration: z.coerce.number().min(1, 'Duration is required'),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
@@ -34,6 +35,7 @@ type CourseRow = {
   id: string;
   courseTitle: string;
   courseCode: string;
+  image?: string;
   instructor?: string;
   duration: number;
   startDate: string;
@@ -66,12 +68,15 @@ export default function AdminCoursesPage() {
   const [statusFilter, setStatusFilter] = useState<CourseStatusFilter>('All');
   const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<CourseForm>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       courseTitle: '',
       courseCode: '',
+      image: '',
       duration: 1,
       startDate: '',
       endDate: '',
@@ -112,6 +117,43 @@ export default function AdminCoursesPage() {
     }
   };
 
+  const handleImageDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'course-images');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Image upload failed');
+      }
+
+      form.setValue('image', data.url);
+      toast.success('Course image uploaded');
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      toast.error((error as Error).message || 'Image upload failed');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+
   useEffect(() => {
     fetchCourses();
   }, []);
@@ -120,6 +162,7 @@ export default function AdminCoursesPage() {
     form.reset({
       courseTitle: '',
       courseCode: '',
+      image: '',
       duration: 1,
       startDate: '',
       endDate: '',
@@ -141,6 +184,7 @@ export default function AdminCoursesPage() {
     form.reset({
       courseTitle: row.courseTitle,
       courseCode: row.courseCode,
+      image: row.image ?? '',
       duration: row.duration,
       startDate: row.startDate,
       endDate: row.endDate,
@@ -181,6 +225,7 @@ export default function AdminCoursesPage() {
       const payload = {
         courseTitle: values.courseTitle,
         courseCode: values.courseCode,
+        image: values.image || undefined,
         duration: Number(values.duration),
         startDate: values.startDate,
         endDate: values.endDate,
@@ -207,6 +252,7 @@ export default function AdminCoursesPage() {
         id: result.course.id,
         courseTitle: result.course.courseTitle,
         courseCode: result.course.courseCode,
+        image: result.course.image,
         duration: result.course.duration,
         startDate: result.course.startDate,
         endDate: result.course.endDate,
@@ -320,6 +366,62 @@ export default function AdminCoursesPage() {
                 <Label htmlFor="courseCode">Course Code</Label>
                 <Input id="courseCode" {...form.register('courseCode')} />
                 {form.formState.errors.courseCode && <p className="text-xs text-red-500">{form.formState.errors.courseCode.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-sm font-semibold">Course Image</Label>
+                  <p className="text-xs text-slate-500">Optional</p>
+                </div>
+                <div
+                  onDrop={handleImageDrop}
+                  onDragOver={(event) => event.preventDefault()}
+                  className="group relative overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-center transition hover:border-slate-400 hover:bg-slate-50"
+                >
+                  {form.watch('image') ? (
+                    <img
+                      src={form.watch('image')}
+                      alt="Course"
+                      className="mx-auto h-28 w-full rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="flex min-h-[112px] flex-col items-center justify-center gap-2 px-2">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-slate-100 text-slate-600 transition group-hover:bg-slate-200">
+                        <ImagePlus className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Upload course image</p>
+                        <p className="text-xs text-slate-500">Drag & drop, or browse</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="inline-flex h-11 items-center gap-2 rounded-xl px-3"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    <UploadCloud className="h-4 w-4" />
+                    {uploadingImage ? 'Uploading…' : 'Upload'}
+                  </Button>
+                  {form.watch('image') && (
+                    <Button type="button" variant="ghost" className="h-11 rounded-xl px-3" onClick={() => form.setValue('image', '')}>
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="duration">Duration (months)</Label>

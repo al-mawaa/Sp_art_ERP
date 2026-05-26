@@ -18,6 +18,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         id: course._id.toString(),
         courseTitle: course.courseTitle,
         courseCode: course.courseCode,
+        image: course.image,
         instructor: course.instructor,
         duration: course.duration,
         startDate: course.startDate?.toISOString() ?? '',
@@ -45,6 +46,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const {
       courseTitle,
       courseCode,
+      image,
       instructor,
       duration,
       startDate,
@@ -69,6 +71,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       }
       updateData.courseCode = courseCode;
     }
+    if (image !== undefined) updateData.image = image;
     if (instructor !== undefined) updateData.instructor = instructor;
     if (duration !== undefined) updateData.duration = Number(duration);
     if (startDate !== undefined) {
@@ -114,6 +117,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         id: updatedCourse._id.toString(),
         courseTitle: updatedCourse.courseTitle,
         courseCode: updatedCourse.courseCode,
+        image: updatedCourse.image,
         instructor: updatedCourse.instructor,
         duration: updatedCourse.duration,
         startDate: updatedCourse.startDate?.toISOString() ?? '',

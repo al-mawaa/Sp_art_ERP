@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
         id: course._id.toString(),
         courseTitle: course.courseTitle,
         courseCode: course.courseCode,
+        image: course.image,
         instructor: course.instructor,
         duration: course.duration,
         startDate: course.startDate?.toISOString() ?? '',
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
     const {
       courseTitle,
       courseCode,
+      image,
       instructor,
       duration,
       startDate,
@@ -86,6 +88,7 @@ export async function POST(request: NextRequest) {
     const course = await Course.create({
       courseTitle,
       courseCode,
+      image: image || undefined,
       instructor: instructor || undefined,
       duration: Number(duration),
       startDate: parsedStartDate,
@@ -105,6 +108,7 @@ export async function POST(request: NextRequest) {
           id: course._id.toString(),
           courseTitle: course.courseTitle,
           courseCode: course.courseCode,
+          image: course.image,
           instructor: course.instructor,
           duration: course.duration,
           startDate: course.startDate?.toISOString() ?? '',
