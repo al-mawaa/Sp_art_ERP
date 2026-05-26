@@ -22,13 +22,8 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   // Cold / on-demand compilation can exceed the default chunk load timeout in dev (ChunkLoadError on app/layout.js).
-  webpack: (config, { dev, isServer }) => {
+  webpack: (config, { dev }) => {
     config.output = config.output || {};
-
-    if (isServer) {
-      // Ensure server async chunks load from the server/chunks directory.
-      config.output.chunkFilename = "chunks/[id].js";
-    }
 
     if (dev) {
       config.output.chunkLoadTimeout = 300000; // 5 minutes (default is often 120s)
