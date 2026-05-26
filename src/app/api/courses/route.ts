@@ -36,14 +36,6 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
-    // Drop old index if it exists
-    try {
-      await Course.collection.dropIndex('code_1');
-      console.log('Dropped old code_1 index');
-    } catch (err) {
-      // Index might not exist, that's fine
-    }
-    
     const body = await request.json();
     const {
       courseTitle,
@@ -60,43 +52,63 @@ export async function POST(request: NextRequest) {
       createdBy,
     } = body;
 
-    if (!courseTitle || !courseCode || duration == null || totalFees == null || discountFees == null || !startDate || !endDate || !status) {
-      return NextResponse.json({ error: 'Course title, code, duration, dates, total fees, discount fees, and status are required' }, { status: 400 });
+    // Basic validation and coercion
+    if (!courseTitle || typeof courseTitle !== 'string' || !courseTitle.trim()) {
+      return NextResponse.json({ error: 'Course title is required' }, { status: 400 });
+    }
+    if (!courseCode || typeof courseCode !== 'string' || !courseCode.trim()) {
+      return NextResponse.json({ error: 'Course code is required' }, { status: 400 });
     }
 
-    if (!['active', 'inactive'].includes(status)) {
+    const normalizedStatus = typeof status === 'string' ? status : 'active';
+    if (!['active', 'inactive'].includes(normalizedStatus)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-    }
-
-    const existingCourse = await Course.findOne({ courseCode });
-    if (existingCourse) {
-      return NextResponse.json({ error: 'Course code already exists' }, { status: 409 });
-    }
-
-    const parsedStartDate = new Date(startDate);
-    const parsedEndDate = new Date(endDate);
-    if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-      return NextResponse.json({ error: 'Dates are invalid' }, { status: 400 });
     }
 
     const totalFeesNumber = Number(totalFees);
     const discountFeesNumber = Number(discountFees);
+    const durationNumber = Number(duration);
+
+    if (Number.isNaN(totalFeesNumber) || Number.isNaN(discountFeesNumber) || Number.isNaN(durationNumber)) {
+      return NextResponse.json({ error: 'Duration, totalFees and discountFees must be numbers' }, { status: 400 });
+    }
+
+    const existingCourse = await Course.findOne({ courseCode: courseCode.trim() });
+    if (existingCourse) {
+      return NextResponse.json({ error: 'Course code already exists' }, { status: 409 });
+    }
+
+    let parsedStartDate: Date | undefined = undefined;
+    let parsedEndDate: Date | undefined = undefined;
+    if (startDate !== undefined && startDate !== null && startDate !== '') {
+      parsedStartDate = new Date(startDate);
+      if (isNaN(parsedStartDate.getTime())) {
+        return NextResponse.json({ error: 'Start date is invalid' }, { status: 400 });
+      }
+    }
+    if (endDate !== undefined && endDate !== null && endDate !== '') {
+      parsedEndDate = new Date(endDate);
+      if (isNaN(parsedEndDate.getTime())) {
+        return NextResponse.json({ error: 'End date is invalid' }, { status: 400 });
+      }
+    }
+
     const discountPercentage = totalFeesNumber > 0
       ? Math.max(0, Math.round(((totalFeesNumber - discountFeesNumber) / totalFeesNumber) * 100))
       : 0;
 
     const course = await Course.create({
-      courseTitle,
-      courseCode,
+      courseTitle: courseTitle.trim(),
+      courseCode: courseCode.trim(),
       image: image || undefined,
       instructor: instructor || undefined,
-      duration: Number(duration),
-      startDate: parsedStartDate,
-      endDate: parsedEndDate,
+      duration: durationNumber,
+      ...(parsedStartDate ? { startDate: parsedStartDate } : {}),
+      ...(parsedEndDate ? { endDate: parsedEndDate } : {}),
       totalFees: totalFeesNumber,
       discountFees: discountFeesNumber,
       discountPercentage,
-      status,
+      status: normalizedStatus as 'active' | 'inactive',
       notes,
       createdBy,
     });

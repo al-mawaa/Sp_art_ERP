@@ -8,8 +8,8 @@ export interface CourseDocument extends mongoose.Document {
   image?: string;
   instructor?: string;
   duration: number;
-  startDate: Date;
-  endDate: Date;
+  startDate?: Date;
+  endDate?: Date;
   totalFees: number;
   discountFees: number;
   discountPercentage: number;
@@ -27,8 +27,8 @@ const CourseSchema = new mongoose.Schema<CourseDocument>(
     image: { type: String },
     instructor: { type: String },
     duration: { type: Number, required: true, default: 1 },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    startDate: { type: Date },
+    endDate: { type: Date },
     totalFees: { type: Number, required: true, default: 0 },
     discountFees: { type: Number, required: true, default: 0 },
     discountPercentage: { type: Number, required: true, default: 0 },

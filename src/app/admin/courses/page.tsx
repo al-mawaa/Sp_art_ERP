@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { CalendarDays, Plus, Pencil, Trash2, UploadCloud, ImagePlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, UploadCloud, ImagePlus, X, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,8 +21,6 @@ const courseSchema = z.object({
   courseCode: z.string().min(1, 'Course code is required'),
   image: z.string().optional(),
   duration: z.coerce.number().min(1, 'Duration is required'),
-  startDate: z.string().min(1, 'Start date is required'),
-  endDate: z.string().min(1, 'End date is required'),
   totalFees: z.coerce.number().min(0, 'Total fees is required'),
   discountFees: z.coerce.number().min(0, 'Discount fees is required'),
   status: z.enum(['active', 'inactive']).default('active'),
@@ -38,8 +35,6 @@ type CourseRow = {
   image?: string;
   instructor?: string;
   duration: number;
-  startDate: string;
-  endDate: string;
   totalFees: number;
   discountFees: number;
   discountPercentage: number;
@@ -50,15 +45,7 @@ type CourseRow = {
 
 type CourseStatusFilter = 'All' | 'active' | 'inactive';
 
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+ 
 
 export default function AdminCoursesPage() {
   const [open, setOpen] = useState(false);
@@ -66,9 +53,9 @@ export default function AdminCoursesPage() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<CourseRow | null>(null);
   const [statusFilter, setStatusFilter] = useState<CourseStatusFilter>('All');
-  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
-  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
+  
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<CourseForm>({
@@ -78,8 +65,6 @@ export default function AdminCoursesPage() {
       courseCode: '',
       image: '',
       duration: 1,
-      startDate: '',
-      endDate: '',
       totalFees: 0,
       discountFees: 0,
       status: 'active',
@@ -158,14 +143,24 @@ export default function AdminCoursesPage() {
     fetchCourses();
   }, []);
 
+  // prevent background scroll when modal is open
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prev = document.body.style.overflow;
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = prev || '';
+    }
+    return () => { document.body.style.overflow = prev || ''; };
+  }, [open]);
+
   const clearForm = () => {
     form.reset({
       courseTitle: '',
       courseCode: '',
       image: '',
       duration: 1,
-      startDate: '',
-      endDate: '',
       totalFees: 0,
       discountFees: 0,
       status: 'active',
@@ -186,8 +181,6 @@ export default function AdminCoursesPage() {
       courseCode: row.courseCode,
       image: row.image ?? '',
       duration: row.duration,
-      startDate: row.startDate,
-      endDate: row.endDate,
       totalFees: row.totalFees,
       discountFees: row.discountFees,
       status: row.status,
@@ -217,6 +210,7 @@ export default function AdminCoursesPage() {
   };
 
   const onSubmit = async (values: CourseForm) => {
+    setSubmitting(true);
     try {
       const discountPercentage = values.totalFees > 0
         ? Math.max(0, Math.round(((values.totalFees - values.discountFees) / values.totalFees) * 100))
@@ -227,8 +221,6 @@ export default function AdminCoursesPage() {
         courseCode: values.courseCode,
         image: values.image || undefined,
         duration: Number(values.duration),
-        startDate: values.startDate,
-        endDate: values.endDate,
         totalFees: Number(values.totalFees),
         discountFees: Number(values.discountFees),
         discountPercentage,
@@ -245,6 +237,7 @@ export default function AdminCoursesPage() {
       const result = await response.json();
       if (!response.ok) {
         toast.error(result.error || 'Failed to save course');
+        setSubmitting(false);
         return;
       }
 
@@ -254,8 +247,6 @@ export default function AdminCoursesPage() {
         courseCode: result.course.courseCode,
         image: result.course.image,
         duration: result.course.duration,
-        startDate: result.course.startDate,
-        endDate: result.course.endDate,
         totalFees: result.course.totalFees,
         discountFees: result.course.discountFees,
         discountPercentage: result.course.discountPercentage,
@@ -277,6 +268,8 @@ export default function AdminCoursesPage() {
     } catch (error) {
       console.error('Error saving course:', error);
       toast.error('Failed to save course');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -322,8 +315,6 @@ export default function AdminCoursesPage() {
               { key: 'courseTitle', header: 'Course' },
               { key: 'courseCode', header: 'Code' },
               { key: 'duration', header: 'Duration', render: row => `${row.duration} months` },
-              { key: 'startDate', header: 'Start Date', render: row => formatDate(row.startDate) },
-              { key: 'endDate', header: 'End Date', render: row => formatDate(row.endDate) },
               { key: 'totalFees', header: 'Total Fees', render: row => `₹${row.totalFees.toFixed(2)}` },
               { key: 'discountFees', header: 'Discount Fees', render: row => `₹${row.discountFees.toFixed(2)}` },
               { key: 'discountPercentage', header: 'Discount %', render: row => `${row.discountPercentage}%` },
@@ -351,63 +342,52 @@ export default function AdminCoursesPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{modalTitle}</DialogTitle>
+        <DialogContent className="max-w-xl max-h-[78vh] overflow-y-auto mx-4 my-8 rounded-2xl p-6 shadow-xl bg-white">
+          <DialogHeader className="sticky top-0 z-10 bg-white/90 -mx-6 px-0 py-2 backdrop-blur-sm">
+            <DialogTitle className="ml-0">{modalTitle}</DialogTitle>
           </DialogHeader>
-          <form className="grid gap-4 mt-4" onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-2 md:grid-cols-2 md:gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="courseTitle">Course Title</Label>
-                <Input id="courseTitle" {...form.register('courseTitle')} />
-                {form.formState.errors.courseTitle && <p className="text-xs text-red-500">{form.formState.errors.courseTitle.message}</p>}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="courseCode">Course Code</Label>
-                <Input id="courseCode" {...form.register('courseCode')} />
-                {form.formState.errors.courseCode && <p className="text-xs text-red-500">{form.formState.errors.courseCode.message}</p>}
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Label className="text-sm font-semibold">Course Image</Label>
-                  <p className="text-xs text-slate-500">Optional</p>
-                </div>
-                <div
-                  onDrop={handleImageDrop}
-                  onDragOver={(event) => event.preventDefault()}
-                  className="group relative overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-center transition hover:border-slate-400 hover:bg-slate-50"
-                >
-                  {form.watch('image') ? (
-                    <img
-                      src={form.watch('image')}
-                      alt="Course"
-                      className="mx-auto h-28 w-full rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex min-h-[112px] flex-col items-center justify-center gap-2 px-2">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-slate-100 text-slate-600 transition group-hover:bg-slate-200">
-                        <ImagePlus className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">Upload course image</p>
-                        <p className="text-xs text-slate-500">Drag & drop, or browse</p>
-                      </div>
+          <form className="grid gap-4 mt-2" onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Image banner at top */}
+            <div className="w-full">
+              <Label className="mb-2 text-sm font-semibold">Course Banner</Label>
+              <div
+                onDrop={handleImageDrop}
+                onDragOver={(e) => e.preventDefault()}
+                className="relative group w-full overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white p-3 transition hover:shadow-lg hover:scale-[1.01]"
+                style={{ transitionProperty: 'box-shadow, transform' }}
+              >
+                {form.watch('image') ? (
+                  <div className="relative h-28 sm:h-40 w-full rounded-lg overflow-hidden">
+                    <img src={form.watch('image')} alt="Course banner" className="object-cover w-full h-full" />
+                    <button type="button" onClick={() => form.setValue('image', '')} className="absolute top-2 right-2 inline-flex items-center justify-center rounded-full bg-white/80 p-1 shadow">
+                      <X className="w-4 h-4 text-slate-700" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex h-28 sm:h-40 w-full flex-col items-center justify-center gap-3 rounded-lg">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+                      <ImagePlus className="h-7 w-7" />
                     </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
+                    <div className="text-center">
+                      <div className="text-sm font-semibold">Upload Course Banner</div>
+                      <div className="text-xs text-slate-500">Drag & drop a banner, or browse to upload</div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    className="inline-flex h-11 items-center gap-2 rounded-xl px-3"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg px-3"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingImage}
                   >
-                    <UploadCloud className="h-4 w-4" />
-                    {uploadingImage ? 'Uploading…' : 'Upload'}
+                    <UploadCloud className="h-4 w-4 text-slate-700" />
+                    <span className="text-sm">{uploadingImage ? 'Uploading…' : 'Upload'}</span>
                   </Button>
                   {form.watch('image') && (
-                    <Button type="button" variant="ghost" className="h-11 rounded-xl px-3" onClick={() => form.setValue('image', '')}>
+                    <Button type="button" variant="ghost" className="h-10 rounded-lg px-3" onClick={() => form.setValue('image', '')}>
                       Remove
                     </Button>
                   )}
@@ -423,77 +403,49 @@ export default function AdminCoursesPage() {
                   }}
                 />
               </div>
+            </div>
+
+            {/* Two-column responsive form */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="courseTitle">Course Title</Label>
+                <Input id="courseTitle" className="h-11 rounded-lg shadow-sm" {...form.register('courseTitle')} />
+                {form.formState.errors.courseTitle && <p className="text-xs text-red-500">{form.formState.errors.courseTitle.message}</p>}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="courseCode">Course Code</Label>
+                <Input id="courseCode" className="h-11 rounded-lg shadow-sm" {...form.register('courseCode')} />
+                {form.formState.errors.courseCode && <p className="text-xs text-red-500">{form.formState.errors.courseCode.message}</p>}
+              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="duration">Duration (months)</Label>
-                <Input id="duration" type="number" min={1} step={1} {...form.register('duration', { valueAsNumber: true })} />
+                <Input id="duration" type="number" className="h-11 rounded-lg shadow-sm" min={1} step={1} {...form.register('duration', { valueAsNumber: true })} />
                 {form.formState.errors.duration && <p className="text-xs text-red-500">{form.formState.errors.duration.message}</p>}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className="justify-between w-full">
-                      {form.watch('startDate') ? formatDate(form.watch('startDate')) : 'Pick a start date'}
-                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={form.watch('startDate') ? new Date(form.watch('startDate')) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          form.setValue('startDate', date.toISOString().slice(0, 10));
-                          setStartDatePickerOpen(false);
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {form.formState.errors.startDate && <p className="text-xs text-red-500">{form.formState.errors.startDate.message}</p>}
-              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="totalFees">Total Fees</Label>
-                <Input id="totalFees" type="number" min={0} step={0.01} {...form.register('totalFees', { valueAsNumber: true })} />
+                <Input id="totalFees" type="number" className="h-11 rounded-lg shadow-sm" min={0} step={0.01} {...form.register('totalFees', { valueAsNumber: true })} />
                 {form.formState.errors.totalFees && <p className="text-xs text-red-500">{form.formState.errors.totalFees.message}</p>}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className="justify-between w-full">
-                      {form.watch('endDate') ? formatDate(form.watch('endDate')) : 'Pick an end date'}
-                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={form.watch('endDate') ? new Date(form.watch('endDate')) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          form.setValue('endDate', date.toISOString().slice(0, 10));
-                          setEndDatePickerOpen(false);
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {form.formState.errors.endDate && <p className="text-xs text-red-500">{form.formState.errors.endDate.message}</p>}
-              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="discountFees">Discount Fees</Label>
-                <Input id="discountFees" type="number" min={0} step={0.01} {...form.register('discountFees', { valueAsNumber: true })} />
+                <Input id="discountFees" type="number" className="h-11 rounded-lg shadow-sm" min={0} step={0.01} {...form.register('discountFees', { valueAsNumber: true })} />
                 {form.formState.errors.discountFees && <p className="text-xs text-red-500">{form.formState.errors.discountFees.message}</p>}
               </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="discountPercentage">Discount (%)</Label>
-                <Input id="discountPercentage" value={`${discountPercentageValue}% OFF`} readOnly />
+                <Input id="discountPercentage" className="h-11 rounded-lg shadow-sm" value={`${discountPercentageValue}% OFF`} readOnly />
               </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={form.watch('status')} onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive')}>
-                  <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="status" className="h-11 rounded-lg shadow-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
@@ -501,16 +453,21 @@ export default function AdminCoursesPage() {
                 </Select>
                 {form.formState.errors.status && <p className="text-xs text-red-500">{form.formState.errors.status.message}</p>}
               </div>
+
+              <div className="sm:col-span-2 grid gap-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea id="notes" className="min-h-[96px] rounded-lg shadow-sm" {...form.register('notes')} />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" {...form.register('notes')} />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => { setOpen(false); clearForm(); }}>
+
+            <div className="flex justify-end items-center gap-3 pt-2">
+              <Button type="button" variant="outline" className="rounded-lg px-4 h-10" onClick={() => { setOpen(false); clearForm(); }} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit">Save Course</Button>
+              <Button type="submit" className="rounded-lg px-5 h-10 inline-flex items-center gap-2" disabled={submitting}>
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>{submitting ? 'Saving…' : 'Save Course'}</span>
+              </Button>
             </div>
           </form>
         </DialogContent>

@@ -8,6 +8,10 @@ export interface CourseEnrollmentDocument extends mongoose.Document {
   completionPercentage: number;
   createdAt: Date;
   updatedAt: Date;
+  paymentId?: string;
+  orderId?: string;
+  amount?: number;
+  paymentStatus?: string;
 }
 
 const CourseEnrollmentSchema = new mongoose.Schema<CourseEnrollmentDocument>(
@@ -38,6 +42,10 @@ const CourseEnrollmentSchema = new mongoose.Schema<CourseEnrollmentDocument>(
       min: 0, 
       max: 100 
     },
+    paymentId: { type: String },
+    orderId: { type: String, unique: true, sparse: true }, // Unique to prevent duplicate payment processing
+    amount: { type: Number },
+    paymentStatus: { type: String },
   },
   {
     timestamps: true,
@@ -45,7 +53,7 @@ const CourseEnrollmentSchema = new mongoose.Schema<CourseEnrollmentDocument>(
   }
 );
 
-// Index to prevent duplicate enrollments
+// Index to prevent duplicate enrollments for same student-course pair
 CourseEnrollmentSchema.index({ studentId: 1, courseId: 1 }, { unique: true });
 
 const CourseEnrollmentModel =

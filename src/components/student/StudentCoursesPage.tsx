@@ -48,7 +48,10 @@ export function StudentCoursesPage() {
     const fetchCourses = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/courses");
+        const response = await fetch("/api/courses", {
+          credentials: 'include',
+          cache: 'no-store',
+        });
         const data = await response.json();
 
         if (response.ok) {
@@ -74,7 +77,10 @@ export function StudentCoursesPage() {
 
     const fetchEnrolledCourses = async () => {
       try {
-        const response = await fetch("/api/student/courses");
+        const response = await fetch("/api/student/courses", {
+          credentials: 'include',
+          cache: 'no-store',
+        });
         const data = await response.json();
 
         if (response.ok) {
@@ -117,7 +123,10 @@ export function StudentCoursesPage() {
   const handleRefresh = async () => {
     try {
       setSearching(true);
-      const response = await fetch("/api/student/courses");
+      const response = await fetch("/api/student/courses", {
+        credentials: 'include',
+        cache: 'no-store',
+      });
       const data = await response.json();
 
       if (response.ok) {
@@ -224,6 +233,7 @@ export function StudentCoursesPage() {
             <div key={course.id} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
               <CourseCard
                 courseId={course.id}
+                courseCode={course.courseCode}
                 courseTitle={course.courseTitle}
                 image={course.image}
                 duration={course.duration}
