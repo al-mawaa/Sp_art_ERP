@@ -43,6 +43,28 @@ type Student = {
   howYouComeToKnow?: string;
 };
 
+type EnrollmentDetails = {
+  enrollmentId?: string;
+  courseId?: string;
+  courseTitle?: string;
+  courseCode?: string;
+  enrollmentDate?: string;
+  status?: string;
+};
+
+type StudentEnrollmentResponse = EnrollmentDetails & {
+  studentId: string;
+};
+
+type BatchDetails = {
+  batchDay?: string;
+  batchTime?: string;
+  startDate?: string;
+  startMonth?: string;
+  endDate?: string;
+  endMonth?: string;
+};
+
 type StudentForm = {
   id?: string;
   fullName: string;
@@ -66,26 +88,6 @@ type StudentForm = {
   motherOccupation: string;
   address: string;
   howYouKnowUs: string;
-};
-
-type StudentEnrollment = {
-  enrollmentId?: string;
-  studentId: string;
-  courseId?: string;
-  courseTitle?: string;
-  courseCode?: string;
-  enrollmentDate?: string;
-  status?: string;
-};
-
-type StudentBatch = {
-  batchDay?: string;
-  batchTime?: string;
-  batchTiming?: string;
-  startDate?: string;
-  endDate?: string;
-  startMonth?: string;
-  endMonth?: string;
 };
 
 const CLASSES = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
@@ -179,8 +181,8 @@ export default function StudentsPage() {
   const [filterFee, setFilterFee] = useState('All');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [viewStudent, setViewStudent] = useState<Student | null>(null);
-  const [currentEnrollment, setCurrentEnrollment] = useState<StudentEnrollment | null>(null);
-  const [currentBatch, setCurrentBatch] = useState<StudentBatch | null>(null);
+  const [currentEnrollment, setCurrentEnrollment] = useState<EnrollmentDetails | null>(null);
+  const [currentBatch, setCurrentBatch] = useState<BatchDetails | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [form, setForm] = useState<StudentForm>(defaultForm);
   const [currentPage, setCurrentPage] = useState(1);
@@ -252,10 +254,10 @@ export default function StudentsPage() {
           console.warn('Failed to fetch enrollments for student profile');
           return;
         }
-        const json = (await res.json()) as { enrollments?: StudentEnrollment[] };
-        const enrollments: StudentEnrollment[] = Array.isArray(json.enrollments) ? json.enrollments : [];
+        const json = await res.json();
+        const enrollments: StudentEnrollmentResponse[] = json.enrollments || [];
         // Find latest enrollment for this student
-        const matching = enrollments.find((e) => e.studentId === viewStudent.id);
+        const matching = enrollments.find(e => e.studentId === viewStudent.id);
         if (mounted && matching) {
           setCurrentEnrollment(matching);
 
@@ -264,7 +266,7 @@ export default function StudentsPage() {
             try {
               const bres = await fetch(`/api/admin/students/${viewStudent.id}/batch`, { credentials: 'include' });
               if (!bres.ok) return;
-              const bjson = (await bres.json()) as { success?: boolean; data?: { batch?: StudentBatch } };
+              const bjson = await bres.json();
               if (bjson?.success && bjson.data?.batch) {
                 if (mounted) setCurrentBatch(bjson.data.batch);
               }
