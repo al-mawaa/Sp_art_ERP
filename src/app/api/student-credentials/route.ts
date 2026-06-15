@@ -79,15 +79,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Password validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' },
-        { status: 400 }
-      );
-    }
-
     // Check if credentials already exist for this student id
     const existingCredentials = await StudentCredentials.findOne({ studentId: computedStudentId });
     if (existingCredentials) {

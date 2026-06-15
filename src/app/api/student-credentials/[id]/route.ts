@@ -99,14 +99,6 @@ export async function PUT(
           { status: 400 }
         );
       }
-
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-      if (!passwordRegex.test(password)) {
-        return NextResponse.json(
-          { error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' },
-          { status: 400 }
-        );
-      }
     }
 
     const updateData: Partial<typeof body> = {};

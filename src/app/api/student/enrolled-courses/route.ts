@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongodb';
+import CourseEnrollment from '@/lib/models/CourseEnrollment';
+import Course, { type CourseDocument } from '@/lib/models/Course';
+import Student from '@/lib/models/Student';
+import { requireStudentFromRequest } from '@/lib/auth/require-student';
+import mongoose from 'mongoose';
+
+export const runtime = 'nodejs';
+=======
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/mongodb";
@@ -9,6 +20,7 @@ import { requireStudentFromRequest } from "@/lib/auth/require-student";
 import { refreshEnrollmentPaymentStatus } from "@/lib/enrollment/enrollmentPaymentService";
 
 export const runtime = "nodejs";
+>>>>>>> eeb514f09b77a18e9c88e0510a1b76b0bbbf2b02
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +40,29 @@ export async function GET(request: NextRequest) {
 
     const enrolledCourses = [];
 
+<<<<<<< HEAD
+        return {
+          enrollmentId: enrollment._id.toString(),
+          courseId: course._id.toString(),
+          courseTitle: course.courseTitle,
+          courseCode: course.courseCode,
+          instructor: course.instructor || 'Not Assigned',
+          image: course.image,
+          duration: course.duration,
+          totalFees: course.totalFees,
+          discountFees: course.discountFees,
+          discountPercentage: course.discountPercentage,
+          status: enrollment.status,
+          enrollmentDate: enrollment.enrollmentDate,
+          completionPercentage: enrollment.completionPercentage,
+          amount: enrollment.amount,
+          paymentStatus: enrollment.paymentStatus,
+          rulesAndRegulations: course.rulesAndRegulations,
+          materialsRequired: course.materialsRequired,
+        };
+      })
+      .filter(course => course !== null);
+=======
     for (const enrollment of enrollments) {
       const course = enrollment.courseId as {
         _id: mongoose.Types.ObjectId;
@@ -40,6 +75,7 @@ export async function GET(request: NextRequest) {
         discountFees?: number;
         discountPercentage?: number;
       } | null;
+>>>>>>> eeb514f09b77a18e9c88e0510a1b76b0bbbf2b02
 
       if (!course?.courseTitle) continue;
 

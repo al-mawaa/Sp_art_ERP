@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
         discountPercentage: course.discountPercentage,
         status: course.status,
         notes: course.notes,
+        rulesAndRegulations: course.rulesAndRegulations,
+        materialsRequired: course.materialsRequired,
         createdAt: course.createdAt,
       })),
     });
@@ -49,6 +51,8 @@ export async function POST(request: NextRequest) {
       discountFees,
       status = 'active',
       notes,
+      rulesAndRegulations,
+      materials,
       createdBy,
     } = body;
 
@@ -110,6 +114,8 @@ export async function POST(request: NextRequest) {
       discountPercentage,
       status: normalizedStatus as 'active' | 'inactive',
       notes,
+      rulesAndRegulations: typeof rulesAndRegulations === 'string' ? rulesAndRegulations : '',
+      materialsRequired: typeof materials === 'string' ? materials : '',
       createdBy,
     });
 
@@ -130,6 +136,8 @@ export async function POST(request: NextRequest) {
           discountPercentage: course.discountPercentage,
           status: course.status,
           notes: course.notes,
+          rulesAndRegulations: course.rulesAndRegulations,
+          materialsRequired: course.materialsRequired,
           createdAt: course.createdAt,
         },
       },
