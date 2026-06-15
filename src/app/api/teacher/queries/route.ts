@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import dbConnect from "@/lib/mongodb";
 import Teacher from "@/lib/models/Teacher";
 import Query from "@/lib/models/Query";
+import { createUserQuery } from "@/lib/queries/createQuery";
+import { getCategoryLabel } from "@/lib/queries/queryCategories";
 import { migrateAllQueriesCollections } from "@/lib/queries/queryAccess";
 import { requireTeacherFromRequest } from "@/lib/auth/require-teacher";
 import {
@@ -12,12 +13,6 @@ import {
 import { sendNewTeacherQueryEmails } from "@/lib/email/teacherQueryEmail";
 
 export const runtime = "nodejs";
-
-const createSchema = z.object({
-  teacherName: z.string().trim().min(2, "Name must be at least 2 characters"),
-  teacherEmail: z.string().trim().email("Enter a valid email"),
-  remarks: z.string().trim().min(10, "Remarks must be at least 10 characters"),
-});
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,45 +63,34 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;
 
     const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors.map(e => e.message).join("; ") },
-        { status: 422 },
-      );
-    }
-
     await dbConnect();
     const teacher = await Teacher.findById(auth.teacher.id);
     if (!teacher) {
       return NextResponse.json({ success: false, error: "Teacher not found" }, { status: 404 });
     }
 
-    const pending = await Query.findOne({
+    const result = await createUserQuery({
       role: "teacher",
-      userId: teacher._id,
-      status: "pending",
-    }).lean();
-    if (pending) {
+      userId: auth.teacher.id,
+      personName: teacher.fullName,
+      personEmail: teacher.email,
+      body,
+      nameKey: "teacherName",
+      emailKey: "teacherEmail",
+    });
+
+    if (!result.ok) {
       return NextResponse.json(
-        { success: false, error: "You already have a pending query. Please wait for admin review." },
-        { status: 400 },
+        { success: false, error: result.error },
+        { status: result.status ?? 422 },
       );
     }
 
-    const doc = await Query.create({
-      role: "teacher",
-      userId: teacher._id,
-      personName: parsed.data.teacherName,
-      personEmail: parsed.data.teacherEmail.toLowerCase(),
-      remarks: parsed.data.remarks,
-      status: "pending",
-      adminRemark: "",
-    });
-
+    const doc = result.doc;
     const emailWarnings = await sendNewTeacherQueryEmails({
       teacherName: doc.personName,
       teacherEmail: doc.personEmail,
+      category: getCategoryLabel(doc.category),
       remarks: doc.remarks,
     }).catch(err => {
       console.error("[teacher/queries POST] email", err);

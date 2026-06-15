@@ -11,6 +11,7 @@ export type StudentQueryDto = {
   id: string;
   studentName: string;
   studentEmail: string;
+  category: string;
   remarks: string;
   status: string;
   adminRemark: string;
@@ -24,6 +25,7 @@ export function serializeStudentQuery(doc: QueryDocument | Record<string, unknow
     id: n.id,
     studentName: n.personName,
     studentEmail: n.personEmail,
+    category: n.category,
     remarks: n.remarks,
     status: n.status,
     adminRemark: n.adminRemark,
@@ -41,6 +43,7 @@ export async function getStudentProfileEditAccess(studentId: string) {
           id: access.latestQuery.id,
           studentName: access.latestQuery.personName,
           studentEmail: access.latestQuery.personEmail,
+          category: access.latestQuery.category,
           remarks: access.latestQuery.remarks,
           status: access.latestQuery.status,
           adminRemark: access.latestQuery.adminRemark,

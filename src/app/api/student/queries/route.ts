@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import mongoose from "mongoose";
-import { z } from "zod";
 import dbConnect from "@/lib/mongodb";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireStudentFromRequest } from "@/lib/auth/require-student";
 import { findStudentById } from "@/lib/student-portal";
 import Query from "@/lib/models/Query";
+import { createUserQuery } from "@/lib/queries/createQuery";
+import { getCategoryLabel } from "@/lib/queries/queryCategories";
 import {
   getStudentProfileEditAccess,
   migrateAllQueriesCollections,
@@ -14,12 +14,6 @@ import {
 import { sendNewStudentQueryEmails } from "@/lib/email/queryEmail";
 
 export const runtime = "nodejs";
-
-const createSchema = z.object({
-  studentName: z.string().trim().min(2, "Name must be at least 2 characters"),
-  studentEmail: z.string().trim().email("Enter a valid email"),
-  remarks: z.string().trim().min(10, "Remarks must be at least 10 characters"),
-});
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,39 +45,29 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;
 
     const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return apiError(parsed.error.errors.map(e => e.message).join("; "), 422);
-    }
-
     await dbConnect();
     const student = await findStudentById(auth.student.id);
     if (!student) return apiError("Student not found", 404);
 
-    await migrateAllQueriesCollections();
-
-    const pending = await Query.findOne({
+    const result = await createUserQuery({
       role: "student",
-      userId: student._id,
-      status: "pending",
-    }).lean();
-    if (pending) {
-      return apiError("You already have a pending query. Please wait for admin review.", 400);
-    }
-
-    const doc = await Query.create({
-      role: "student",
-      userId: student._id,
-      personName: parsed.data.studentName,
-      personEmail: parsed.data.studentEmail.toLowerCase(),
-      remarks: parsed.data.remarks,
-      status: "pending",
-      adminRemark: "",
+      userId: auth.student.id,
+      personName: student.fullName,
+      personEmail: student.email,
+      body,
+      nameKey: "studentName",
+      emailKey: "studentEmail",
     });
 
+    if (!result.ok) {
+      return apiError(result.error, result.status ?? 422);
+    }
+
+    const doc = result.doc;
     const emailWarnings = await sendNewStudentQueryEmails({
       studentName: doc.personName,
       studentEmail: doc.personEmail,
+      category: getCategoryLabel(doc.category),
       remarks: doc.remarks,
     }).catch(err => {
       console.error("[student/queries POST] email", err);

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import dbConnect from "@/lib/mongodb";
 import SeniorTeacher from "@/lib/models/SeniorTeacher";
 import Query from "@/lib/models/Query";
+import { createUserQuery } from "@/lib/queries/createQuery";
+import { getCategoryLabel } from "@/lib/queries/queryCategories";
 import { migrateAllQueriesCollections } from "@/lib/queries/queryAccess";
 import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
 import {
@@ -12,12 +13,6 @@ import {
 import { sendNewSeniorTeacherQueryEmails } from "@/lib/email/seniorTeacherQueryEmail";
 
 export const runtime = "nodejs";
-
-const createSchema = z.object({
-  seniorTeacherName: z.string().trim().min(2, "Name must be at least 2 characters"),
-  seniorTeacherEmail: z.string().trim().email("Enter a valid email"),
-  remarks: z.string().trim().min(10, "Remarks must be at least 10 characters"),
-});
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,46 +63,34 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;
 
     const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors.map(e => e.message).join("; ") },
-        { status: 422 },
-      );
-    }
-
     await dbConnect();
-    await migrateAllQueriesCollections();
     const senior = await SeniorTeacher.findById(auth.seniorTeacher.id);
     if (!senior) {
       return NextResponse.json({ success: false, error: "Senior teacher not found" }, { status: 404 });
     }
 
-    const pending = await Query.findOne({
+    const result = await createUserQuery({
       role: "senior_teacher",
-      userId: senior._id,
-      status: "pending",
-    }).lean();
-    if (pending) {
+      userId: auth.seniorTeacher.id,
+      personName: senior.fullName,
+      personEmail: senior.email,
+      body,
+      nameKey: "seniorTeacherName",
+      emailKey: "seniorTeacherEmail",
+    });
+
+    if (!result.ok) {
       return NextResponse.json(
-        { success: false, error: "You already have a pending query. Please wait for admin review." },
-        { status: 400 },
+        { success: false, error: result.error },
+        { status: result.status ?? 422 },
       );
     }
 
-    const doc = await Query.create({
-      role: "senior_teacher",
-      userId: senior._id,
-      personName: parsed.data.seniorTeacherName,
-      personEmail: parsed.data.seniorTeacherEmail.toLowerCase(),
-      remarks: parsed.data.remarks,
-      status: "pending",
-      adminRemark: "",
-    });
-
+    const doc = result.doc;
     const emailWarnings = await sendNewSeniorTeacherQueryEmails({
       seniorTeacherName: doc.personName,
       seniorTeacherEmail: doc.personEmail,
+      category: getCategoryLabel(doc.category),
       remarks: doc.remarks,
     }).catch(err => {
       console.error("[senior-teacher/queries POST] email", err);

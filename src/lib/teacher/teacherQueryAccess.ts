@@ -8,6 +8,7 @@ export type TeacherQueryDto = {
   id: string;
   teacherName: string;
   teacherEmail: string;
+  category: string;
   remarks: string;
   status: string;
   adminRemark: string;
@@ -21,6 +22,7 @@ export function serializeTeacherQuery(doc: QueryDocument | Record<string, unknow
     id: n.id,
     teacherName: n.personName,
     teacherEmail: n.personEmail,
+    category: n.category,
     remarks: n.remarks,
     status: n.status,
     adminRemark: n.adminRemark,
@@ -38,6 +40,7 @@ export async function getTeacherProfileEditAccess(teacherId: string) {
           id: access.latestQuery.id,
           teacherName: access.latestQuery.personName,
           teacherEmail: access.latestQuery.personEmail,
+          category: access.latestQuery.category,
           remarks: access.latestQuery.remarks,
           status: access.latestQuery.status,
           adminRemark: access.latestQuery.adminRemark,
