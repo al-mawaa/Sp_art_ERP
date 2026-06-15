@@ -5,6 +5,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireStudentFromRequest } from "@/lib/auth/require-student";
 import { findStudentById, toProfileDto, updateStudentProfile } from "@/lib/student-portal";
 import { getStudentProfileEditAccess } from "@/lib/student/studentQueryAccess";
+import { consumeProfileEditAccess } from "@/lib/queries/queryAccess";
 import { findBatchesForStudent } from "@/lib/student/studentBatches";
 
 export const runtime = "nodejs";
@@ -92,6 +93,8 @@ export async function PUT(request: NextRequest) {
         404,
       );
     }
+
+    await consumeProfileEditAccess("student", auth.student.id);
 
     return apiSuccess(
       { profile: toProfileDto(student) },

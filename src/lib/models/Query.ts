@@ -16,6 +16,8 @@ export interface QueryDocument extends mongoose.Document {
   reviewedAt?: Date;
   reviewedBy?: string;
   actionType?: "approved" | "rejected";
+  /** Set when the user saves profile changes after an approved profile_correction query */
+  profileEditUsedAt?: Date;
   /** Profile correction */
   requestedChanges?: string;
   /** Switch batch */
@@ -83,6 +85,7 @@ const QuerySchema = new mongoose.Schema<QueryDocument>(
     reviewedAt: { type: Date },
     reviewedBy: { type: String, trim: true },
     actionType: { type: String, enum: ["approved", "rejected"] },
+    profileEditUsedAt: { type: Date },
     requestedChanges: { type: String, trim: true },
     currentBatchId: { type: String, trim: true },
     requestedBatchId: { type: String, trim: true },

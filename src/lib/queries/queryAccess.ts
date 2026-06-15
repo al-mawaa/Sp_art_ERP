@@ -294,9 +294,28 @@ export async function getProfileEditAccess(role: QueryRole, userId: string) {
   ]);
 
   return {
-    canEditProfile: latestProfile?.status === "approved",
+    canEditProfile:
+      latestProfile?.status === "approved" && !latestProfile?.profileEditUsedAt,
     latestQuery: latest ? normalizeQueryFields(latest) : null,
   };
+}
+
+export async function consumeProfileEditAccess(role: QueryRole, userId: string): Promise<void> {
+  if (!mongoose.Types.ObjectId.isValid(userId)) return;
+
+  await migrateAllQueriesCollections();
+
+  await Query.findOneAndUpdate(
+    {
+      role,
+      userId: new mongoose.Types.ObjectId(userId),
+      category: "profile_correction",
+      status: "approved",
+      $or: [{ profileEditUsedAt: { $exists: false } }, { profileEditUsedAt: null }],
+    },
+    { $set: { profileEditUsedAt: new Date() } },
+    { sort: { createdAt: -1 } },
+  );
 }
 
 export async function fetchAllAdminQueries(filters: {
