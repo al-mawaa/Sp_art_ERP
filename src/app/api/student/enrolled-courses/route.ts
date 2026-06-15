@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
         totalFees?: number;
         discountFees?: number;
         discountPercentage?: number;
+        rulesAndRegulations?: string;
+        materialsRequired?: string;
       } | null;
 
       if (!course?.courseTitle) continue;
@@ -67,6 +69,8 @@ export async function GET(request: NextRequest) {
         totalFees: course.totalFees,
         discountFees: course.discountFees,
         discountPercentage: course.discountPercentage,
+        rulesAndRegulations: course.rulesAndRegulations,
+        materialsRequired: course.materialsRequired,
         status: enrollment.status,
         enrollmentDate: enrollment.enrollmentDate,
         completionPercentage: enrollment.completionPercentage,

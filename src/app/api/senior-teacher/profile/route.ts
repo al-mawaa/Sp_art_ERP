@@ -4,6 +4,7 @@ import dbConnect from "@/lib/mongodb";
 import SeniorTeacher, { type SeniorTeacherDocument } from "@/lib/models/SeniorTeacher";
 import { requireSeniorTeacherFromRequest } from "@/lib/auth/require-senior-teacher";
 import { getSeniorTeacherProfileEditAccess } from "@/lib/senior-teacher/seniorTeacherQueryAccess";
+import { consumeProfileEditAccess } from "@/lib/queries/queryAccess";
 
 export const runtime = "nodejs";
 
@@ -154,6 +155,8 @@ export async function PUT(request: NextRequest) {
         { status: 404 },
       );
     }
+
+    await consumeProfileEditAccess("senior_teacher", auth.seniorTeacher.id);
 
     return NextResponse.json({
       success: true,

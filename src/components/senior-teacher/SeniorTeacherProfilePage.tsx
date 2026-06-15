@@ -159,6 +159,8 @@ export function SeniorTeacherProfilePage() {
       setProfile(p);
       setForm(toForm(p));
       setEditing(false);
+      setCanEditProfile(false);
+      void refreshQueryStatus();
       toast.success(json.message || "Saved");
     } catch (e) {
       toast.error((e as Error).message);
@@ -243,20 +245,7 @@ export function SeniorTeacherProfilePage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            {!editing ? (
-              <Button
-                className="rounded-xl gradient-primary text-white border-0"
-                onClick={() => setEditing(true)}
-                disabled={!canEditProfile}
-                title={
-                  canEditProfile
-                    ? "Edit your profile"
-                    : "Submit and get a query approved to edit your profile"
-                }
-              >
-                <Pencil className="w-4 h-4 mr-1" /> Edit Profile
-              </Button>
-            ) : (
+            {editing ? (
               <>
                 <Button
                   className="rounded-xl gradient-primary text-white border-0"
@@ -269,7 +258,15 @@ export function SeniorTeacherProfilePage() {
                   Cancel
                 </Button>
               </>
-            )}
+            ) : canEditProfile ? (
+              <Button
+                className="rounded-xl gradient-primary text-white border-0"
+                onClick={() => setEditing(true)}
+                title="Edit your profile"
+              >
+                <Pencil className="w-4 h-4 mr-1" /> Edit Profile
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               className="rounded-xl border-primary/30 text-primary hover:bg-primary/5"

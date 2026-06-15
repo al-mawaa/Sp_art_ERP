@@ -4,6 +4,7 @@ import dbConnect from "@/lib/mongodb";
 import Teacher, { type TeacherDocument } from "@/lib/models/Teacher";
 import { requireTeacherFromRequest } from "@/lib/auth/require-teacher";
 import { getTeacherProfileEditAccess } from "@/lib/teacher/teacherQueryAccess";
+import { consumeProfileEditAccess } from "@/lib/queries/queryAccess";
 
 export const runtime = "nodejs";
 
@@ -121,6 +122,8 @@ export async function PUT(request: NextRequest) {
     }
 
     await teacher.save();
+
+    await consumeProfileEditAccess("teacher", auth.teacher.id);
 
     return NextResponse.json({
       success: true,
