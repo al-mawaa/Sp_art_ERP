@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send, Plus, Search, Paperclip, Loader2, X, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Avatar } from "@/components/shared/Avatar";
@@ -78,37 +78,16 @@ export function Chat() {
     return threads.find(thread => thread.id === activeId) ?? threads[0] ?? null;
   }, [threads, activeId]);
 
-  useEffect(() => {
-    loadCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    loadThreads();
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!active) return;
-    setActiveId(active.id);
-    loadMessages(active.id);
-  }, [active?.id]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages.length]);
-
-  async function loadCurrentUser() {
+  const loadCurrentUser = useCallback(async () => {
     try {
       const data = await fetchJson<ChatUser>("/api/chat/me");
       setCurrentUser(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load chat user.");
     }
-  }
+  }, []);
 
-  async function loadThreads() {
+  const loadThreads = useCallback(async () => {
     if (!currentUser) return;
     setPending(true);
     try {
@@ -122,9 +101,9 @@ export function Chat() {
     } finally {
       setPending(false);
     }
-  }
+  }, [currentUser, activeId]);
 
-  async function loadMessages(conversationId: string) {
+  const loadMessages = useCallback(async (conversationId: string) => {
     setPending(true);
     try {
       const data = await fetchJson<ChatMessageType[]>(`/api/chat/conversations/${conversationId}/messages?limit=100`);
@@ -134,7 +113,27 @@ export function Chat() {
     } finally {
       setPending(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadCurrentUser();
+  }, [loadCurrentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    loadThreads();
+  }, [currentUser, loadThreads]);
+
+  useEffect(() => {
+    if (!active) return;
+    loadMessages(active.id);
+  }, [active, loadMessages]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages.length]);
 
   async function deleteConversation(conversationId: string) {
     if (!conversationId) return;
@@ -381,15 +380,7 @@ function NewChatDialog({ open, onOpenChange, onCreate }: { open: boolean; onOpen
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const timeout = setTimeout(() => {
-      loadRecipients();
-    }, 200);
-    return () => clearTimeout(timeout);
-  }, [open, query]);
-
-  async function loadRecipients() {
+  const loadRecipients = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await fetchJson<ChatUser[]>(`/api/chat/users?q=${encodeURIComponent(query)}`);
@@ -403,7 +394,15 @@ function NewChatDialog({ open, onOpenChange, onCreate }: { open: boolean; onOpen
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [query, selectedId]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timeout = setTimeout(() => {
+      loadRecipients();
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [open, loadRecipients]);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -17,8 +17,7 @@ const adminNav: Array<NavItem | NavSection> = [
   {
     title: "Student Management",
     items: [
-      { to: "/admin/admission", label: "Admission", icon: UserPlus },
-      { to: "/admin/students", label: "Students", icon: Users },
+      { to: "/admin/students", label: "Student admission", icon: Users },
       { to: "/admin/enrolled", label: "Enrolled", icon: ClipboardCheck },
       { to: "/admin/referrals", label: "Referral Management", icon: Gift },
       { to: "/admin/credentials", label: "Credentials", icon: Shield },
