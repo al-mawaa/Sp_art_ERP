@@ -24,7 +24,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { parseJsonResponse } from "@/lib/api/parseJsonResponse";
-import type { UnifiedAdminQuery } from "@/lib/admin/unifiedQueries";
+import type { UnifiedAdminQuery, QueryStats } from "@/lib/admin/unifiedQueries";
+import { QUERY_CATEGORIES, QUERY_CATEGORY_LABELS } from "@/lib/queries/queryCategories";
+import { QueryCategoryBadge } from "@/components/queries/QueryCategoryBadge";
+import { QueryAdminDetailSections } from "@/components/queries/QueryAdminDetailSections";
 import { batchFetch } from "@/lib/batch/batchFetch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -50,12 +53,28 @@ function RoleBadge({ roleType }: { roleType: UnifiedAdminQuery["roleType"] }) {
   );
 }
 
+function approveLabel(category: string) {
+  if (category === "switch_batch") return "Approve Switch";
+  if (category === "course_change") return "Approve Change";
+  if (category === "attendance_correction") return "Approve Correction";
+  return "Approve";
+}
+
+function rejectLabel(category: string) {
+  if (category === "switch_batch") return "Reject Request";
+  if (category === "course_change") return "Reject Change";
+  if (category === "attendance_correction") return "Reject Correction";
+  return "Reject";
+}
+
 export default function AdminQueriesPage() {
   const [rows, setRows] = useState<UnifiedAdminQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stats, setStats] = useState<QueryStats | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -70,6 +89,7 @@ export default function AdminQueriesPage() {
       if (search.trim()) params.set("search", search.trim());
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (roleFilter !== "all") params.set("roleType", roleFilter);
+      if (categoryFilter !== "all") params.set("category", categoryFilter);
       params.set("page", String(page));
       params.set("limit", "12");
 
@@ -78,12 +98,14 @@ export default function AdminQueriesPage() {
         error?: string;
         data?: {
           queries: UnifiedAdminQuery[];
+          stats: QueryStats;
           total: number;
           pagination: { totalPages: number };
         };
       }>(res);
       if (!res.ok) throw new Error(json.error || "Failed to load");
       setRows(json.data?.queries ?? []);
+      setStats(json.data?.stats ?? null);
       setTotal(json.data?.total ?? 0);
       setTotalPages(json.data?.pagination?.totalPages ?? 1);
     } catch (e) {
@@ -91,7 +113,7 @@ export default function AdminQueriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, roleFilter, page]);
+  }, [search, statusFilter, roleFilter, categoryFilter, page]);
 
   useEffect(() => {
     const t = setTimeout(() => void load(), 300);
@@ -100,7 +122,7 @@ export default function AdminQueriesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, roleFilter]);
+  }, [search, statusFilter, roleFilter, categoryFilter]);
 
   const openDetail = (r: UnifiedAdminQuery) => {
     setDetail(r);
@@ -144,10 +166,33 @@ export default function AdminQueriesPage() {
     <div className="space-y-6 pb-8">
       <PageHeader
         title="Queries"
-        subtitle="Profile edit requests from students, teachers, and senior teachers"
+        subtitle="Manage categorized requests from students, teachers, and senior teachers"
       />
 
-      <div className="card-soft p-4 flex flex-col lg:flex-row gap-3">
+      {stats && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            { label: "Total Queries", value: stats.total },
+            { label: "Pending", value: stats.pending },
+            { label: "Approved", value: stats.approved },
+            { label: "Rejected", value: stats.rejected },
+            {
+              label: "Top Category",
+              value: QUERY_CATEGORY_LABELS[
+                (Object.entries(stats.byCategory).sort((a, b) => b[1] - a[1])[0]?.[0] ??
+                  "other") as keyof typeof QUERY_CATEGORY_LABELS
+              ],
+            },
+          ].map(card => (
+            <div key={card.label} className="card-soft p-4">
+              <p className="text-xs text-muted-foreground">{card.label}</p>
+              <p className="mt-1 text-xl font-display font-semibold">{card.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="card-soft p-4 flex flex-col lg:flex-row gap-3 flex-wrap">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -166,6 +211,19 @@ export default function AdminQueriesPage() {
             <SelectItem value="student">Student</SelectItem>
             <SelectItem value="teacher">Teacher</SelectItem>
             <SelectItem value="senior_teacher">Senior teacher</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-full sm:w-48 rounded-xl">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {QUERY_CATEGORIES.map(cat => (
+              <SelectItem key={cat} value={cat}>
+                {QUERY_CATEGORY_LABELS[cat]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -212,6 +270,7 @@ export default function AdminQueriesPage() {
                 <div className="flex flex-wrap gap-1.5">
                   <QueryStatusBadge status={r.status} />
                   <RoleBadge roleType={r.roleType} />
+                  <QueryCategoryBadge category={r.category} />
                 </div>
                 <span className="text-[11px] text-muted-foreground flex items-center gap-1 shrink-0">
                   <Calendar className="h-3 w-3" />
@@ -258,7 +317,7 @@ export default function AdminQueriesPage() {
                         void patchQuery(r, "approve");
                       }}
                     >
-                      Approve
+                      {approveLabel(r.category)}
                     </Button>
                     <Button
                       size="sm"
@@ -270,7 +329,7 @@ export default function AdminQueriesPage() {
                         void patchQuery(r, "reject");
                       }}
                     >
-                      Reject
+                      {rejectLabel(r.category)}
                     </Button>
                   </>
                 )}
@@ -309,7 +368,7 @@ export default function AdminQueriesPage() {
       )}
 
       <Dialog open={!!detail} onOpenChange={open => !open && setDetail(null)}>
-        <DialogContent className="rounded-3xl max-w-lg">
+        <DialogContent className="rounded-3xl max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">Query details</DialogTitle>
           </DialogHeader>
@@ -318,23 +377,13 @@ export default function AdminQueriesPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <QueryStatusBadge status={detail.status} />
                 <RoleBadge roleType={detail.roleType} />
-                <span className="text-muted-foreground">
-                  {new Date(detail.createdAt).toLocaleString("en-IN")}
-                </span>
+                <QueryCategoryBadge category={detail.category} />
               </div>
-              <p>
-                <span className="text-muted-foreground">{roleLabel(detail.roleType)}:</span>{" "}
-                {detail.personName}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Email:</span> {detail.personEmail}
-              </p>
-              <div className="rounded-xl bg-muted/40 p-3">
-                <p className="text-muted-foreground text-xs uppercase mb-1">Query</p>
-                <p className="whitespace-pre-wrap">{detail.remarks}</p>
-              </div>
+
+              <QueryAdminDetailSections detail={detail} />
+
               <div className="space-y-1.5">
-                <Label htmlFor="admin-remark">Admin remark</Label>
+                <Label htmlFor="admin-remark">Admin remarks</Label>
                 <Textarea
                   id="admin-remark"
                   rows={3}
@@ -351,7 +400,7 @@ export default function AdminQueriesPage() {
                     disabled={acting}
                     onClick={() => void patchQuery(detail, "approve")}
                   >
-                    Approve
+                    {approveLabel(detail.category)}
                   </Button>
                   <Button
                     variant="destructive"
@@ -359,7 +408,7 @@ export default function AdminQueriesPage() {
                     disabled={acting}
                     onClick={() => void patchQuery(detail, "reject")}
                   >
-                    Reject
+                    {rejectLabel(detail.category)}
                   </Button>
                 </div>
               ) : (

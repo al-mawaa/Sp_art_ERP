@@ -15,6 +15,7 @@ import {
 import { sendStudentQueryStatusEmail } from "@/lib/email/queryEmail";
 import { sendTeacherQueryStatusEmail } from "@/lib/email/teacherQueryEmail";
 import { sendSeniorTeacherQueryStatusEmail } from "@/lib/email/seniorTeacherQueryEmail";
+import { getCategoryLabel } from "@/lib/queries/queryCategories";
 
 export const runtime = "nodejs";
 
@@ -37,14 +38,17 @@ async function sendStatusEmailForRole(
   status: string,
   adminRemark: string,
   approved: boolean,
+  category: string,
 ) {
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const categoryLabel = category;
   if (role === "teacher") {
     await sendTeacherQueryStatusEmail(
       personEmail,
       {
         teacherName: personName,
         teacherEmail: personEmail,
+        category: categoryLabel,
         remarks,
         status: statusLabel,
         adminRemark,
@@ -59,6 +63,7 @@ async function sendStatusEmailForRole(
       {
         seniorTeacherName: personName,
         seniorTeacherEmail: personEmail,
+        category: categoryLabel,
         remarks,
         status: statusLabel,
         adminRemark,
@@ -72,6 +77,7 @@ async function sendStatusEmailForRole(
     {
       studentName: personName,
       studentEmail: personEmail,
+      category: categoryLabel,
       remarks,
       status: statusLabel,
       adminRemark,
@@ -132,6 +138,8 @@ export async function PATCH(
     doc.status = approved ? "approved" : "rejected";
     doc.adminRemark = adminRemark;
     doc.reviewedAt = new Date();
+    doc.reviewedBy = "Admin";
+    doc.actionType = approved ? "approved" : "rejected";
     await doc.save();
 
     try {
@@ -143,6 +151,7 @@ export async function PATCH(
         doc.status,
         doc.adminRemark || "",
         approved,
+        getCategoryLabel(fields.category),
       );
     } catch (e) {
       console.error("[admin/queries PATCH] email", e);

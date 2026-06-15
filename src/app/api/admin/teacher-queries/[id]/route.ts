@@ -10,6 +10,7 @@ import {
 } from "@/lib/queries/queryAccess";
 import { serializeTeacherQuery } from "@/lib/teacher/teacherQueryAccess";
 import { sendTeacherQueryStatusEmail } from "@/lib/email/teacherQueryEmail";
+import { getCategoryLabel } from "@/lib/queries/queryCategories";
 
 export const runtime = "nodejs";
 
@@ -93,6 +94,7 @@ export async function PATCH(
         {
           teacherName: fields.personName,
           teacherEmail: fields.personEmail,
+          category: getCategoryLabel(fields.category),
           remarks: fields.remarks,
           status: doc.status.charAt(0).toUpperCase() + doc.status.slice(1),
           adminRemark: doc.adminRemark,

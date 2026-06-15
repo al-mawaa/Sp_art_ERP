@@ -1,8 +1,24 @@
 import mongoose from "mongoose";
 import Query, { type QueryDocument, type QueryRole } from "@/lib/models/Query";
+import type { QueryCategory } from "@/lib/queries/queryCategories";
 
 export type { QueryRole };
 export type QueryRoleType = QueryRole;
+
+export type QueryCategoryFieldsDto = {
+  requestedChanges?: string;
+  currentBatchId?: string;
+  requestedBatchId?: string;
+  currentBatchName?: string;
+  requestedBatchName?: string;
+  currentCourseId?: string;
+  requestedCourseId?: string;
+  currentCourseName?: string;
+  requestedCourseName?: string;
+  attendanceDate?: string;
+  currentAttendanceStatus?: string;
+  requestedAttendanceStatus?: string;
+};
 
 export type NormalizedQuery = {
   id: string;
@@ -10,23 +26,27 @@ export type NormalizedQuery = {
   userId: string;
   personName: string;
   personEmail: string;
+  category: QueryCategory;
   remarks: string;
   status: string;
   adminRemark: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  actionType?: string;
   createdAt: string;
   updatedAt: string;
+} & QueryCategoryFieldsDto;
+
+export type UnifiedAdminQuery = NormalizedQuery & {
+  roleType: QueryRole;
 };
 
-export type UnifiedAdminQuery = {
-  id: string;
-  roleType: QueryRole;
-  personName: string;
-  personEmail: string;
-  remarks: string;
-  status: string;
-  adminRemark: string;
-  createdAt: string;
-  updatedAt: string;
+export type QueryStats = {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  byCategory: Record<QueryCategory, number>;
 };
 
 type RawQuery = Record<string, unknown> & {
@@ -42,85 +62,107 @@ function toRawQuery(doc: QueryDocument | RawQuery | Record<string, unknown>): Ra
   return doc as RawQuery;
 }
 
+function pickCategoryFields(d: RawQuery): QueryCategoryFieldsDto {
+  return {
+    requestedChanges: d.requestedChanges ? String(d.requestedChanges) : undefined,
+    currentBatchId: d.currentBatchId ? String(d.currentBatchId) : undefined,
+    requestedBatchId: d.requestedBatchId ? String(d.requestedBatchId) : undefined,
+    currentBatchName: d.currentBatchName ? String(d.currentBatchName) : undefined,
+    requestedBatchName: d.requestedBatchName ? String(d.requestedBatchName) : undefined,
+    currentCourseId: d.currentCourseId ? String(d.currentCourseId) : undefined,
+    requestedCourseId: d.requestedCourseId ? String(d.requestedCourseId) : undefined,
+    currentCourseName: d.currentCourseName ? String(d.currentCourseName) : undefined,
+    requestedCourseName: d.requestedCourseName ? String(d.requestedCourseName) : undefined,
+    attendanceDate: d.attendanceDate ? String(d.attendanceDate) : undefined,
+    currentAttendanceStatus: d.currentAttendanceStatus
+      ? String(d.currentAttendanceStatus)
+      : undefined,
+    requestedAttendanceStatus: d.requestedAttendanceStatus
+      ? String(d.requestedAttendanceStatus)
+      : undefined,
+  };
+}
+
+function baseNormalized(
+  id: string,
+  role: QueryRole,
+  userId: string,
+  personName: string,
+  personEmail: string,
+  d: RawQuery,
+): NormalizedQuery {
+  return {
+    id,
+    role,
+    userId,
+    personName,
+    personEmail,
+    category: (d.category as QueryCategory) || "profile_correction",
+    remarks: String(d.remarks ?? ""),
+    status: String(d.status ?? "pending"),
+    adminRemark: String(d.adminRemark ?? ""),
+    reviewedAt: d.reviewedAt ? new Date(d.reviewedAt as Date).toISOString() : undefined,
+    reviewedBy: d.reviewedBy ? String(d.reviewedBy) : undefined,
+    actionType: d.actionType ? String(d.actionType) : undefined,
+    createdAt: new Date(d.createdAt as Date).toISOString(),
+    updatedAt: new Date(d.updatedAt as Date).toISOString(),
+    ...pickCategoryFields(d),
+  };
+}
+
 /** Resolve unified fields from new or legacy document shape. */
 export function normalizeQueryFields(doc: QueryDocument | RawQuery | Record<string, unknown>): NormalizedQuery {
   const d = toRawQuery(doc);
   const id = d._id.toString();
 
   if (d.role && d.userId) {
-    return {
+    return baseNormalized(
       id,
-      role: d.role as QueryRole,
-      userId: String(d.userId),
-      personName: String(d.personName ?? ""),
-      personEmail: String(d.personEmail ?? ""),
-      remarks: String(d.remarks ?? ""),
-      status: String(d.status ?? "pending"),
-      adminRemark: String(d.adminRemark ?? ""),
-      createdAt: new Date(d.createdAt as Date).toISOString(),
-      updatedAt: new Date(d.updatedAt as Date).toISOString(),
-    };
+      d.role as QueryRole,
+      String(d.userId),
+      String(d.personName ?? ""),
+      String(d.personEmail ?? ""),
+      d,
+    );
   }
 
   if (d.studentId || d.studentName) {
-    return {
+    return baseNormalized(
       id,
-      role: "student",
-      userId: String(d.userId ?? d.studentId),
-      personName: String(d.personName ?? d.studentName ?? ""),
-      personEmail: String(d.personEmail ?? d.studentEmail ?? ""),
-      remarks: String(d.remarks ?? ""),
-      status: String(d.status ?? "pending"),
-      adminRemark: String(d.adminRemark ?? ""),
-      createdAt: new Date(d.createdAt as Date).toISOString(),
-      updatedAt: new Date(d.updatedAt as Date).toISOString(),
-    };
+      "student",
+      String(d.userId ?? d.studentId),
+      String(d.personName ?? d.studentName ?? ""),
+      String(d.personEmail ?? d.studentEmail ?? ""),
+      d,
+    );
   }
 
   if (d.teacherId || d.teacherName) {
-    return {
+    return baseNormalized(
       id,
-      role: "teacher",
-      userId: String(d.userId ?? d.teacherId),
-      personName: String(d.personName ?? d.teacherName ?? ""),
-      personEmail: String(d.personEmail ?? d.teacherEmail ?? ""),
-      remarks: String(d.remarks ?? ""),
-      status: String(d.status ?? "pending"),
-      adminRemark: String(d.adminRemark ?? ""),
-      createdAt: new Date(d.createdAt as Date).toISOString(),
-      updatedAt: new Date(d.updatedAt as Date).toISOString(),
-    };
+      "teacher",
+      String(d.userId ?? d.teacherId),
+      String(d.personName ?? d.teacherName ?? ""),
+      String(d.personEmail ?? d.teacherEmail ?? ""),
+      d,
+    );
   }
 
-  return {
+  return baseNormalized(
     id,
-    role: "senior_teacher",
-    userId: String(d.userId ?? d.seniorTeacherId),
-    personName: String(d.personName ?? d.seniorTeacherName ?? ""),
-    personEmail: String(d.personEmail ?? d.seniorTeacherEmail ?? ""),
-    remarks: String(d.remarks ?? ""),
-    status: String(d.status ?? "pending"),
-    adminRemark: String(d.adminRemark ?? ""),
-    createdAt: new Date(d.createdAt as Date).toISOString(),
-    updatedAt: new Date(d.updatedAt as Date).toISOString(),
-  };
+    "senior_teacher",
+    String(d.userId ?? d.seniorTeacherId),
+    String(d.personName ?? d.seniorTeacherName ?? ""),
+    String(d.personEmail ?? d.seniorTeacherEmail ?? ""),
+    d,
+  );
 }
 
 export function toUnifiedAdminQuery(
   doc: QueryDocument | RawQuery | Record<string, unknown>,
 ): UnifiedAdminQuery {
   const n = normalizeQueryFields(doc);
-  return {
-    id: n.id,
-    roleType: n.role,
-    personName: n.personName,
-    personEmail: n.personEmail,
-    remarks: n.remarks,
-    status: n.status,
-    adminRemark: n.adminRemark,
-    createdAt: n.createdAt,
-    updatedAt: n.updatedAt,
-  };
+  return { ...n, roleType: n.role };
 }
 
 /** Copy legacy `student_queries` into `queries` if needed. */
@@ -137,7 +179,7 @@ export async function migrateLegacyStudentQueriesCollection(): Promise<number> {
   await db.collection("queries").insertMany(
     legacy.map(doc => {
       const { _id, ...rest } = doc;
-      return { ...rest, _id };
+      return { ...rest, _id, category: rest.category ?? "profile_correction" };
     }),
   );
   return legacy.length;
@@ -155,6 +197,7 @@ async function normalizeLegacyDocsInQueries(): Promise<number> {
     doc.userId = new mongoose.Types.ObjectId(n.userId);
     doc.personName = n.personName;
     doc.personEmail = n.personEmail;
+    if (!doc.category) doc.category = "profile_correction";
     await doc.save();
     count++;
   }
@@ -183,6 +226,7 @@ async function importLegacyCollection(
       await Query.collection.insertOne({
         ...payload,
         _id: id,
+        category: payload.category ?? "profile_correction",
       });
       imported++;
     } catch (e) {
@@ -193,10 +237,6 @@ async function importLegacyCollection(
   return imported;
 }
 
-/**
- * One-time migrations: student_queries → queries, normalize student docs,
- * teacher_queries & senior_teacher_queries → queries with role.
- */
 export async function migrateAllQueriesCollections(): Promise<void> {
   await migrateLegacyStudentQueriesCollection();
   await normalizeLegacyDocsInQueries();
@@ -226,6 +266,11 @@ export async function migrateAllQueriesCollections(): Promise<void> {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   }));
+
+  await Query.updateMany(
+    { $or: [{ category: { $exists: false } }, { category: null }] },
+    { $set: { category: "profile_correction" } },
+  );
 }
 
 export async function getProfileEditAccess(role: QueryRole, userId: string) {
@@ -235,15 +280,21 @@ export async function getProfileEditAccess(role: QueryRole, userId: string) {
 
   await migrateAllQueriesCollections();
 
-  const latest = await Query.findOne({
-    role,
-    userId: new mongoose.Types.ObjectId(userId),
-  })
-    .sort({ createdAt: -1 })
-    .lean();
+  const [latest, latestProfile] = await Promise.all([
+    Query.findOne({ role, userId: new mongoose.Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .lean(),
+    Query.findOne({
+      role,
+      userId: new mongoose.Types.ObjectId(userId),
+      category: "profile_correction",
+    })
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
 
   return {
-    canEditProfile: latest?.status === "approved",
+    canEditProfile: latestProfile?.status === "approved",
     latestQuery: latest ? normalizeQueryFields(latest) : null,
   };
 }
@@ -252,6 +303,7 @@ export async function fetchAllAdminQueries(filters: {
   search: string;
   status: string;
   roleType: string;
+  category: string;
 }): Promise<UnifiedAdminQuery[]> {
   await migrateAllQueriesCollections();
 
@@ -261,6 +313,9 @@ export async function fetchAllAdminQueries(filters: {
   }
   if (filters.roleType && filters.roleType !== "all") {
     dbFilter.role = filters.roleType;
+  }
+  if (filters.category && filters.category !== "all") {
+    dbFilter.category = filters.category;
   }
 
   const rows = await Query.find(dbFilter).sort({ createdAt: -1 }).lean();
@@ -272,11 +327,45 @@ export async function fetchAllAdminQueries(filters: {
       q =>
         q.personName.toLowerCase().includes(s) ||
         q.personEmail.toLowerCase().includes(s) ||
-        q.remarks.toLowerCase().includes(s),
+        q.remarks.toLowerCase().includes(s) ||
+        q.category.toLowerCase().includes(s),
     );
   }
 
   return result;
+}
+
+export async function getQueryStats(): Promise<QueryStats> {
+  await migrateAllQueriesCollections();
+  const rows = await Query.find({}).lean();
+  const byCategory = {
+    profile_correction: 0,
+    switch_batch: 0,
+    course_change: 0,
+    fee_related: 0,
+    attendance_correction: 0,
+    other: 0,
+  } as Record<QueryCategory, number>;
+
+  let pending = 0;
+  let approved = 0;
+  let rejected = 0;
+
+  for (const row of rows) {
+    const cat = (row.category as QueryCategory) || "profile_correction";
+    if (byCategory[cat] !== undefined) byCategory[cat] += 1;
+    if (row.status === "pending") pending += 1;
+    else if (row.status === "approved") approved += 1;
+    else if (row.status === "rejected") rejected += 1;
+  }
+
+  return {
+    total: rows.length,
+    pending,
+    approved,
+    rejected,
+    byCategory,
+  };
 }
 
 export async function findQueryByIdAndRole(id: string, role: QueryRole) {
@@ -285,4 +374,26 @@ export async function findQueryByIdAndRole(id: string, role: QueryRole) {
   if (!doc) return null;
   if (normalizeQueryFields(doc).role !== role) return null;
   return doc;
+}
+
+export function buildQueryCreatePayload(
+  role: QueryRole,
+  userId: mongoose.Types.ObjectId,
+  personName: string,
+  personEmail: string,
+  remarks: string,
+  category: QueryCategory,
+  extra: QueryCategoryFieldsDto,
+) {
+  return {
+    role,
+    userId,
+    personName,
+    personEmail: personEmail.toLowerCase(),
+    category,
+    remarks,
+    status: "pending" as const,
+    adminRemark: "",
+    ...extra,
+  };
 }

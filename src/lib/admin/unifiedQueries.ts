@@ -1,2 +1,2 @@
-export type { QueryRoleType, UnifiedAdminQuery } from "@/lib/queries/queryAccess";
-export { fetchAllAdminQueries, migrateAllQueriesCollections } from "@/lib/queries/queryAccess";
+export type { QueryRoleType, UnifiedAdminQuery, QueryStats } from "@/lib/queries/queryAccess";
+export { fetchAllAdminQueries, migrateAllQueriesCollections, getQueryStats } from "@/lib/queries/queryAccess";

@@ -8,6 +8,7 @@ export type SeniorTeacherQueryDto = {
   id: string;
   seniorTeacherName: string;
   seniorTeacherEmail: string;
+  category: string;
   remarks: string;
   status: string;
   adminRemark: string;
@@ -23,6 +24,7 @@ export function serializeSeniorTeacherQuery(
     id: n.id,
     seniorTeacherName: n.personName,
     seniorTeacherEmail: n.personEmail,
+    category: n.category,
     remarks: n.remarks,
     status: n.status,
     adminRemark: n.adminRemark,
@@ -40,6 +42,7 @@ export async function getSeniorTeacherProfileEditAccess(seniorTeacherId: string)
           id: access.latestQuery.id,
           seniorTeacherName: access.latestQuery.personName,
           seniorTeacherEmail: access.latestQuery.personEmail,
+          category: access.latestQuery.category,
           remarks: access.latestQuery.remarks,
           status: access.latestQuery.status,
           adminRemark: access.latestQuery.adminRemark,
