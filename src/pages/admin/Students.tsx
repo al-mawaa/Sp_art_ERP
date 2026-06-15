@@ -26,10 +26,7 @@ import { z } from "zod";
 const credentialsSchema = z.object({
   username: z.string().min(1, "Username is required"),
   email: z.string().email("Invalid email address"),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
-      "Password must contain uppercase, lowercase, number, and special character"),
+  password: z.string().min(1, "Password is required"),
   confirmPassword: z.string(),
   role: z.enum(["Student", "Class Representative", "Premium Student"]),
   portalAccess: z.boolean(),
@@ -706,7 +703,7 @@ export default function Students() {
                   </div>
 
                   <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <strong>Password Requirements:</strong> Minimum 8 characters with at least one uppercase letter, one lowercase letter, one number, and one special character.
+                    <strong>Password Requirements:</strong> Any password is allowed, including simple passwords.
                   </div>
                 </div>
 

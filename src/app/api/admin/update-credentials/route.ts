@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateCredentialById } from '@/app/api/credentials/[id]/route';
+import { updateCredentialById } from '@/lib/admin/updateCredentialById';
 import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';

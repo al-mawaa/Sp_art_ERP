@@ -15,6 +15,8 @@ export interface CourseDocument extends mongoose.Document {
   discountPercentage: number;
   status: CourseStatus;
   notes?: string;
+  rulesAndRegulations?: string;
+  materialsRequired?: string;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +36,8 @@ const CourseSchema = new mongoose.Schema<CourseDocument>(
     discountPercentage: { type: Number, required: true, default: 0 },
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
     notes: { type: String },
+    rulesAndRegulations: { type: String, default: '' },
+    materialsRequired: { type: String, default: '' },
     createdBy: { type: String },
   },
   {

@@ -62,6 +62,16 @@ export default async function CourseDetailPage({ params }: Props) {
             </div>
 
             <div>
+              <h3 className="text-sm font-semibold">Rules & Regulations</h3>
+              <p className="text-sm text-muted-foreground">{course.rulesAndRegulations?.trim() ? course.rulesAndRegulations : 'No rules or regulations defined yet.'}</p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold">Materials Required</h3>
+              <p className="text-sm text-muted-foreground">{course.materialsRequired?.trim() ? course.materialsRequired : 'No materials required information available.'}</p>
+            </div>
+
+            <div>
               <p className="text-xs text-muted-foreground">Status</p>
               <p className="font-semibold">{course.status}</p>
             </div>

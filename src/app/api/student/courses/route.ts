@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
         enrollmentDate: enrollment.enrollmentDate,
         completionPercentage: enrollment.completionPercentage,
         notes: course.notes,
+        rulesAndRegulations: course.rulesAndRegulations,
+        materialsRequired: course.materialsRequired,
       };
     });
 

@@ -13,9 +13,9 @@ function adminSessionSecret(): string {
 }
 
 /** Signed token: base64url(payloadJson).hexHmac */
-export function createAdminSessionToken(): string {
+export function createAdminSessionToken(role: "admin" | "super-admin"): string {
   const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days
-  const payload = Buffer.from(JSON.stringify({ sub: "admin", exp }), "utf8").toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ sub: "admin", role, exp }), "utf8").toString("base64url");
   const sig = createHmac("sha256", adminSessionSecret()).update(payload).digest("hex");
   return `${payload}.${sig}`;
 }
@@ -33,29 +33,42 @@ export function getAdminSessionTokenFromRequest(request: NextRequest): string | 
   return undefined;
 }
 
-export function verifyAdminSessionToken(token: string | undefined): boolean {
-  if (!token || !token.includes(".")) return false;
+type AdminSessionPayload = {
+  sub: "admin";
+  role: "admin" | "super-admin";
+  exp: number;
+};
+
+function parseAdminSessionToken(token: string): AdminSessionPayload | null {
+  if (!token || !token.includes(".")) return null;
   const dot = token.lastIndexOf(".");
   const payload = token.slice(0, dot);
   const sig = token.slice(dot + 1);
-  if (!payload || !sig) return false;
+  if (!payload || !sig) return null;
   const expected = createHmac("sha256", adminSessionSecret()).update(payload).digest("hex");
   try {
     const a = Buffer.from(sig, "utf8");
     const b = Buffer.from(expected, "utf8");
-    if (a.length !== b.length) return false;
-    if (!timingSafeEqual(a, b)) return false;
+    if (a.length !== b.length) return null;
+    if (!timingSafeEqual(a, b)) return null;
   } catch {
-    return false;
+    return null;
   }
   try {
-    const json = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: string; exp?: number };
-    if (json.sub !== "admin" || typeof json.exp !== "number") return false;
-    if (json.exp < Math.floor(Date.now() / 1000)) return false;
-    return true;
+    const json = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as AdminSessionPayload;
+    if (json.sub !== "admin" || (json.role !== "admin" && json.role !== "super-admin")) return null;
+    if (typeof json.exp !== "number" || json.exp < Math.floor(Date.now() / 1000)) return null;
+    return json;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function verifyAdminSessionToken(token: string | undefined, requiredRole?: "admin" | "super-admin"): boolean {
+  const parsed = token ? parseAdminSessionToken(token) : null;
+  if (!parsed) return false;
+  if (requiredRole && parsed.role !== requiredRole) return false;
+  return true;
 }
 
 export function adminSessionCookieOptions() {
@@ -79,5 +92,19 @@ export function serverAdminCredentials() {
     process.env.ADMIN_PASSWORD ||
     process.env.NEXT_PUBLIC_ADMIN_PASSWORD ||
     "demo1234";
+  return { email, password };
+}
+
+/** Server-side super admin login — read from secure env only. */
+export function secureCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
+
+export function serverSuperAdminCredentials() {
+  const email = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
+  const password = process.env.SUPER_ADMIN_PASSWORD || "";
   return { email, password };
 }

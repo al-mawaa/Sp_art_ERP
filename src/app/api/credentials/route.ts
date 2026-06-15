@@ -114,14 +114,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' },
-        { status: 400 }
-      );
-    }
-
     const username = emailNorm.split('@')[0];
 
     const existingEmail = await findCredentialByEmail(emailNorm);

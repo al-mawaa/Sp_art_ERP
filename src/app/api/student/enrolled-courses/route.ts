@@ -1,22 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import CourseEnrollment from '@/lib/models/CourseEnrollment';
-import Course from '@/lib/models/Course';
+import Course, { type CourseDocument } from '@/lib/models/Course';
 import Student from '@/lib/models/Student';
 import { requireStudentFromRequest } from '@/lib/auth/require-student';
 import mongoose from 'mongoose';
-
-type CourseDocument = {
-  _id: mongoose.Types.ObjectId;
-  courseTitle: string;
-  courseCode: string;
-  instructor?: string;
-  image?: string;
-  duration?: number;
-  totalFees?: number;
-  discountFees?: number;
-  discountPercentage?: number;
-};
 
 export const runtime = 'nodejs';
 
@@ -71,6 +59,8 @@ export async function GET(request: NextRequest) {
           completionPercentage: enrollment.completionPercentage,
           amount: enrollment.amount,
           paymentStatus: enrollment.paymentStatus,
+          rulesAndRegulations: course.rulesAndRegulations,
+          materialsRequired: course.materialsRequired,
         };
       })
       .filter(course => course !== null);

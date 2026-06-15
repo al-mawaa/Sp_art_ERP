@@ -28,6 +28,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         discountPercentage: course.discountPercentage,
         status: course.status,
         notes: course.notes,
+        rulesAndRegulations: course.rulesAndRegulations,
+        materialsRequired: course.materialsRequired,
         createdAt: course.createdAt,
         updatedAt: course.updatedAt,
       },
@@ -55,6 +57,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       discountFees,
       status,
       notes,
+      rulesAndRegulations,
+      materials,
     } = body;
 
     const course = await Course.findById(id);
@@ -105,6 +109,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       updateData.status = status;
     }
     if (notes !== undefined) updateData.notes = notes;
+    if (rulesAndRegulations !== undefined) updateData.rulesAndRegulations = rulesAndRegulations;
+    if (materials !== undefined) updateData.materialsRequired = materials;
 
     const updatedCourse = await Course.findByIdAndUpdate(id, updateData, { new: true });
     if (!updatedCourse) {
@@ -127,6 +133,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         discountPercentage: updatedCourse.discountPercentage,
         status: updatedCourse.status,
         notes: updatedCourse.notes,
+        rulesAndRegulations: updatedCourse.rulesAndRegulations,
+        materialsRequired: updatedCourse.materialsRequired,
         createdAt: updatedCourse.createdAt,
         updatedAt: updatedCourse.updatedAt,
       },

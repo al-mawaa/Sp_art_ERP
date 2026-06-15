@@ -15,19 +15,14 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { adminSessionAuthHeaders } from "@/lib/auth/admin-session-client";
 
-const credentialsSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  mobileNumber: z.string().min(1, "Mobile number is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain uppercase, lowercase, number, and special character"),
-  confirmPassword: z.string(),
-  accountStatus: z.enum(["Active", "Inactive"]).default("Active"),
-});
-
-type CredentialForm = z.infer<typeof credentialsSchema>;
+type CredentialForm = {
+  name: string;
+  mobileNumber: string;
+  email: string;
+  password?: string;
+  confirmPassword?: string;
+  accountStatus: "Active" | "Inactive";
+};
 
 type CredentialRole = "student" | "teacher" | "senior_teacher";
 
@@ -77,8 +72,6 @@ export default function AdminCredentialsPage() {
     confirmPassword: z.string().optional(),
     accountStatus: z.enum(["Active", "Inactive"]).default("Active"),
   }).superRefine((data, ctx) => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
     if (!editing && !data.password) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -101,14 +94,6 @@ export default function AdminCredentialsPage() {
           code: z.ZodIssueCode.custom,
           path: ['confirmPassword'],
           message: 'Confirm your password',
-        });
-      }
-
-      if (data.password && !passwordRegex.test(data.password)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['password'],
-          message: 'Password must contain uppercase, lowercase, number, and special character',
         });
       }
 

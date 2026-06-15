@@ -15,10 +15,9 @@ import { setAdminSessionToken } from "@/lib/auth/admin-session-client";
 
 type RoleOption = { id: Role; title: string; desc: string; icon: React.ComponentType<{className?: string}>; gradient: string; demoEmail: string };
 const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "anjali@littlebrushes.in").toLowerCase().trim();
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "demo1234";
 
 const ROLES: RoleOption[] = [
-  { id: "super-admin",    title: "Super Admin",    desc: "Manage all institutes",   icon: Crown,         gradient: "from-secondary to-secondary/70", demoEmail: "vikram@littlebrushes.in" },
+  { id: "super-admin",    title: "Super Admin",    desc: "Manage all institutes",   icon: Crown,         gradient: "from-secondary to-secondary/70", demoEmail: "" },
   { id: "admin",          title: "Admin",          desc: "Run the academy",         icon: Shield,        gradient: "from-primary to-accent",         demoEmail: ADMIN_EMAIL },
   { id: "senior-teacher", title: "Senior Teacher", desc: "Approvals & oversight",   icon: GraduationCap, gradient: "from-accent to-primary",          demoEmail: "rahul@littlebrushes.in" },
   { id: "teacher",        title: "Teacher",        desc: "Classes & attendance",    icon: Users,         gradient: "from-success to-info",            demoEmail: "sneha@littlebrushes.in" },
@@ -58,21 +57,18 @@ export default function Login() {
         return;
       }
 
-      if (role === "admin") {
+      if (role === "admin" || role === "super-admin") {
         const emailNorm = email.trim().toLowerCase();
-        if (emailNorm !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-          return toast.error("Invalid admin credentials");
-        }
-
         const sessionRes = await fetch("/api/admin/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ email: emailNorm, password }),
+          body: JSON.stringify({ email: emailNorm, password, role }),
         });
+
         const sessionData = await sessionRes.json().catch(() => ({}));
         if (!sessionRes.ok) {
-          throw new Error(sessionData?.error || "Admin session could not be created");
+          throw new Error(sessionData?.error || `${ROLES.find(r => r.id === role)?.title} login failed`);
         }
         if (sessionData?.data?.token) {
           setAdminSessionToken(sessionData.data.token);
@@ -96,7 +92,13 @@ export default function Login() {
 
   function pickRole(r: Role) {
     setRole(r);
-    setEmail(r === "admin" ? ADMIN_EMAIL : ROLES.find(x => x.id === r)!.demoEmail);
+    if (r === "admin") {
+      setEmail(ADMIN_EMAIL);
+    } else if (r === "super-admin") {
+      setEmail("");
+    } else {
+      setEmail(ROLES.find(x => x.id === r)!.demoEmail);
+    }
     setPassword("");
   }
 
@@ -139,7 +141,7 @@ export default function Login() {
           <div>
             <h2 className="font-display text-3xl font-bold text-secondary">Welcome back!</h2>
             <p className="text-muted-foreground mt-1">
-              Teacher and Senior Teacher use database credentials. Admin uses env settings.
+              Teacher and Senior Teacher use database credentials. Admin and Super Admin use secure env-backed login.
             </p>
           </div>
 
@@ -182,6 +184,8 @@ export default function Login() {
               <p className="text-[11px] text-muted-foreground">
                 {role === "admin"
                   ? "Admin login uses the env credentials you configured."
+                  : role === "super-admin"
+                  ? "Super Admin login uses secure env-backed credentials only."
                   : "Enter the password from your credential record."}
               </p>
             </div>

@@ -2,20 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import CourseEnrollment from '@/lib/models/CourseEnrollment';
-import Course from '@/lib/models/Course';
+import Course, { type CourseDocument } from '@/lib/models/Course';
 import Student from '@/lib/models/Student';
 import { requireStudentFromRequest } from '@/lib/auth/require-student';
 import { generateEnrollmentInvoicePdf } from '@/lib/invoice';
-
-type CourseDocument = {
-  _id: mongoose.Types.ObjectId;
-  courseTitle: string;
-  courseCode: string;
-  duration?: number;
-  image?: string;
-  totalFees?: number;
-  discountPercentage?: number;
-};
 
 export const runtime = 'nodejs';
 

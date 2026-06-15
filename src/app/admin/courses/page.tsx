@@ -25,6 +25,8 @@ const courseSchema = z.object({
   discountFees: z.coerce.number().min(0, 'Discount fees is required'),
   status: z.enum(['active', 'inactive']).default('active'),
   notes: z.string().optional(),
+  rulesAndRegulations: z.string().optional(),
+  materials: z.string().optional(),
 });
 
 type CourseForm = z.infer<typeof courseSchema>;
@@ -40,6 +42,8 @@ type CourseRow = {
   discountPercentage: number;
   status: 'active' | 'inactive';
   notes?: string;
+  rulesAndRegulations?: string;
+  materialsRequired?: string;
   createdAt: string;
 };
 
@@ -69,6 +73,8 @@ export default function AdminCoursesPage() {
       discountFees: 0,
       status: 'active',
       notes: '',
+      rulesAndRegulations: '',
+      materials: '',
     },
   });
 
@@ -165,6 +171,8 @@ export default function AdminCoursesPage() {
       discountFees: 0,
       status: 'active',
       notes: '',
+      rulesAndRegulations: '',
+      materials: '',
     });
     setEditing(null);
   };
@@ -185,6 +193,8 @@ export default function AdminCoursesPage() {
       discountFees: row.discountFees,
       status: row.status,
       notes: row.notes ?? '',
+      rulesAndRegulations: row.rulesAndRegulations ?? '',
+      materials: row.materialsRequired ?? '',
     });
     setOpen(true);
   };
@@ -226,6 +236,8 @@ export default function AdminCoursesPage() {
         discountPercentage,
         status: values.status,
         notes: values.notes || undefined,
+        rulesAndRegulations: values.rulesAndRegulations || undefined,
+        materials: values.materials || undefined,
       };
       const url = editing ? `/api/courses/${editing.id}` : '/api/courses';
       const method = editing ? 'PUT' : 'POST';
@@ -252,6 +264,8 @@ export default function AdminCoursesPage() {
         discountPercentage: result.course.discountPercentage,
         status: result.course.status,
         notes: result.course.notes,
+        rulesAndRegulations: result.course.rulesAndRegulations,
+        materialsRequired: result.course.materialsRequired,
         createdAt: result.course.createdAt,
       };
 
@@ -457,6 +471,26 @@ export default function AdminCoursesPage() {
               <div className="sm:col-span-2 grid gap-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" className="min-h-[96px] rounded-lg shadow-sm" {...form.register('notes')} />
+              </div>
+
+              <div className="sm:col-span-2 grid gap-2">
+                <Label htmlFor="rulesAndRegulations">Rules & Regulations</Label>
+                <Textarea
+                  id="rulesAndRegulations"
+                  className="min-h-[120px] rounded-lg shadow-sm"
+                  placeholder="Enter course rules and regulations"
+                  {...form.register('rulesAndRegulations')}
+                />
+              </div>
+
+              <div className="sm:col-span-2 grid gap-2">
+                <Label htmlFor="materials">Materials</Label>
+                <Textarea
+                  id="materials"
+                  className="min-h-[120px] rounded-lg shadow-sm"
+                  placeholder="Enter materials, tools, books, kits, or supplies required for this course"
+                  {...form.register('materials')}
+                />
               </div>
             </div>
 
