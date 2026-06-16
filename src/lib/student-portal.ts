@@ -15,6 +15,19 @@ export type StudentProfileDto = {
   gender: string;
   studentId: string;
   profileImage: string;
+  dob: string;
+  bloodGroup: string;
+  school: string;
+  college: string;
+  occupation: string;
+  fatherName: string;
+  fatherMobile: string;
+  fatherOccupation: string;
+  motherName: string;
+  motherMobile: string;
+  motherOccupation: string;
+  address: string;
+  howYouKnowUs: string;
   batchName: string;
   batchTiming: string;
   courseName: string;
@@ -28,6 +41,13 @@ export type StudentProfileDto = {
     teacherName: string;
   }[];
 };
+
+function formatDob(value?: Date | string | null): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -43,6 +63,19 @@ export function toProfileDto(doc: StudentDocument): StudentProfileDto {
     gender: doc.gender ?? "",
     studentId: doc.badgeId,
     profileImage: doc.photo ?? "",
+    dob: formatDob(doc.dob),
+    bloodGroup: doc.bloodGroup ?? "",
+    school: doc.school ?? "",
+    college: doc.college ?? "",
+    occupation: doc.occupation ?? "",
+    fatherName: doc.fatherName ?? "",
+    fatherMobile: doc.fatherMobile ?? "",
+    fatherOccupation: doc.fatherOccupation ?? "",
+    motherName: doc.motherName ?? "",
+    motherMobile: doc.motherMobile ?? "",
+    motherOccupation: doc.motherOccupation ?? "",
+    address: doc.address ?? "",
+    howYouKnowUs: doc.howYouKnowUs ?? doc.howYouComeToKnow ?? "",
     batchName: doc.className ?? "",
     batchTiming: "",
     courseName: doc.className ?? "",
@@ -138,6 +171,19 @@ export type StudentProfileUpdate = {
   age?: number | null;
   gender?: string;
   profileImage?: string;
+  dob?: string | null;
+  bloodGroup?: string;
+  school?: string;
+  college?: string;
+  occupation?: string;
+  fatherName?: string;
+  fatherMobile?: string;
+  fatherOccupation?: string;
+  motherName?: string;
+  motherMobile?: string;
+  motherOccupation?: string;
+  address?: string;
+  howYouKnowUs?: string;
 };
 
 /** Update existing `students` document only — never inserts. */
@@ -158,6 +204,28 @@ export async function updateStudentProfile(
   if (data.gender !== undefined) student.gender = data.gender;
   if (data.profileImage !== undefined) {
     student.photo = data.profileImage || undefined;
+  }
+  if (data.dob !== undefined) {
+    student.dob = data.dob ? new Date(data.dob) : undefined;
+  }
+  if (data.bloodGroup !== undefined) student.bloodGroup = data.bloodGroup || undefined;
+  if (data.school !== undefined) student.school = data.school || undefined;
+  if (data.college !== undefined) student.college = data.college || undefined;
+  if (data.occupation !== undefined) student.occupation = data.occupation || undefined;
+  if (data.fatherName !== undefined) student.fatherName = data.fatherName || undefined;
+  if (data.fatherMobile !== undefined) student.fatherMobile = data.fatherMobile || undefined;
+  if (data.fatherOccupation !== undefined) {
+    student.fatherOccupation = data.fatherOccupation || undefined;
+  }
+  if (data.motherName !== undefined) student.motherName = data.motherName || undefined;
+  if (data.motherMobile !== undefined) student.motherMobile = data.motherMobile || undefined;
+  if (data.motherOccupation !== undefined) {
+    student.motherOccupation = data.motherOccupation || undefined;
+  }
+  if (data.address !== undefined) student.address = data.address || undefined;
+  if (data.howYouKnowUs !== undefined) {
+    student.howYouKnowUs = data.howYouKnowUs || undefined;
+    student.howYouComeToKnow = data.howYouKnowUs || undefined;
   }
 
   await student.save();
