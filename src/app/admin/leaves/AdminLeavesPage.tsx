@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Eye, X } from "lucide-react";
+import { Check, Eye, Search, X } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Avatar } from "@/components/shared/Avatar";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { StaffTypeBadge, type LeaveStaffType } from "@/components/leave/StaffTypeBadge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,6 +64,8 @@ export function AdminLeavesPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterStaff, setFilterStaff] = useState<"All" | LeaveStaffType>("All");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [detail, setDetail] = useState<LeaveRow | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     leave: LeaveRow;
@@ -174,9 +177,33 @@ export function AdminLeavesPage() {
   }, [load]);
 
   const visibleRows = useMemo(() => {
-    if (filterStaff === "All") return rows;
-    return rows.filter(r => r.staffType === filterStaff);
-  }, [rows, filterStaff]);
+    let filtered = rows;
+    if (filterStaff !== "All") {
+      filtered = filtered.filter(r => r.staffType === filterStaff);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(
+        r =>
+          r.staffName.toLowerCase().includes(q) ||
+          r.leaveType.toLowerCase().includes(q) ||
+          r.reason.toLowerCase().includes(q) ||
+          r.status.toLowerCase().includes(q) ||
+          r.from.includes(q) ||
+          r.to.includes(q),
+      );
+    }
+    return filtered;
+  }, [rows, filterStaff, searchQuery]);
+
+  const applySearch = () => {
+    setSearchQuery(searchInput.trim());
+  };
+
+  const clearSearch = () => {
+    setSearchInput("");
+    setSearchQuery("");
+  };
 
   const runAction = async () => {
     if (!confirmAction) return;
@@ -212,6 +239,32 @@ export function AdminLeavesPage() {
       />
 
       <div className="card-soft p-4 flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[220px]">
+          <Label className="text-xs text-muted-foreground">Search</Label>
+          <div className="flex gap-2 mt-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="rounded-xl pl-9"
+                placeholder="Search by name, leave type, reason…"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") applySearch();
+                }}
+              />
+            </div>
+            <Button type="button" className="rounded-xl gradient-primary text-white border-0" onClick={applySearch}>
+              <Search className="w-4 h-4 mr-1" />
+              Search
+            </Button>
+            {searchQuery ? (
+              <Button type="button" variant="outline" className="rounded-xl" onClick={clearSearch}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </div>
         <div className="w-48">
           <Label className="text-xs text-muted-foreground">Staff type</Label>
           <Select
@@ -255,7 +308,7 @@ export function AdminLeavesPage() {
         </div>
       ) : visibleRows.length === 0 ? (
         <div className="card-soft p-10 text-center text-sm text-muted-foreground">
-          No leave requests found.
+          {searchQuery ? "No leave requests match your search." : "No leave requests found."}
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
