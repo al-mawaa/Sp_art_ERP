@@ -19,6 +19,19 @@ const updateSchema = z.object({
     .string()
     .optional()
     .refine(v => !v || v.startsWith("http"), "Profile image must be a valid URL"),
+  dob: z.string().trim().optional().nullable(),
+  bloodGroup: z.string().trim().max(10).optional(),
+  school: z.string().trim().max(200).optional(),
+  college: z.string().trim().max(200).optional(),
+  occupation: z.string().trim().max(200).optional(),
+  fatherName: z.string().trim().max(120).optional(),
+  fatherMobile: z.string().trim().max(20).optional(),
+  fatherOccupation: z.string().trim().max(200).optional(),
+  motherName: z.string().trim().max(120).optional(),
+  motherMobile: z.string().trim().max(20).optional(),
+  motherOccupation: z.string().trim().max(200).optional(),
+  address: z.string().trim().max(500).optional(),
+  howYouKnowUs: z.string().trim().max(100).optional(),
 });
 
 export async function GET(request: NextRequest) {
