@@ -9,6 +9,7 @@ import {
   portalSessionCookieOptions,
   clearSessionCookieOptions,
 } from '@/lib/auth/portal-session';
+import { getTodaysBirthdays } from '@/lib/helpers/birthdays';
 import { findCredentialByLogin } from '@/lib/auth/findCredential';
 import { normalizeEmail } from '@/lib/auth/normalizeEmail';
 import { verifyCredentialPassword } from '@/lib/auth/verifyCredentialPassword';
@@ -99,12 +100,30 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      type BirthdayItem = {
+        id: string;
+        name: string;
+        dob: string;
+        age: number;
+        batch: string;
+        photo?: string;
+        email?: string;
+      };
+      let birthdays: BirthdayItem[] = [];
+      try {
+        birthdays = await getTodaysBirthdays();
+      } catch (e) {
+        console.warn('[login] failed to fetch todays birthdays:', e);
+      }
+
       const res = NextResponse.json({
         user: {
           email: cred.email,
           name: cred.name,
           role,
         },
+        birthdays,
+        birthdaysCount: birthdays.length,
       });
       clearOtherPortalSessions(res);
       res.cookies.set(TEACHER_SESSION_COOKIE, teacher._id.toString(), portalSessionCookieOptions());
@@ -145,12 +164,30 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      type BirthdayItem = {
+        id: string;
+        name: string;
+        dob: string;
+        age: number;
+        batch: string;
+        photo?: string;
+        email?: string;
+      };
+      let birthdays: BirthdayItem[] = [];
+      try {
+        birthdays = await getTodaysBirthdays();
+      } catch (e) {
+        console.warn('[login] failed to fetch todays birthdays:', e);
+      }
+
       const res = NextResponse.json({
         user: {
           email: cred.email,
           name: cred.name,
           role,
         },
+        birthdays,
+        birthdaysCount: birthdays.length,
       });
       clearOtherPortalSessions(res);
       res.cookies.set(SENIOR_TEACHER_SESSION_COOKIE, senior._id.toString(), portalSessionCookieOptions());

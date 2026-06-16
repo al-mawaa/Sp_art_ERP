@@ -53,6 +53,16 @@ export default function Login() {
 
         login(role, email, data.user.name);
         toast.success(`Welcome, ${data.user.name}!`);
+        // If backend returned today's birthdays, show a quick notification
+        try {
+          const count = Number(data?.birthdaysCount || (data?.birthdays?.length ?? 0));
+          if (count > 0) {
+            toast(`🎂 ${count} student${count !== 1 ? 's' : ''} have birthdays today`);
+          }
+        } catch (e) {
+          /* ignore */
+        }
+
         router.push(`/${role}`);
         return;
       }

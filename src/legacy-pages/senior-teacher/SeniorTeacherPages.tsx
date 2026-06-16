@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { Avatar } from "@/components/shared/Avatar";
+import { BirthdayReminderCard } from "@/components/shared/BirthdayReminderCard";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import AdmissionForm from "@/components/senior-teacher/AdmissionForm";
@@ -14,12 +15,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { todaysClasses } from "@/data/mockData";
 import { useStore, actions } from "@/store/dataStore";
 import { toast } from "sonner";
+import { useBirthdayNotification } from "@/hooks/use-birthday-notification";
 export { Chat as ChatPage } from "@/pages/shared/Chat";
 
 export function SeniorDashboard() {
   const slots = useStore(s => s.slots);
   const teachers = useStore(s => s.teachers);
   const pendingSlots = slots.filter(r => r.status === "Pending").length;
+  
+  // Show birthday notification on page load
+  useBirthdayNotification();
+  
   return (
     <div className="space-y-6">
       <PageHeader title="Senior Teacher Dashboard" subtitle="Approvals and oversight" />
@@ -28,6 +34,7 @@ export function SeniorDashboard() {
         <StatCard label="Classes Today" value={todaysClasses.length} icon={CalendarDays} tone="primary" />
         <StatCard label="My Teachers" value={teachers.length} icon={Users} tone="success" />
       </div>
+      <BirthdayReminderCard />
       <div className="card-soft p-5">
         <h3 className="font-display font-bold text-lg mb-3">Today's classes</h3>
         <div className="space-y-2">

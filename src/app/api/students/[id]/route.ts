@@ -6,8 +6,8 @@ import Credentials from '@/lib/models/Credentials';
 
 export const runtime = 'nodejs';
 
-export async function PUT(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   try {
     await dbConnect();
@@ -44,7 +44,7 @@ export async function PUT(request: Request, context: unknown) {
       );
     }
 
-    const student = await Student.findById(params.id);
+    const student = await Student.findById(id);
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
@@ -61,7 +61,7 @@ export async function PUT(request: Request, context: unknown) {
     const nameChanged = oldName !== fullName;
 
     const updatedStudent = await Student.findByIdAndUpdate(
-      params.id,
+      id,
       {
         fullName,
         email,
@@ -86,7 +86,7 @@ export async function PUT(request: Request, context: unknown) {
         howYouComeToKnow: howYouKnowUs ?? student.howYouComeToKnow,
         feeStatus,
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!updatedStudent) {

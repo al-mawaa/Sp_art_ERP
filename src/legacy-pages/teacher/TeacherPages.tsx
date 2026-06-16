@@ -7,6 +7,7 @@ import { StatCard } from "@/components/shared/StatCard";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { Avatar } from "@/components/shared/Avatar";
 import { BirthdayBanner } from "@/components/shared/BirthdayBanner";
+import { BirthdayReminderCard } from "@/components/shared/BirthdayReminderCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +18,17 @@ import { useStore, actions } from "@/store/dataStore";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { TeacherAttendancePage } from "@/components/teacher/TeacherAttendancePage";
+import { useBirthdayNotification } from "@/hooks/use-birthday-notification";
 export { ChatPage } from "@/legacy-pages/senior-teacher/SeniorTeacherPages";
 
 export function TeacherDashboard() {
   const students = useStore(s => s.students);
   const slots = useStore(s => s.slots);
   const birthdays = students.filter(s => s.isBirthdayToday).map(s => s.name);
+  
+  // Show birthday notification on page load
+  useBirthdayNotification();
+  
   return (
     <div className="space-y-6">
       <PageHeader title="Hello, Sneha 👋" subtitle="Here's your day at a glance" />
@@ -33,6 +39,7 @@ export function TeacherDashboard() {
         <StatCard label="My Students" value={students.length} icon={UsersIcon} tone="info" />
         <StatCard label="Leave Balance" value="9 days" icon={CalendarOff} tone="success" />
       </div>
+      <BirthdayReminderCard />
       <div className="card-soft p-5">
         <h3 className="font-display font-bold text-lg mb-4">Today's timeline</h3>
         <div className="space-y-3">

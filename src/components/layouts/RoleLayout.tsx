@@ -39,12 +39,12 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
     return "items" in item;
   };
 
-  const renderNavItem = (item: NavItem) => {
+  const renderNavItem = (item: NavItem, key?: string) => {
     const isActive = pathname === item.to || (item.end === false && pathname.startsWith(item.to));
 
     return (
       <Link
-        key={item.to}
+        key={key ?? item.to}
         href={item.to}
         onClick={() => setOpen(false)}
         className={cn(
@@ -135,13 +135,13 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
                     {item.title}
                   </div>
                   <div className="space-y-1">
-                    {item.items.map(renderNavItem)}
+                    {item.items.map((it, idx) => renderNavItem(it, `${item.title}-${it.to}-${idx}`))}
                   </div>
                 </div>
               );
             }
 
-            return renderNavItem(item);
+            return renderNavItem(item, `nav-${index}-${item.to}`);
           })}
         </nav>
         <div className="p-3 border-t border-sidebar-border">

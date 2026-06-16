@@ -7,13 +7,13 @@ export const runtime = 'nodejs';
 
 export async function GET(
   request: Request,
-  context: unknown
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { params } = context as { params: { id: string } };
+  const { id } = await params;
   try {
     await dbConnect();
 
-    const credentials = await StudentCredentials.findOne({ _id: params.id });
+    const credentials = await StudentCredentials.findOne({ _id: id });
     if (!credentials) {
       return NextResponse.json(
         { error: 'Credentials not found' },
@@ -50,9 +50,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  context: unknown
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { params } = context as { params: { id: string } };
+  const { id } = await params;
   try {
     await dbConnect();
 
@@ -73,7 +73,7 @@ export async function PUT(
 
     // Validation
     if (username) {
-      const existingUsername = await StudentCredentials.findOne({ username, _id: { $ne: params.id } });
+      const existingUsername = await StudentCredentials.findOne({ username, _id: { $ne: id } });
       if (existingUsername) {
         return NextResponse.json(
           { error: 'Username already taken' },
@@ -83,7 +83,7 @@ export async function PUT(
     }
 
     if (email) {
-      const existingEmail = await StudentCredentials.findOne({ email, _id: { $ne: params.id } });
+      const existingEmail = await StudentCredentials.findOne({ email, _id: { $ne: id } });
       if (existingEmail) {
         return NextResponse.json(
           { error: 'Email already registered' },
@@ -117,9 +117,9 @@ export async function PUT(
     if (studentIdNumber !== undefined) updateData.studentIdNumber = studentIdNumber;
 
     const credentials = await StudentCredentials.findOneAndUpdate(
-      { _id: params.id },
+      { _id: id },
       updateData,
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!credentials) {
@@ -158,13 +158,13 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  context: unknown
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { params } = context as { params: { id: string } };
+  const { id } = await params;
   try {
     await dbConnect();
 
-    const credentials = await StudentCredentials.findOneAndDelete({ _id: params.id });
+    const credentials = await StudentCredentials.findOneAndDelete({ _id: id });
     if (!credentials) {
       return NextResponse.json(
         { error: 'Credentials not found' },
