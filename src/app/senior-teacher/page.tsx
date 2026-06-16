@@ -1,5 +1,5 @@
-import Teachers from "@/admin-pages/Teachers";
+import { SeniorDashboard } from "@/legacy-pages/senior-teacher/SeniorTeacherPages";
 
 export default function SeniorTeacherDashboardPage() {
-  return <Teachers />;
+  return <SeniorDashboard />;
 }

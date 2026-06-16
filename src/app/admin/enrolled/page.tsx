@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Users, Eye, Loader2, AlertCircle, Download, Bell, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { PaymentStatusBadge, PaymentModeBadge, PaymentModeSummary } from "@/components/student/PaymentStatusBadge";
 import {
-  PaymentStatusBadge,
-  PaymentModeBadge,
-  PaymentModeSummary,
   getEnrollmentPaymentMode,
   filterCoursesByPaymentMode,
   type StudentPaymentMode,
-} from "@/components/student/PaymentStatusBadge";
+} from "@/components/student/payment-status-utils";
 import {
   Dialog,
   DialogContent,
@@ -76,11 +74,7 @@ export default function EnrolledPage() {
   const [showModal, setShowModal] = useState(false);
   const [remindingId, setRemindingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchEnrollments();
-  }, [filter]);
-
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
     try {
       setLoading(true);
       const query = filter === "all" ? "" : `?filter=${filter}`;
@@ -125,7 +119,11 @@ export default function EnrolledPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    void fetchEnrollments();
+  }, [fetchEnrollments]);
 
   const handleViewCourses = (student: StudentEnrollments, coursesOverride?: Enrollment[]) => {
     const courses = coursesOverride ?? filterCoursesByPaymentMode(student.courses, paymentModeFilter);

@@ -5,6 +5,7 @@ import {
   LayoutDashboard, CalendarOff, Palette, CalendarDays, MessageSquare, TrendingUp, ClipboardList, User, UserPlus, Boxes, GraduationCap, Users,
 } from "lucide-react";
 import { RoleLayout, NavItem, RequireRoles } from "@/components/layouts/RoleLayout";
+import { useSeniorTeacherSessionGuard } from "@/components/senior-teacher/useSeniorTeacherSessionGuard";
 
 const seniorNav: NavItem[] = [
   { to: "/senior-teacher", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -22,10 +23,22 @@ const seniorNav: NavItem[] = [
 ];
 
 export default function SeniorTeacherLayout({ children }: { children: ReactNode }) {
+  const { sessionOk, checking } = useSeniorTeacherSessionGuard();
+
   return (
     <RequireRoles roles={["senior-teacher"]}>
       <RoleLayout navItems={seniorNav} role="senior-teacher">
-        {children}
+        {checking ? (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+            Verifying senior teacher session…
+          </div>
+        ) : sessionOk ? (
+          children
+        ) : (
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground px-6 text-center">
+            Redirecting to login…
+          </div>
+        )}
       </RoleLayout>
     </RequireRoles>
   );
