@@ -2,13 +2,15 @@ import { cn } from "@/lib/utils";
 
 export type LeaveStaffType = "teacher" | "senior_teacher";
 
-const STYLES: Record<LeaveStaffType, { label: string; className: string }> = {
+const STYLES: Record<LeaveStaffType, { label: string; shortLabel: string; className: string }> = {
   teacher: {
     label: "Teacher",
+    shortLabel: "Teacher",
     className: "bg-info/15 text-info border border-info/25",
   },
   senior_teacher: {
     label: "Senior Teacher",
+    shortLabel: "Sn. Teacher",
     className: "bg-secondary-soft text-secondary border border-secondary/30",
   },
 };
@@ -16,9 +18,11 @@ const STYLES: Record<LeaveStaffType, { label: string; className: string }> = {
 export function StaffTypeBadge({
   staffType,
   className,
+  variant = "default",
 }: {
   staffType: LeaveStaffType;
   className?: string;
+  variant?: "default" | "short";
 }) {
   const cfg = STYLES[staffType];
   return (
@@ -29,7 +33,7 @@ export function StaffTypeBadge({
         className,
       )}
     >
-      {cfg.label}
+      {variant === "short" ? cfg.shortLabel : cfg.label}
     </span>
   );
 }

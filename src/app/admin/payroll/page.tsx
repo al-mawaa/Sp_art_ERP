@@ -1,5 +1,5 @@
-import Payroll from "@/legacy-pages/admin/Payroll";
+import { PayrollDashboard } from "@/app/admin/payroll/PayrollDashboard";
 
 export default function PayrollPage() {
-  return <Payroll />;
+  return <PayrollDashboard />;
 }
