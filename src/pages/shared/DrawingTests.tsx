@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Upload, Image as ImageIcon, Star, Send, Award, Clock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Upload, Image as ImageIcon, Star, Send, Award, Clock, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Avatar } from "@/components/shared/Avatar";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { StatCard } from "@/components/shared/StatCard";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStore, actions, type DrawingTest, type DrawingScore } from "@/store/dataStore";
-import { CLASSES } from "@/data/mockData";
+import { useTeacherSessionGuard } from "@/components/teacher/useTeacherSessionGuard";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,31 @@ function fileToDataUrl(file: File): Promise<string> {
     r.readAsDataURL(file);
   });
 }
+
+type TeacherDrawingTest = {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  batchId: string;
+  batchName: string;
+  courseName: string;
+  batchMonth: string;
+  studentId: string;
+  studentName: string;
+  testTitle: string;
+  timeTaken: number;
+  teacherDrawingImage: string;
+  studentDrawingImage: string;
+  status: 'Pending Senior Review' | 'Reviewed' | 'Approved' | 'Rejected';
+  submittedAt: string;
+  createdAt: string;
+  reviewerNotes?: string;
+};
+
+type ApiBatchResponse = { id?: string; batchName?: string; name?: string; batchTitle?: string };
+type ApiStudentResponse = { id?: string; studentId?: string; name?: string; studentName?: string; badgeId?: string };
+type BatchOption = { id: string; name: string };
+type BatchStudentItem = { id: string; name: string; badgeId?: string };
 
 function ImagePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -61,46 +87,223 @@ function ImagePicker({ label, value, onChange }: { label: string; value: string;
 
 /* ---------------- Teacher: submit a drawing test ---------------- */
 export function TeacherDrawingTests() {
-  const tests = useStore(s => s.drawingTests);
-  const students = useStore(s => s.students);
-  const teacherName = "Sneha Kulkarni";
-  const myTests = tests.filter(t => t.teacherName === teacherName);
+  const storeStudents = useStore(s => s.students);
+  const [tests, setTests] = useState<TeacherDrawingTest[]>([]);
+  const [loadingTests, setLoadingTests] = useState(false);
+  const [testsError, setTestsError] = useState<string | null>(null);
+
+  const [batches, setBatches] = useState<Array<{ id: string; name: string }>>([]);
+  const [batchStudents, setBatchStudents] = useState<BatchStudentItem[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const { sessionOk, checking } = useTeacherSessionGuard();
 
   const [open, setOpen] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
-    studentId: students[0]?.id ?? "",
-    className: CLASSES[0] as string,
+    studentId: storeStudents[0]?.id ?? "",
+    batchId: "",
     duration: 30,
     teacherImage: "",
     studentImage: "",
   });
 
   function reset() {
-    setForm({ title: "", studentId: students[0]?.id ?? "", className: CLASSES[0], duration: 30, teacherImage: "", studentImage: "" });
+    setEditingTestId(null);
+    setForm({ title: "", studentId: storeStudents[0]?.id ?? "", batchId: "", duration: 30, teacherImage: "", studentImage: "" });
+    setBatchStudents([]);
   }
 
-  function submit(e: React.FormEvent) {
+  function openEdit(test: TeacherDrawingTest) {
+    setEditingTestId(test.id);
+    setForm({
+      title: test.testTitle,
+      studentId: test.studentId,
+      batchId: test.batchId,
+      duration: test.timeTaken,
+      teacherImage: test.teacherDrawingImage,
+      studentImage: test.studentDrawingImage,
+    });
+    loadStudentsForBatch(test.batchId);
+    setOpen(true);
+  }
+
+  async function loadTeacherTests() {
+    setLoadingTests(true);
+    setTestsError(null);
+    try {
+      const res = await fetch('/api/drawing-tests/teacher', { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const error = json?.error || `HTTP ${res.status}`;
+        setTestsError(error);
+        setTests([]);
+        return;
+      }
+      if (json?.success && Array.isArray(json.data?.tests)) {
+        setTests(json.data.tests);
+      } else {
+        setTests([]);
+      }
+    } catch (err) {
+      console.error('Failed to load teacher drawing tests', err);
+      setTestsError('Unable to load drawing tests');
+      setTests([]);
+    } finally {
+      setLoadingTests(false);
+    }
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title || !form.teacherImage || !form.studentImage) {
       toast.error("Add title and both drawings");
       return;
     }
-    const stu = students.find(s => s.id === form.studentId);
-    if (!stu) return;
-    actions.submitDrawingTest({
-      title: form.title,
-      studentId: stu.id,
-      studentName: stu.name,
-      teacherName,
-      className: form.className,
-      teacherImage: form.teacherImage,
-      studentImage: form.studentImage,
-      durationMinutes: Number(form.duration) || 0,
-    });
-    toast.success("Sent to senior teacher for review!");
-    setOpen(false);
-    reset();
+    if (!form.batchId) {
+      toast.error('Please select a batch');
+      return;
+    }
+    const stu = batchStudents.find(s => s.id === form.studentId);
+    if (!stu) {
+      toast.error('Please select a student from the chosen batch');
+      return;
+    }
+    try {
+      setLoadingSubmit(true);
+      const isEdit = Boolean(editingTestId);
+      const response = await fetch(editingTestId ? `/api/drawing-tests/${editingTestId}` : '/api/drawing-tests', {
+        method: isEdit ? 'PUT' : 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batchId: form.batchId,
+          studentId: stu.id,
+          testTitle: form.title,
+          teacherDrawingImage: form.teacherImage,
+          studentDrawingImage: form.studentImage,
+          timeTaken: Number(form.duration) || 0,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        console.error('Drawing test submit failed', response.status, result);
+        toast.error(result?.error || `Submit failed (${response.status})`);
+        return;
+      }
+
+      if (result?.success) {
+        toast.success(editingTestId ? 'Drawing test updated successfully.' : 'Drawing test submitted successfully and sent to Senior Teacher.');
+        setOpen(false);
+        reset();
+        await loadTeacherTests();
+      } else {
+        toast.error(result?.error || 'Failed to submit');
+      }
+    } catch (err) {
+      console.error('Drawing test submit error', err);
+      toast.error('Failed to submit due to network or server error');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  }
+
+  // fetch teacher batches when dialog opens
+  async function loadBatches() {
+    setLoadingBatches(true);
+    setBatchError(null);
+    try {
+      const res = await fetch('/api/teacher/batches', { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const error = json?.error || `HTTP ${res.status}`;
+        setBatchError(error);
+        console.error('loadBatches failed', res.status, json);
+        setBatches([]);
+        return;
+      }
+      const typed = json as
+        | { success?: boolean; data?: { batches?: ApiBatchResponse[] }; batches?: ApiBatchResponse[] }
+        | null;
+
+      if (typed?.success && Array.isArray(typed.data?.batches)) {
+        setBatches(
+          typed.data.batches
+            .map((b): BatchOption => ({ id: b.id ? String(b.id) : '', name: b.batchName || b.name || b.batchTitle || '' }))
+            .filter((b): b is BatchOption => Boolean(b.id)),
+        );
+      } else if (Array.isArray(typed?.batches)) {
+        setBatches(
+          typed.batches
+            .map((b): BatchOption => ({ id: b.id ? String(b.id) : '', name: b.name || '' }))
+            .filter((b): b is BatchOption => Boolean(b.id)),
+        );
+      } else {
+        setBatches([]);
+      }
+    } catch (e) {
+      setBatchError('Unable to load batches');
+      console.error('Failed to load batches', e);
+      setBatches([]);
+    } finally {
+      setLoadingBatches(false);
+    }
+  }
+
+  async function loadStudentsForBatch(batchId: string) {
+    if (!batchId) return setBatchStudents([]);
+    try {
+      const res = await fetch(`/api/teacher/batches/${batchId}/students`, { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error('loadStudentsForBatch failed', res.status, json);
+        return;
+      }
+      const typed = json as { success?: boolean; data?: { students?: ApiStudentResponse[] } } | null;
+      if (typed?.success && Array.isArray(typed.data?.students)) {
+        setBatchStudents(
+          typed.data.students
+            .map((s): BatchStudentItem => ({
+              id: s.id ? String(s.id) : s.studentId ? String(s.studentId) : '',
+              name: s.name || s.studentName || '',
+              badgeId: s.badgeId || undefined,
+            }))
+            .filter((s): s is BatchStudentItem => Boolean(s.id)),
+        );
+      } else {
+        setBatchStudents([]);
+      }
+    } catch (e) {
+      console.error('Failed to load students for batch', e);
+      setBatchStudents([]);
+    }
+  }
+
+  useEffect(() => {
+    if (!checking && sessionOk) {
+      loadTeacherTests();
+    }
+  }, [checking, sessionOk]);
+
+  useEffect(() => {
+    if (open && !checking && sessionOk && !loadingBatches && batches.length === 0) {
+      loadBatches();
+    }
+  }, [open, checking, sessionOk, loadingBatches, batches.length]);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Verifying teacher session…
+      </div>
+    );
+  }
+
+  if (!sessionOk) {
+    return null;
   }
 
   return (
@@ -116,36 +319,67 @@ export function TeacherDrawingTests() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Submitted" value={myTests.length} icon={ImageIcon} tone="info" />
-        <StatCard label="Pending" value={myTests.filter(t => t.status === "Pending Review").length} icon={Clock} tone="warning" />
-        <StatCard label="Scored" value={myTests.filter(t => t.status === "Scored").length} icon={Award} tone="success" />
-        <StatCard
-          label="Avg my score"
-          value={(() => {
-            const scored = myTests.filter(t => t.teacherScore);
-            if (!scored.length) return "—";
-            const tot = scored.reduce((a, t) => a + (t.teacherScore!.duration + t.teacherScore!.neatness + t.teacherScore!.art), 0) / scored.length;
-            return `${tot.toFixed(1)}/30`;
-          })()}
-          icon={Star}
-          tone="primary"
-        />
+        <StatCard label="Submitted" value={tests.length} icon={ImageIcon} tone="info" />
+        <StatCard label="Pending review" value={tests.filter(t => t.status === "Pending Senior Review").length} icon={Clock} tone="warning" />
+        <StatCard label="Reviewed" value={tests.filter(t => t.status !== "Pending Senior Review").length} icon={Award} tone="success" />
+        <StatCard label="Batches" value={new Set(tests.map(t => t.batchName)).size} icon={Star} tone="primary" />
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {myTests.length === 0 && (
-          <div className="card-soft p-10 text-center text-muted-foreground col-span-full">
-            No drawing tests yet. Click "New submission" to send one.
-          </div>
-        )}
-        {myTests.map(t => (
-          <TestCard key={t.id} test={t} showStudent showBoth />
-        ))}
+      <div className="space-y-4">
+        <div className="rounded-xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Batch</TableHead>
+                <TableHead>Test Title</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tests.length === 0 && (
+                <TableRow>
+                  <TableCell className="px-4 py-6 text-center text-muted-foreground" colSpan={7}>
+                    {loadingTests ? 'Loading drawing tests…' : testsError ? testsError : 'No drawing tests yet. Click "New submission" to send one.'}
+                  </TableCell>
+                </TableRow>
+              )}
+              {tests.map(test => (
+                <TableRow key={test.id} className="hover:bg-slate-50">
+                  <TableCell><StatusPill status={test.status} /></TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{test.studentName}</TableCell>
+                  <TableCell>{test.batchName}</TableCell>
+                  <TableCell>{test.testTitle}</TableCell>
+                  <TableCell>{test.timeTaken} min</TableCell>
+                  <TableCell>{formatSubmittedAt(test.submittedAt)}</TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full px-3 py-1.5 text-xs inline-flex items-center gap-1"
+                      onClick={() => openEdit(test)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
       </div>
 
-      <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) reset(); }}>
+      <Dialog open={open} onOpenChange={o => { setOpen(o); if (o && sessionOk) loadBatches(); if (!o) reset(); }}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>New drawing test</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingTestId ? 'Edit drawing test' : 'New drawing test'}</DialogTitle>
+          </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -153,17 +387,45 @@ export function TeacherDrawingTests() {
                 <Input className="rounded-xl" placeholder="e.g. Still life - apple" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Class</Label>
-                <Select value={form.className} onValueChange={v => setForm(f => ({ ...f, className: v }))}>
+                <Label>Batch</Label>
+                <Select
+                  value={form.batchId}
+                  onValueChange={v => {
+                    setForm(f => ({ ...f, batchId: v, studentId: '' }));
+                    loadStudentsForBatch(v);
+                  }}
+                  disabled={Boolean(editingTestId)}
+                >
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {loadingBatches && <SelectItem value="none" disabled>Loading batches…</SelectItem>}
+                    {!loadingBatches && batches.length === 0 && (
+                      <SelectItem value="none" disabled>{batchError || 'No batches assigned'}</SelectItem>
+                    )}
+                    {batches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
+                {batchError ? (
+                  <p className="text-sm text-destructive mt-1">{batchError}</p>
+                ) : !loadingBatches && batches.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mt-1">No batches were found for this teacher. Check that this teacher is assigned to batches in the DB.</p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <Label>Student</Label>
-                <Select value={form.studentId} onValueChange={v => setForm(f => ({ ...f, studentId: v }))}>
+                <Select
+                  value={form.studentId}
+                  onValueChange={v => setForm(f => ({ ...f, studentId: v }))}
+                  disabled={Boolean(editingTestId)}
+                >
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.name} • {s.badgeId}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                      {!form.batchId && <SelectItem value="none" disabled>Select a batch first</SelectItem>}
+                      {form.batchId && batchStudents.length === 0 && <SelectItem value="none" disabled>No students in this batch</SelectItem>}
+                      {form.batchId && batchStudents.map(s => (
+                        <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}{s.badgeId ? ` • ${s.badgeId}` : ''}</SelectItem>
+                      ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
@@ -177,8 +439,8 @@ export function TeacherDrawingTests() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" className="gradient-primary text-white border-0">
-                <Send className="w-4 h-4 mr-1" /> Send to senior teacher
+              <Button type="submit" className="gradient-primary text-white border-0" disabled={loadingSubmit}>
+                <Send className="w-4 h-4 mr-1" /> {loadingSubmit ? 'Sending…' : 'Send to senior teacher'}
               </Button>
             </DialogFooter>
           </form>
@@ -292,6 +554,13 @@ function ScoreCard({ title, score, onChange, readOnly }: { title: string; score:
 }
 
 export default TeacherDrawingTests;
+
+function formatSubmittedAt(value: string) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 function ReadRow({ label, v }: { label: string; v: number }) {
   return (

@@ -26,6 +26,12 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;
+    // DEBUG: log teacher id coming from session cookie
+    try {
+      console.debug('[debug] teacher session id:', auth.teacher.id);
+    } catch (e) {
+      console.debug('[debug] teacher session id: <unavailable>');
+    }
 
     const teacherId = auth.teacher.id;
     await dbConnect();
