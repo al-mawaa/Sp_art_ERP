@@ -11,9 +11,18 @@ export async function GET(request: NextRequest) {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;
 
+    const { searchParams } = new URL(request.url);
+    const taskId = (searchParams.get('taskId') || '').trim();
     await dbConnect();
     const teacherOid = new mongoose.Types.ObjectId(auth.teacher.id);
-    const rows = await DrawingTest.find({ teacherId: teacherOid }).sort({ createdAt: -1 }).lean();
+    const filter: Record<string, unknown> = { teacherId: teacherOid };
+    if (taskId) {
+      if (!mongoose.Types.ObjectId.isValid(taskId)) {
+        return NextResponse.json({ success: false, error: 'Invalid taskId' }, { status: 400 });
+      }
+      filter.taskId = new mongoose.Types.ObjectId(taskId);
+    }
+    const rows = await DrawingTest.find(filter).sort({ createdAt: -1 }).lean();
 
     const payload = rows.map(r => ({
       id: String(r._id),

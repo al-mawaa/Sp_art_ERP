@@ -23,7 +23,7 @@ const teacherNav: NavItem[] = [
   { to: "/teacher/profile", label: "My Profile", icon: User },
   { to: "/teacher/classes", label: "My Classes", icon: CalendarDays },
   { to: "/teacher/attendance", label: "Attendance", icon: ClipboardCheck },
-  { to: "/teacher/drawing-tests", label: "Drawing Tests", icon: Palette },
+  { to: "/teacher/drawing-tests", label: "Drawing Tasks", icon: Palette },
   { to: "/teacher/progress", label: "Student Progress", icon: TrendingUp },
   { to: "/teacher/slot-requests", label: "Slot Requests", icon: ClipboardList },
   { to: "/teacher/leave", label: "Leave", icon: CalendarOff },

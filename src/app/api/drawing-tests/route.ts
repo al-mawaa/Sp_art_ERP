@@ -33,12 +33,12 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const body = await request.json();
-    const { batchId, studentId, testTitle, teacherDrawingImage, studentDrawingImage, timeTaken } = body || {};
+    const { batchId, studentId, testTitle, teacherDrawingImage, studentDrawingImage, timeTaken, taskId } = body || {};
 
-    if (!batchId || !studentId || !testTitle || !teacherDrawingImage || !studentDrawingImage) {
+    if (!batchId || !studentId || !testTitle || !teacherDrawingImage || !studentDrawingImage || !taskId) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
-    if (!mongoose.Types.ObjectId.isValid(batchId) || !mongoose.Types.ObjectId.isValid(studentId)) {
+    if (!mongoose.Types.ObjectId.isValid(batchId) || !mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(taskId)) {
       return NextResponse.json({ success: false, error: 'Invalid ids' }, { status: 400 });
     }
 
@@ -69,6 +69,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Student not found in batch or student records' }, { status: 404 });
     }
 
+    // validate task exists and belongs to this teacher
+    const DrawingTask = await import('@/lib/models/DrawingTask').then(m => m.default);
+    const task = await DrawingTask.findById(taskId).lean().catch(() => null);
+    if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+    if (String(task.createdBy) !== auth.teacher.id) return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+
     const doc = await DrawingTest.create({
       teacherId: new mongoose.Types.ObjectId(auth.teacher.id),
       teacherName,
@@ -76,6 +82,7 @@ export async function POST(request: NextRequest) {
       batchName,
       courseName,
       batchMonth,
+      taskId: new mongoose.Types.ObjectId(taskId),
       studentId: new mongoose.Types.ObjectId(studentId),
       studentName,
       testTitle,

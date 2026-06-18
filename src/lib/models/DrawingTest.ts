@@ -11,6 +11,7 @@ export interface DrawingTestDocument extends mongoose.Document {
   batchMonth?: string;
   studentId: mongoose.Types.ObjectId;
   studentName: string;
+  taskId?: mongoose.Types.ObjectId;
   testTitle: string;
   timeTaken: number;
   teacherDrawingImage: string;
@@ -31,6 +32,7 @@ const DrawingTestSchema = new mongoose.Schema<DrawingTestDocument>(
     batchMonth: { type: String, default: "" },
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
     studentName: { type: String, required: true },
+    taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'DrawingTask', index: true, required: false },
     testTitle: { type: String, required: true },
     timeTaken: { type: Number, default: 0 },
     teacherDrawingImage: { type: String, required: true },

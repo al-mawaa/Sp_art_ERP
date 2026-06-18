@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Upload, Image as ImageIcon, Star, Send, Award, Clock, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -86,16 +86,17 @@ function ImagePicker({ label, value, onChange }: { label: string; value: string;
 }
 
 /* ---------------- Teacher: submit a drawing test ---------------- */
-export function TeacherDrawingTests() {
+export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
   const storeStudents = useStore(s => s.students);
   const [tests, setTests] = useState<TeacherDrawingTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(false);
   const [testsError, setTestsError] = useState<string | null>(null);
 
-  const [batches, setBatches] = useState<Array<{ id: string; name: string }>>([]);
+  const [taskInfo, setTaskInfo] = useState<{ batchId: string; batchName: string; taskName: string; taskDate: string } | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [batches, setBatches] = useState<ApiBatchResponse[]>([]);
   const [batchStudents, setBatchStudents] = useState<BatchStudentItem[]>([]);
-  const [loadingBatches, setLoadingBatches] = useState(false);
-  const [batchError, setBatchError] = useState<string | null>(null);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const { sessionOk, checking } = useTeacherSessionGuard();
 
   const [open, setOpen] = useState(false);
@@ -110,10 +111,33 @@ export function TeacherDrawingTests() {
     studentImage: "",
   });
 
+  async function loadBatches() {
+    try {
+      const res = await fetch('/api/teacher/batches', { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success && Array.isArray(json.data?.batches)) {
+        setBatches(json.data.batches);
+      } else {
+        setBatches([]);
+      }
+    } catch (e) {
+      console.error('Failed to load batches', e);
+      setBatches([]);
+    }
+  }
+
   function reset() {
     setEditingTestId(null);
-    setForm({ title: "", studentId: storeStudents[0]?.id ?? "", batchId: "", duration: 30, teacherImage: "", studentImage: "" });
-    setBatchStudents([]);
+    const defaultBatchId = taskInfo?.batchId ?? (batches[0]?.id || "");
+    setForm({ title: "", studentId: batchStudents[0]?.id ?? storeStudents[0]?.id ?? "", batchId: defaultBatchId, duration: 30, teacherImage: "", studentImage: "" });
+  }
+
+  async function handleNewSubmission() {
+    if (taskInfo?.batchId) {
+      await loadStudentsForBatch(taskInfo.batchId);
+      setForm(f => ({ ...f, batchId: taskInfo.batchId }));
+    }
+    setOpen(true);
   }
 
   function openEdit(test: TeacherDrawingTest) {
@@ -130,32 +154,6 @@ export function TeacherDrawingTests() {
     setOpen(true);
   }
 
-  async function loadTeacherTests() {
-    setLoadingTests(true);
-    setTestsError(null);
-    try {
-      const res = await fetch('/api/drawing-tests/teacher', { credentials: 'include' });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const error = json?.error || `HTTP ${res.status}`;
-        setTestsError(error);
-        setTests([]);
-        return;
-      }
-      if (json?.success && Array.isArray(json.data?.tests)) {
-        setTests(json.data.tests);
-      } else {
-        setTests([]);
-      }
-    } catch (err) {
-      console.error('Failed to load teacher drawing tests', err);
-      setTestsError('Unable to load drawing tests');
-      setTests([]);
-    } finally {
-      setLoadingTests(false);
-    }
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title || !form.teacherImage || !form.studentImage) {
@@ -168,7 +166,7 @@ export function TeacherDrawingTests() {
     }
     const stu = batchStudents.find(s => s.id === form.studentId);
     if (!stu) {
-      toast.error('Please select a student from the chosen batch');
+      toast.error('Please select a student');
       return;
     }
     try {
@@ -181,6 +179,7 @@ export function TeacherDrawingTests() {
         body: JSON.stringify({
           batchId: form.batchId,
           studentId: stu.id,
+          taskId: taskId ?? null,
           testTitle: form.title,
           teacherDrawingImage: form.teacherImage,
           studentDrawingImage: form.studentImage,
@@ -199,7 +198,8 @@ export function TeacherDrawingTests() {
         toast.success(editingTestId ? 'Drawing test updated successfully.' : 'Drawing test submitted successfully and sent to Senior Teacher.');
         setOpen(false);
         reset();
-        await loadTeacherTests();
+        // Reload tests for this specific task
+        await loadTeacherTests(taskId);
       } else {
         toast.error(result?.error || 'Failed to submit');
       }
@@ -211,88 +211,113 @@ export function TeacherDrawingTests() {
     }
   }
 
-  // fetch teacher batches when dialog opens
-  async function loadBatches() {
-    setLoadingBatches(true);
-    setBatchError(null);
+  const loadTaskInfo = useCallback(async () => {
+    if (!taskId) return;
+    setTaskError(null);
     try {
-      const res = await fetch('/api/teacher/batches', { credentials: 'include' });
+      const res = await fetch(`/api/drawing-tasks/${taskId}`, { credentials: 'include' });
       const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const error = json?.error || `HTTP ${res.status}`;
-        setBatchError(error);
-        console.error('loadBatches failed', res.status, json);
-        setBatches([]);
+      if (!res.ok || !json?.success || !json.data?.task) {
+        const errorMessage = json?.error || `Task load failed (${res.status})`;
+        console.error('loadTaskInfo failed', res.status, json);
+        setTaskError(errorMessage);
         return;
       }
-      const typed = json as
-        | { success?: boolean; data?: { batches?: ApiBatchResponse[] }; batches?: ApiBatchResponse[] }
-        | null;
 
-      if (typed?.success && Array.isArray(typed.data?.batches)) {
-        setBatches(
-          typed.data.batches
-            .map((b): BatchOption => ({ id: b.id ? String(b.id) : '', name: b.batchName || b.name || b.batchTitle || '' }))
-            .filter((b): b is BatchOption => Boolean(b.id)),
-        );
-      } else if (Array.isArray(typed?.batches)) {
-        setBatches(
-          typed.batches
-            .map((b): BatchOption => ({ id: b.id ? String(b.id) : '', name: b.name || '' }))
-            .filter((b): b is BatchOption => Boolean(b.id)),
-        );
-      } else {
-        setBatches([]);
+      const batchIdValue = json.data.task.batchId ? String(json.data.task.batchId) : '';
+      if (!batchIdValue) {
+        setTaskError('Task batch id is missing or invalid.');
+        return;
       }
+
+      setTaskInfo({
+        batchId: batchIdValue,
+        batchName: String(json.data.task.batchName || 'Unknown batch'),
+        taskName: String(json.data.task.taskName || 'Drawing task'),
+        taskDate: new Date(json.data.task.taskDate).toISOString(),
+      });
+      setForm(f => ({ ...f, batchId: batchIdValue }));
+      await loadStudentsForBatch(batchIdValue);
     } catch (e) {
-      setBatchError('Unable to load batches');
-      console.error('Failed to load batches', e);
-      setBatches([]);
-    } finally {
-      setLoadingBatches(false);
+      console.error('Failed to load task info', e);
+      setTaskError('Unable to load task information.');
     }
-  }
+  }, [taskId]);
+
+  const loadTeacherTests = useCallback(async (filterTaskId?: string) => {
+    setLoadingTests(true);
+    setTestsError(null);
+    try {
+      let apiUrl = '/api/drawing-tests/teacher';
+      if (filterTaskId) {
+        apiUrl += `?taskId=${encodeURIComponent(filterTaskId)}`;
+      }
+      const res = await fetch(apiUrl, { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        console.error('loadTeacherTests failed', res.status, json);
+        setTests([]);
+        setLoadingTests(false);
+        return;
+      }
+      setTests(Array.isArray(json.data?.tests) ? json.data.tests : []);
+    } catch (e) {
+      console.error('Failed to load teacher tests', e);
+      setTests([]);
+    } finally {
+      setLoadingTests(false);
+    }
+  }, []);
 
   async function loadStudentsForBatch(batchId: string) {
     if (!batchId) return setBatchStudents([]);
+    setLoadingStudents(true);
     try {
       const res = await fetch(`/api/teacher/batches/${batchId}/students`, { credentials: 'include' });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         console.error('loadStudentsForBatch failed', res.status, json);
+        setLoadingStudents(false);
         return;
       }
       const typed = json as { success?: boolean; data?: { students?: ApiStudentResponse[] } } | null;
       if (typed?.success && Array.isArray(typed.data?.students)) {
-        setBatchStudents(
-          typed.data.students
-            .map((s): BatchStudentItem => ({
-              id: s.id ? String(s.id) : s.studentId ? String(s.studentId) : '',
-              name: s.name || s.studentName || '',
-              badgeId: s.badgeId || undefined,
-            }))
-            .filter((s): s is BatchStudentItem => Boolean(s.id)),
-        );
+        const students = typed.data.students
+          .map((s): BatchStudentItem => ({
+            id: s.id ? String(s.id) : s.studentId ? String(s.studentId) : '',
+            name: s.name || s.studentName || '',
+            badgeId: s.badgeId || undefined,
+          }))
+          .filter((s): s is BatchStudentItem => Boolean(s.id));
+        setBatchStudents(students);
+        setForm(f => ({
+          ...f,
+          studentId: students.find(s => s.id === f.studentId)?.id ?? students[0]?.id ?? f.studentId,
+        }));
       } else {
         setBatchStudents([]);
       }
     } catch (e) {
       console.error('Failed to load students for batch', e);
       setBatchStudents([]);
+    } finally {
+      setLoadingStudents(false);
     }
   }
 
   useEffect(() => {
     if (!checking && sessionOk) {
-      loadTeacherTests();
+      if (taskId) {
+        // When viewing a specific task, only load submissions for that task
+        loadTeacherTests(taskId);
+        loadTaskInfo();
+      } else {
+        // When on general drawing tests page, load all submissions
+        loadTeacherTests();
+        loadBatches();
+      }
     }
-  }, [checking, sessionOk]);
-
-  useEffect(() => {
-    if (open && !checking && sessionOk && !loadingBatches && batches.length === 0) {
-      loadBatches();
-    }
-  }, [open, checking, sessionOk, loadingBatches, batches.length]);
+  }, [checking, sessionOk, taskId, loadTeacherTests, loadTaskInfo]);
 
   if (checking) {
     return (
@@ -309,14 +334,28 @@ export function TeacherDrawingTests() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Drawing Tests"
-        subtitle="Submit student drawings for senior teacher review"
+        title={taskInfo?.taskName || 'Drawing Tests'}
+        subtitle={
+          taskInfo
+            ? `Task date: ${new Date(taskInfo.taskDate).toLocaleDateString()} · Batch: ${taskInfo.batchName}`
+            : 'Submit student drawings for senior teacher review'
+        }
         action={
-          <Button className="rounded-xl gradient-primary text-white border-0" onClick={() => setOpen(true)}>
-            <Upload className="w-4 h-4 mr-1" /> New submission
-          </Button>
+          taskId ? (
+            <Button
+              className="rounded-xl gradient-primary text-white border-0"
+              onClick={handleNewSubmission}
+            >
+              <Upload className="w-4 h-4 mr-1" /> New submission
+            </Button>
+          ) : null
         }
       />
+      {taskError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {taskError}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Submitted" value={tests.length} icon={ImageIcon} tone="info" />
@@ -343,7 +382,7 @@ export function TeacherDrawingTests() {
               {tests.length === 0 && (
                 <TableRow>
                   <TableCell className="px-4 py-6 text-center text-muted-foreground" colSpan={7}>
-                    {loadingTests ? 'Loading drawing tests…' : testsError ? testsError : 'No drawing tests yet. Click "New submission" to send one.'}
+                    {loadingTests ? 'Loading drawing tests…' : testsError ? testsError : 'No student submissions available. Click "New Submission" to upload student drawings.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -375,56 +414,61 @@ export function TeacherDrawingTests() {
 
       </div>
 
-      <Dialog open={open} onOpenChange={o => { setOpen(o); if (o && sessionOk) loadBatches(); if (!o) reset(); }}>
+      <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) reset(); }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingTestId ? 'Edit drawing test' : 'New drawing test'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
+            {!taskInfo && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Select a batch to start adding submissions
+              </div>
+            )}
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Test title</Label>
                 <Input className="rounded-xl" placeholder="e.g. Still life - apple" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
-              <div className="space-y-1.5">
-                <Label>Batch</Label>
-                <Select
-                  value={form.batchId}
-                  onValueChange={v => {
-                    setForm(f => ({ ...f, batchId: v, studentId: '' }));
-                    loadStudentsForBatch(v);
-                  }}
-                  disabled={Boolean(editingTestId)}
-                >
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {loadingBatches && <SelectItem value="none" disabled>Loading batches…</SelectItem>}
-                    {!loadingBatches && batches.length === 0 && (
-                      <SelectItem value="none" disabled>{batchError || 'No batches assigned'}</SelectItem>
-                    )}
-                    {batches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {batchError ? (
-                  <p className="text-sm text-destructive mt-1">{batchError}</p>
-                ) : !loadingBatches && batches.length === 0 ? (
-                  <p className="text-sm text-muted-foreground mt-1">No batches were found for this teacher. Check that this teacher is assigned to batches in the DB.</p>
-                ) : null}
-              </div>
+              {!taskInfo && (
+                <div className="space-y-1.5">
+                  <Label>Batch</Label>
+                  <Select
+                    value={form.batchId}
+                    onValueChange={async (v) => {
+                      setForm(f => ({ ...f, batchId: v }));
+                      await loadStudentsForBatch(v);
+                    }}
+                  >
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select a batch" /></SelectTrigger>
+                    <SelectContent>
+                      {batches.length === 0 && <SelectItem value="none" disabled>No batches available</SelectItem>}
+                      {batches.map(batch => (
+                        <SelectItem key={batch.id} value={String(batch.id)}>
+                          {batch.batchName || batch.name || `Batch ${batch.id}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Student</Label>
                 <Select
                   value={form.studentId}
                   onValueChange={v => setForm(f => ({ ...f, studentId: v }))}
-                  disabled={Boolean(editingTestId)}
+                  disabled={loadingStudents || batchStudents.length === 0}
                 >
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder={loadingStudents ? 'Loading students…' : batchStudents.length === 0 ? 'No students available' : 'Select a student'}>
+                      {batchStudents.find(s => String(s.id) === form.studentId)?.name || (loadingStudents ? 'Loading...' : 'Select a student')}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
-                      {!form.batchId && <SelectItem value="none" disabled>Select a batch first</SelectItem>}
-                      {form.batchId && batchStudents.length === 0 && <SelectItem value="none" disabled>No students in this batch</SelectItem>}
-                      {form.batchId && batchStudents.map(s => (
-                        <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}{s.badgeId ? ` • ${s.badgeId}` : ''}</SelectItem>
-                      ))}
+                    {batchStudents.length === 0 && <SelectItem value="none" disabled>{loadingStudents ? 'Loading students…' : 'No students in this batch'}</SelectItem>}
+                    {batchStudents.map(s => (
+                      <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}{s.badgeId ? ` • ${s.badgeId}` : ''}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
