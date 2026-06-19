@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Upload, Image as ImageIcon, Star, Send, Award, Clock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Upload, Image as ImageIcon, Star, Send, Award, Clock, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Avatar } from "@/components/shared/Avatar";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { StatCard } from "@/components/shared/StatCard";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStore, actions, type DrawingTest, type DrawingScore } from "@/store/dataStore";
-import { CLASSES } from "@/data/mockData";
+import { useTeacherSessionGuard } from "@/components/teacher/useTeacherSessionGuard";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,31 @@ function fileToDataUrl(file: File): Promise<string> {
     r.readAsDataURL(file);
   });
 }
+
+type TeacherDrawingTest = {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  batchId: string;
+  batchName: string;
+  courseName: string;
+  batchMonth: string;
+  studentId: string;
+  studentName: string;
+  testTitle: string;
+  timeTaken: number;
+  teacherDrawingImage: string;
+  studentDrawingImage: string;
+  status: 'Pending Senior Review' | 'Reviewed' | 'Approved' | 'Rejected';
+  submittedAt: string;
+  createdAt: string;
+  reviewerNotes?: string;
+};
+
+type ApiBatchResponse = { id?: string; batchName?: string; name?: string; batchTitle?: string };
+type ApiStudentResponse = { id?: string; studentId?: string; name?: string; studentName?: string; badgeId?: string };
+type BatchOption = { id: string; name: string };
+type BatchStudentItem = { id: string; name: string; badgeId?: string };
 
 function ImagePicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -60,110 +86,390 @@ function ImagePicker({ label, value, onChange }: { label: string; value: string;
 }
 
 /* ---------------- Teacher: submit a drawing test ---------------- */
-export function TeacherDrawingTests() {
-  const tests = useStore(s => s.drawingTests);
-  const students = useStore(s => s.students);
-  const teacherName = "Sneha Kulkarni";
-  const myTests = tests.filter(t => t.teacherName === teacherName);
+export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
+  const storeStudents = useStore(s => s.students);
+  const [tests, setTests] = useState<TeacherDrawingTest[]>([]);
+  const [loadingTests, setLoadingTests] = useState(false);
+  const [testsError, setTestsError] = useState<string | null>(null);
+
+  const [taskInfo, setTaskInfo] = useState<{ batchId: string; batchName: string; taskName: string; taskDate: string } | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [batches, setBatches] = useState<ApiBatchResponse[]>([]);
+  const [batchStudents, setBatchStudents] = useState<BatchStudentItem[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const { sessionOk, checking } = useTeacherSessionGuard();
 
   const [open, setOpen] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
-    studentId: students[0]?.id ?? "",
-    className: CLASSES[0] as string,
+    studentId: storeStudents[0]?.id ?? "",
+    batchId: "",
     duration: 30,
     teacherImage: "",
     studentImage: "",
   });
 
-  function reset() {
-    setForm({ title: "", studentId: students[0]?.id ?? "", className: CLASSES[0], duration: 30, teacherImage: "", studentImage: "" });
+  async function loadBatches() {
+    try {
+      const res = await fetch('/api/teacher/batches', { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success && Array.isArray(json.data?.batches)) {
+        setBatches(json.data.batches);
+      } else {
+        setBatches([]);
+      }
+    } catch (e) {
+      console.error('Failed to load batches', e);
+      setBatches([]);
+    }
   }
 
-  function submit(e: React.FormEvent) {
+  function reset() {
+    setEditingTestId(null);
+    const defaultBatchId = taskInfo?.batchId ?? (batches[0]?.id || "");
+    setForm({ title: "", studentId: batchStudents[0]?.id ?? storeStudents[0]?.id ?? "", batchId: defaultBatchId, duration: 30, teacherImage: "", studentImage: "" });
+  }
+
+  async function handleNewSubmission() {
+    if (taskInfo?.batchId) {
+      await loadStudentsForBatch(taskInfo.batchId);
+      setForm(f => ({ ...f, batchId: taskInfo.batchId }));
+    }
+    setOpen(true);
+  }
+
+  function openEdit(test: TeacherDrawingTest) {
+    setEditingTestId(test.id);
+    setForm({
+      title: test.testTitle,
+      studentId: test.studentId,
+      batchId: test.batchId,
+      duration: test.timeTaken,
+      teacherImage: test.teacherDrawingImage,
+      studentImage: test.studentDrawingImage,
+    });
+    loadStudentsForBatch(test.batchId);
+    setOpen(true);
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title || !form.teacherImage || !form.studentImage) {
       toast.error("Add title and both drawings");
       return;
     }
-    const stu = students.find(s => s.id === form.studentId);
-    if (!stu) return;
-    actions.submitDrawingTest({
-      title: form.title,
-      studentId: stu.id,
-      studentName: stu.name,
-      teacherName,
-      className: form.className,
-      teacherImage: form.teacherImage,
-      studentImage: form.studentImage,
-      durationMinutes: Number(form.duration) || 0,
-    });
-    toast.success("Sent to senior teacher for review!");
-    setOpen(false);
-    reset();
+    if (!form.batchId) {
+      toast.error('Please select a batch');
+      return;
+    }
+    const stu = batchStudents.find(s => s.id === form.studentId);
+    if (!stu) {
+      toast.error('Please select a student');
+      return;
+    }
+    try {
+      setLoadingSubmit(true);
+      const isEdit = Boolean(editingTestId);
+      const response = await fetch(editingTestId ? `/api/drawing-tests/${editingTestId}` : '/api/drawing-tests', {
+        method: isEdit ? 'PUT' : 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batchId: form.batchId,
+          studentId: stu.id,
+          taskId: taskId ?? null,
+          testTitle: form.title,
+          teacherDrawingImage: form.teacherImage,
+          studentDrawingImage: form.studentImage,
+          timeTaken: Number(form.duration) || 0,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        console.error('Drawing test submit failed', response.status, result);
+        toast.error(result?.error || `Submit failed (${response.status})`);
+        return;
+      }
+
+      if (result?.success) {
+        toast.success(editingTestId ? 'Drawing test updated successfully.' : 'Drawing test submitted successfully and sent to Senior Teacher.');
+        setOpen(false);
+        reset();
+        // Reload tests for this specific task
+        await loadTeacherTests(taskId);
+      } else {
+        toast.error(result?.error || 'Failed to submit');
+      }
+    } catch (err) {
+      console.error('Drawing test submit error', err);
+      toast.error('Failed to submit due to network or server error');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  }
+
+  const loadTaskInfo = useCallback(async () => {
+    if (!taskId) return;
+    setTaskError(null);
+    try {
+      const res = await fetch(`/api/drawing-tasks/${taskId}`, { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success || !json.data?.task) {
+        const errorMessage = json?.error || `Task load failed (${res.status})`;
+        console.error('loadTaskInfo failed', res.status, json);
+        setTaskError(errorMessage);
+        return;
+      }
+
+      const batchIdValue = json.data.task.batchId ? String(json.data.task.batchId) : '';
+      if (!batchIdValue) {
+        setTaskError('Task batch id is missing or invalid.');
+        return;
+      }
+
+      setTaskInfo({
+        batchId: batchIdValue,
+        batchName: String(json.data.task.batchName || 'Unknown batch'),
+        taskName: String(json.data.task.taskName || 'Drawing task'),
+        taskDate: new Date(json.data.task.taskDate).toISOString(),
+      });
+      setForm(f => ({ ...f, batchId: batchIdValue }));
+      await loadStudentsForBatch(batchIdValue);
+    } catch (e) {
+      console.error('Failed to load task info', e);
+      setTaskError('Unable to load task information.');
+    }
+  }, [taskId]);
+
+  const loadTeacherTests = useCallback(async (filterTaskId?: string) => {
+    setLoadingTests(true);
+    setTestsError(null);
+    try {
+      let apiUrl = '/api/drawing-tests/teacher';
+      if (filterTaskId) {
+        apiUrl += `?taskId=${encodeURIComponent(filterTaskId)}`;
+      }
+      const res = await fetch(apiUrl, { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        console.error('loadTeacherTests failed', res.status, json);
+        setTests([]);
+        setLoadingTests(false);
+        return;
+      }
+      setTests(Array.isArray(json.data?.tests) ? json.data.tests : []);
+    } catch (e) {
+      console.error('Failed to load teacher tests', e);
+      setTests([]);
+    } finally {
+      setLoadingTests(false);
+    }
+  }, []);
+
+  async function loadStudentsForBatch(batchId: string) {
+    if (!batchId) return setBatchStudents([]);
+    setLoadingStudents(true);
+    try {
+      const res = await fetch(`/api/teacher/batches/${batchId}/students`, { credentials: 'include' });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error('loadStudentsForBatch failed', res.status, json);
+        setLoadingStudents(false);
+        return;
+      }
+      const typed = json as { success?: boolean; data?: { students?: ApiStudentResponse[] } } | null;
+      if (typed?.success && Array.isArray(typed.data?.students)) {
+        const students = typed.data.students
+          .map((s): BatchStudentItem => ({
+            id: s.id ? String(s.id) : s.studentId ? String(s.studentId) : '',
+            name: s.name || s.studentName || '',
+            badgeId: s.badgeId || undefined,
+          }))
+          .filter((s): s is BatchStudentItem => Boolean(s.id));
+        setBatchStudents(students);
+        setForm(f => ({
+          ...f,
+          studentId: students.find(s => s.id === f.studentId)?.id ?? students[0]?.id ?? f.studentId,
+        }));
+      } else {
+        setBatchStudents([]);
+      }
+    } catch (e) {
+      console.error('Failed to load students for batch', e);
+      setBatchStudents([]);
+    } finally {
+      setLoadingStudents(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!checking && sessionOk) {
+      if (taskId) {
+        // When viewing a specific task, only load submissions for that task
+        loadTeacherTests(taskId);
+        loadTaskInfo();
+      } else {
+        // When on general drawing tests page, load all submissions
+        loadTeacherTests();
+        loadBatches();
+      }
+    }
+  }, [checking, sessionOk, taskId, loadTeacherTests, loadTaskInfo]);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Verifying teacher session…
+      </div>
+    );
+  }
+
+  if (!sessionOk) {
+    return null;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Drawing Tests"
-        subtitle="Submit student drawings for senior teacher review"
+        title={taskInfo?.taskName || 'Drawing Tests'}
+        subtitle={
+          taskInfo
+            ? `Task date: ${new Date(taskInfo.taskDate).toLocaleDateString()} · Batch: ${taskInfo.batchName}`
+            : 'Submit student drawings for senior teacher review'
+        }
         action={
-          <Button className="rounded-xl gradient-primary text-white border-0" onClick={() => setOpen(true)}>
-            <Upload className="w-4 h-4 mr-1" /> New submission
-          </Button>
+          taskId ? (
+            <Button
+              className="rounded-xl gradient-primary text-white border-0"
+              onClick={handleNewSubmission}
+            >
+              <Upload className="w-4 h-4 mr-1" /> New submission
+            </Button>
+          ) : null
         }
       />
+      {taskError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {taskError}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Submitted" value={myTests.length} icon={ImageIcon} tone="info" />
-        <StatCard label="Pending" value={myTests.filter(t => t.status === "Pending Review").length} icon={Clock} tone="warning" />
-        <StatCard label="Scored" value={myTests.filter(t => t.status === "Scored").length} icon={Award} tone="success" />
-        <StatCard
-          label="Avg my score"
-          value={(() => {
-            const scored = myTests.filter(t => t.teacherScore);
-            if (!scored.length) return "—";
-            const tot = scored.reduce((a, t) => a + (t.teacherScore!.duration + t.teacherScore!.neatness + t.teacherScore!.art), 0) / scored.length;
-            return `${tot.toFixed(1)}/30`;
-          })()}
-          icon={Star}
-          tone="primary"
-        />
+        <StatCard label="Submitted" value={tests.length} icon={ImageIcon} tone="info" />
+        <StatCard label="Pending review" value={tests.filter(t => t.status === "Pending Senior Review").length} icon={Clock} tone="warning" />
+        <StatCard label="Reviewed" value={tests.filter(t => t.status !== "Pending Senior Review").length} icon={Award} tone="success" />
+        <StatCard label="Batches" value={new Set(tests.map(t => t.batchName)).size} icon={Star} tone="primary" />
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {myTests.length === 0 && (
-          <div className="card-soft p-10 text-center text-muted-foreground col-span-full">
-            No drawing tests yet. Click "New submission" to send one.
-          </div>
-        )}
-        {myTests.map(t => (
-          <TestCard key={t.id} test={t} showStudent showBoth />
-        ))}
+      <div className="space-y-4">
+        <div className="rounded-xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Batch</TableHead>
+                <TableHead>Test Title</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tests.length === 0 && (
+                <TableRow>
+                  <TableCell className="px-4 py-6 text-center text-muted-foreground" colSpan={7}>
+                    {loadingTests ? 'Loading drawing tests…' : testsError ? testsError : 'No student submissions available. Click "New Submission" to upload student drawings.'}
+                  </TableCell>
+                </TableRow>
+              )}
+              {tests.map(test => (
+                <TableRow key={test.id} className="hover:bg-slate-50">
+                  <TableCell><StatusPill status={test.status} /></TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{test.studentName}</TableCell>
+                  <TableCell>{test.batchName}</TableCell>
+                  <TableCell>{test.testTitle}</TableCell>
+                  <TableCell>{test.timeTaken} min</TableCell>
+                  <TableCell>{formatSubmittedAt(test.submittedAt)}</TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full px-3 py-1.5 text-xs inline-flex items-center gap-1"
+                      onClick={() => openEdit(test)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
       </div>
 
       <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) reset(); }}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>New drawing test</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingTestId ? 'Edit drawing test' : 'New drawing test'}</DialogTitle>
+          </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
+            {!taskInfo && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Select a batch to start adding submissions
+              </div>
+            )}
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Test title</Label>
                 <Input className="rounded-xl" placeholder="e.g. Still life - apple" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
-              <div className="space-y-1.5">
-                <Label>Class</Label>
-                <Select value={form.className} onValueChange={v => setForm(f => ({ ...f, className: v }))}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              {!taskInfo && (
+                <div className="space-y-1.5">
+                  <Label>Batch</Label>
+                  <Select
+                    value={form.batchId}
+                    onValueChange={async (v) => {
+                      setForm(f => ({ ...f, batchId: v }));
+                      await loadStudentsForBatch(v);
+                    }}
+                  >
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select a batch" /></SelectTrigger>
+                    <SelectContent>
+                      {batches.length === 0 && <SelectItem value="none" disabled>No batches available</SelectItem>}
+                      {batches.map(batch => (
+                        <SelectItem key={batch.id} value={String(batch.id)}>
+                          {batch.batchName || batch.name || `Batch ${batch.id}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Student</Label>
-                <Select value={form.studentId} onValueChange={v => setForm(f => ({ ...f, studentId: v }))}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.name} • {s.badgeId}</SelectItem>)}</SelectContent>
+                <Select
+                  value={form.studentId}
+                  onValueChange={v => setForm(f => ({ ...f, studentId: v }))}
+                  disabled={loadingStudents || batchStudents.length === 0}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder={loadingStudents ? 'Loading students…' : batchStudents.length === 0 ? 'No students available' : 'Select a student'}>
+                      {batchStudents.find(s => String(s.id) === form.studentId)?.name || (loadingStudents ? 'Loading...' : 'Select a student')}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {batchStudents.length === 0 && <SelectItem value="none" disabled>{loadingStudents ? 'Loading students…' : 'No students in this batch'}</SelectItem>}
+                    {batchStudents.map(s => (
+                      <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}{s.badgeId ? ` • ${s.badgeId}` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
@@ -177,8 +483,8 @@ export function TeacherDrawingTests() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" className="gradient-primary text-white border-0">
-                <Send className="w-4 h-4 mr-1" /> Send to senior teacher
+              <Button type="submit" className="gradient-primary text-white border-0" disabled={loadingSubmit}>
+                <Send className="w-4 h-4 mr-1" /> {loadingSubmit ? 'Sending…' : 'Send to senior teacher'}
               </Button>
             </DialogFooter>
           </form>
@@ -292,6 +598,13 @@ function ScoreCard({ title, score, onChange, readOnly }: { title: string; score:
 }
 
 export default TeacherDrawingTests;
+
+function formatSubmittedAt(value: string) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 function ReadRow({ label, v }: { label: string; v: number }) {
   return (
