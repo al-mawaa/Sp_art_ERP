@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, ChevronLeft, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { todayDateString } from "@/lib/dates/attendanceDate";
+import { isDateBeforeToday, todayDateString } from "@/lib/dates/attendanceDate";
 
 interface BatchDetail {
   _id: string;
@@ -40,10 +40,11 @@ export default function BatchAttendancePage() {
   const [attendance, setAttendance] = useState<Record<string, AttendanceStudent>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const minSelectableDate = todayDateString();
 
   useEffect(() => {
-    setSelectedDate(todayDateString());
-  }, []);
+    setSelectedDate(minSelectableDate);
+  }, [minSelectableDate]);
 
   useEffect(() => {
     if (!batchId || !selectedDate) return;
@@ -222,7 +223,20 @@ export default function BatchAttendancePage() {
               <Input
                 type="date"
                 value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
+                min={minSelectableDate}
+                onChange={e => {
+                  const value = e.target.value;
+                  if (isDateBeforeToday(value)) {
+                    setSelectedDate(minSelectableDate);
+                    toast({
+                      title: "Past dates not allowed",
+                      description: "You can only mark attendance for today or a future date.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  setSelectedDate(value);
+                }}
                 className="rounded-3xl mt-2"
               />
             </div>
