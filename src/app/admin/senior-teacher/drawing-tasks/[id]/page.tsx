@@ -50,6 +50,15 @@ interface Summary {
   pendingStudents: number;
 }
 
+interface TeacherPerformance {
+  averagePerformance: number;
+  totalStudentsEvaluated: number;
+  incentiveEligible: boolean;
+  incentivePercentage: number;
+  lastEvaluatedAt: string | null;
+  lastUpdatedAt: string | null;
+}
+
 const PAGE_SIZE = 10;
 
 export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: { basePath?: string }) {
@@ -60,6 +69,7 @@ export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [teacherPerformance, setTeacherPerformance] = useState<TeacherPerformance | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -76,6 +86,7 @@ export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: {
         setTask(json.data.task);
         setStudents(json.data.students);
         setSummary(json.data.summary);
+        setTeacherPerformance(json.data.teacherPerformance ?? null);
       }
     } catch (e) {
       console.error("Failed to load task details", e);
@@ -200,29 +211,6 @@ export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: {
         subtitle={`${task.batch.name} · ${task.batch.course} · ${task.teacher.name}`}
       />
 
-      {summary && (
-        <div className="grid sm:grid-cols-3 gap-3">
-          <StatCard
-            label="Total Students"
-            value={summary.totalStudents}
-            icon={Users}
-            tone="primary"
-          />
-          <StatCard
-            label="Completed Evaluations"
-            value={summary.evaluatedStudents}
-            icon={CheckCircle}
-            tone="success"
-          />
-          <StatCard
-            label="Pending Evaluations"
-            value={summary.pendingStudents}
-            icon={Clock}
-            tone="warning"
-          />
-        </div>
-      )}
-
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl bg-white p-4 shadow-sm">
@@ -242,16 +230,13 @@ export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: {
             <div className="font-semibold">{task.teacher.name}</div>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-xs text-muted-foreground">Total Students</div>
-            <div className="font-semibold">{summary?.totalStudents ?? 0}</div>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-xs text-muted-foreground">Completed Evaluations</div>
-            <div className="font-semibold">{summary?.evaluatedStudents ?? 0}</div>
-          </div>
-          <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-xs text-muted-foreground">Pending Evaluations</div>
-            <div className="font-semibold">{summary?.pendingStudents ?? 0}</div>
+            <div className="text-xs text-muted-foreground">Teacher Performance</div>
+            <div className="font-semibold">
+              {teacherPerformance ? `${teacherPerformance.averagePerformance}%` : '0%'}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {teacherPerformance ? `${teacherPerformance.totalStudentsEvaluated} evaluations` : 'No evaluations yet'}
+            </div>
           </div>
         </div>
       </div>

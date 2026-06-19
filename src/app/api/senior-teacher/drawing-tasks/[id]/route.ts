@@ -6,6 +6,7 @@ import Teacher from '@/lib/models/Teacher';
 import DrawingTask from '@/lib/models/DrawingTask';
 import DrawingTest from '@/lib/models/DrawingTest';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
+import TeacherPerformance from '@/lib/models/TeacherPerformance';
 
 export const runtime = 'nodejs';
 
@@ -81,6 +82,15 @@ export async function GET(
       };
     });
 
+    const teacherIdString =
+      typeof task.createdBy === 'object'
+        ? (task.createdBy as unknown as Record<string, unknown>)?._id?.toString?.() ?? ''
+        : String(task.createdBy || '');
+
+    const teacherPerformance = teacherIdString && mongoose.Types.ObjectId.isValid(teacherIdString)
+      ? await TeacherPerformance.findOne({ teacherId: new mongoose.Types.ObjectId(teacherIdString) }).lean()
+      : null;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -94,7 +104,7 @@ export async function GET(
             course: (task.batchId as unknown as Record<string, unknown>)?.courseName ?? '',
           },
           teacher: {
-            id: (task.createdBy as unknown as Record<string, unknown>)?._id?.toString() ?? '',
+            id: teacherIdString,
             name: (task.createdBy as unknown as Record<string, unknown>)?.fullName ?? '',
             email: (task.createdBy as unknown as Record<string, unknown>)?.email ?? '',
           },
@@ -105,10 +115,28 @@ export async function GET(
           evaluatedStudents: students.filter(s => s.status === 'Evaluated').length,
           pendingStudents: students.filter(s => s.status === 'Pending').length,
         },
+        teacherPerformance: teacherPerformance
+          ? {
+              averagePerformance: teacherPerformance.averagePerformance,
+              totalStudentsEvaluated: teacherPerformance.totalStudentsEvaluated,
+              incentiveEligible: teacherPerformance.incentiveEligible,
+              incentivePercentage: teacherPerformance.incentivePercentage,
+              lastEvaluatedAt: teacherPerformance.lastEvaluatedAt?.toISOString() ?? null,
+              lastUpdatedAt: teacherPerformance.lastUpdatedAt?.toISOString() ?? null,
+            }
+          : null,
       },
     });
   } catch (e) {
     console.error('[senior-teacher/drawing-tasks/[id] GET]', e);
+    if (process.env.NODE_ENV !== 'production') {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      const errStack = e instanceof Error ? e.stack : null;
+      return NextResponse.json(
+        { success: false, error: 'Failed to load task details', details: errMsg, stack: errStack },
+        { status: 500 },
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to load task details' },
       { status: 500 },
