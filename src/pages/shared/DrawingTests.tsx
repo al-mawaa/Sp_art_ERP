@@ -333,6 +333,13 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
 
   return (
     <div className="space-y-6">
+      {taskId && (
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => window.location.href = '/teacher/drawing-tests'}>
+            ← Back
+          </Button>
+        </div>
+      )}
       <PageHeader
         title={taskInfo?.taskName || 'Drawing Tests'}
         subtitle={

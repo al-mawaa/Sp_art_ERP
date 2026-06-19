@@ -16,6 +16,9 @@ type DrawingTaskItem = {
   batchName?: string;
   courseName?: string;
   createdAt: string;
+  submittedCount?: number;
+  pendingCount?: number;
+  reviewedCount?: number;
 };
 
 type BatchItem = {
@@ -118,15 +121,15 @@ export default function DrawingTasksPage() {
             <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
               <div>
                 <div className="text-xs text-muted-foreground">Submitted</div>
-                <div className="font-semibold">—</div>
+                <div className="font-semibold">{t.submittedCount ?? 0}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Pending Review</div>
-                <div className="font-semibold">—</div>
+                <div className="font-semibold">{t.pendingCount ?? 0}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Reviewed</div>
-                <div className="font-semibold">—</div>
+                <div className="font-semibold">{t.reviewedCount ?? 0}</div>
               </div>
             </div>
             <div className="text-xs text-muted-foreground mt-3">Created {new Date(t.createdAt).toLocaleString()}</div>

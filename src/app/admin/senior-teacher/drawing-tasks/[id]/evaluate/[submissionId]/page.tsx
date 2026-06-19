@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,9 @@ export default function EvaluationPage() {
   const router = useRouter();
   const taskId = params?.id as string;
   const submissionId = params?.submissionId as string;
+
+  const pathname = usePathname();
+  const basePath = pathname?.startsWith("/admin") ? "/admin/senior-teacher" : "/senior-teacher";
 
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,7 +142,7 @@ export default function EvaluationPage() {
       if (res.ok && json?.success) {
         toast.success("Evaluation submitted successfully!");
         setTimeout(() => {
-          router.push(`/admin/senior-teacher/drawing-tasks/${taskId}`);
+          router.push(`${basePath}/drawing-tasks/${taskId}`);
         }, 1200);
       } else {
         toast.error(json?.error || "Failed to submit evaluation");
@@ -171,7 +174,7 @@ export default function EvaluationPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => router.push(`/admin/senior-teacher/drawing-tasks/${taskId}`)}>
+        <Button variant="outline" size="sm" onClick={() => router.push(`${basePath}/drawing-tasks/${taskId}`)}>
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back
         </Button>
@@ -353,7 +356,7 @@ export default function EvaluationPage() {
       </Card>
 
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => router.push(`/admin/senior-teacher/drawing-tasks/${taskId}`)}>
+        <Button variant="outline" onClick={() => router.push(`${basePath}/drawing-tasks/${taskId}`)}>
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={submitting} className="gradient-primary text-white border-0">
