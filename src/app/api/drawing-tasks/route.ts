@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { requireTeacherFromRequest } from '@/lib/auth/require-teacher';
 import DrawingTask from '@/lib/models/DrawingTask';
+import DrawingTest from '@/lib/models/DrawingTest';
 
 export const runtime = 'nodejs';
 
@@ -17,8 +18,29 @@ export async function GET(request: NextRequest) {
       .populate('batchId', 'courseName')
       .lean();
 
+    const taskIds = rows.map(r => r._id);
+
+    // Aggregate submission counts per task to return live stats
+    const counts = await DrawingTest.aggregate([
+      { $match: { taskId: { $in: taskIds } } },
+      {
+        $group: {
+          _id: '$taskId',
+          submitted: { $sum: 1 },
+          pending: { $sum: { $cond: [{ $eq: ['$status', 'Pending Senior Review'] }, 1, 0] } },
+          reviewed: { $sum: { $cond: [{ $ne: ['$status', 'Pending Senior Review'] }, 1, 0] } },
+        },
+      },
+    ]);
+
+    const countsById = counts.reduce<Record<string, { submitted: number; pending: number; reviewed: number }>>((acc, c) => {
+      acc[String(c._id)] = { submitted: c.submitted || 0, pending: c.pending || 0, reviewed: c.reviewed || 0 };
+      return acc;
+    }, {});
+
     const tasks = rows.map(r => {
       const batch = typeof r.batchId === 'object' && r.batchId !== null ? (r.batchId as { courseName?: string }) : null;
+      const cnt = countsById[String(r._id)] || { submitted: 0, pending: 0, reviewed: 0 };
       return {
         id: String(r._id),
         taskName: r.taskName,
@@ -26,6 +48,9 @@ export async function GET(request: NextRequest) {
         createdAt: r.createdAt,
         batchName: r.batchName || '',
         courseName: batch?.courseName || '',
+        submittedCount: cnt.submitted,
+        pendingCount: cnt.pending,
+        reviewedCount: cnt.reviewed,
       };
     });
     return NextResponse.json({ success: true, data: { tasks } });
