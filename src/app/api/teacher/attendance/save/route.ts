@@ -4,7 +4,18 @@ import dbConnect from "@/lib/mongodb";
 import TeacherStudentAttendanceModel from "@/lib/models/TeacherStudentAttendance";
 import TeacherModel from "@/lib/models/Teacher";
 import { TEACHER_SESSION_COOKIE } from "@/lib/auth/portal-session";
-import { normalizeDateOnly } from "@/lib/dates/attendanceDate";
+import { dateOnlyToUtcNoon, normalizeDateOnly } from "@/lib/dates/attendanceDate";
+
+function mapStudents(students: Array<Record<string, unknown>>) {
+  return students.map(student => ({
+    studentId: new mongoose.Types.ObjectId(String(student.studentId)),
+    studentName: String(student.studentName ?? ""),
+    studentEmail: String(student.studentEmail ?? ""),
+    phone: String(student.phone ?? ""),
+    status: student.status as "Present" | "Absent",
+    remark: String(student.remark ?? ""),
+  }));
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +41,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid date. Use YYYY-MM-DD." }, { status: 400 });
     }
 
+    const legacyDate = dateOnlyToUtcNoon(attendanceDate);
+    if (!legacyDate) {
+      return NextResponse.json({ error: "Invalid date. Use YYYY-MM-DD." }, { status: 400 });
+    }
+
     const teacher = await TeacherModel.findById(teacherId).select("fullName");
     if (!teacher) {
       return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
@@ -37,27 +53,43 @@ export async function POST(req: NextRequest) {
 
     const objectBatchId = new mongoose.Types.ObjectId(batchId);
     const objectTeacherId = new mongoose.Types.ObjectId(teacherId);
+    const mappedStudents = mapStudents(students);
 
-    const existingAttendance = await TeacherStudentAttendanceModel.findOne({
+    const payload = {
+      batchName,
+      courseName,
+      teacherId: objectTeacherId,
+      teacherName: teacher.fullName,
+      attendanceDate,
+      date: legacyDate,
+      students: mappedStudents,
+    };
+
+    let existingAttendance = await TeacherStudentAttendanceModel.findOne({
       batchId: objectBatchId,
       attendanceDate,
     });
 
+    if (!existingAttendance) {
+      existingAttendance = await TeacherStudentAttendanceModel.findOne({
+        batchId: objectBatchId,
+        $or: [
+          { attendanceDate: { $exists: false } },
+          { attendanceDate: null },
+          { attendanceDate: "" },
+        ],
+      });
+    }
+
     if (existingAttendance) {
-      existingAttendance.students = students;
-      existingAttendance.teacherName = teacher.fullName;
-      existingAttendance.attendanceDate = attendanceDate;
+      Object.assign(existingAttendance, payload);
       await existingAttendance.save();
     } else {
-      await TeacherStudentAttendanceModel.create({
-        batchId: objectBatchId,
-        batchName,
-        courseName,
-        teacherId: objectTeacherId,
-        teacherName: teacher.fullName,
-        attendanceDate,
-        students,
-      });
+      await TeacherStudentAttendanceModel.findOneAndUpdate(
+        { batchId: objectBatchId, attendanceDate },
+        { $set: { batchId: objectBatchId, ...payload } },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
     }
 
     return NextResponse.json(
@@ -66,6 +98,13 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Error saving attendance:", error);
+    const code = (error as { code?: number })?.code;
+    if (code === 11000) {
+      return NextResponse.json(
+        { error: "Attendance for this batch and date already exists. Refresh and try again." },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ error: "Failed to save attendance" }, { status: 500 });
   }
 }

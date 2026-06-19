@@ -59,6 +59,14 @@ export function isValidDateOnly(value: string): boolean {
   return DATE_ONLY_RE.test(value.trim());
 }
 
+/** UTC noon for a YYYY-MM-DD string — stable legacy `date` field without timezone drift. */
+export function dateOnlyToUtcNoon(dateOnly: string): Date | null {
+  const normalized = normalizeDateOnly(dateOnly);
+  if (!normalized) return null;
+  const [y, m, d] = normalized.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+}
+
 /** Inclusive start/end date strings for a calendar month (YYYY-MM). */
 export function monthDateBounds(month: string): { start: string; end: string } | null {
   const m = month.trim().match(/^(\d{4})-(\d{2})$/);
