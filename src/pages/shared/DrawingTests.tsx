@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { Avatar } from "@/components/shared/Avatar";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { StatCard } from "@/components/shared/StatCard";
@@ -44,6 +45,8 @@ type TeacherDrawingTest = {
   status: 'Pending Senior Review' | 'Reviewed' | 'Approved' | 'Rejected';
   submittedAt: string;
   createdAt: string;
+  performancePercentage?: number | null;
+  evaluatedAt?: string | null;
   reviewerNotes?: string;
 };
 
@@ -97,6 +100,14 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
   const [batches, setBatches] = useState<ApiBatchResponse[]>([]);
   const [batchStudents, setBatchStudents] = useState<BatchStudentItem[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+
+  const avgPerformance = useMemo(() => {
+    const scoredTests = tests
+      .map(test => test.performancePercentage)
+      .filter((value): value is number => value !== null && value !== undefined);
+    if (!scoredTests.length) return null;
+    return scoredTests.reduce((sum, value) => sum + value, 0) / scoredTests.length;
+  }, [tests]);
   const { sessionOk, checking } = useTeacherSessionGuard();
 
   const [open, setOpen] = useState(false);
@@ -368,7 +379,7 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
         <StatCard label="Submitted" value={tests.length} icon={ImageIcon} tone="info" />
         <StatCard label="Pending review" value={tests.filter(t => t.status === "Pending Senior Review").length} icon={Clock} tone="warning" />
         <StatCard label="Reviewed" value={tests.filter(t => t.status !== "Pending Senior Review").length} icon={Award} tone="success" />
-        <StatCard label="Batches" value={new Set(tests.map(t => t.batchName)).size} icon={Star} tone="primary" />
+        <StatCard label="Student performance" value={avgPerformance !== null ? `${avgPerformance.toFixed(1)}%` : '—'} icon={Star} tone="primary" />
       </div>
 
       <div className="space-y-4">
@@ -381,6 +392,7 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
                 <TableHead>Batch</TableHead>
                 <TableHead>Test Title</TableHead>
                 <TableHead>Time</TableHead>
+                <TableHead>Score</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
@@ -388,7 +400,7 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
             <TableBody>
               {tests.length === 0 && (
                 <TableRow>
-                  <TableCell className="px-4 py-6 text-center text-muted-foreground" colSpan={7}>
+                  <TableCell className="px-4 py-6 text-center text-muted-foreground" colSpan={8}>
                     {loadingTests ? 'Loading drawing tests…' : testsError ? testsError : 'No student submissions available. Click "New Submission" to upload student drawings.'}
                   </TableCell>
                 </TableRow>
@@ -400,6 +412,7 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
                   <TableCell>{test.batchName}</TableCell>
                   <TableCell>{test.testTitle}</TableCell>
                   <TableCell>{test.timeTaken} min</TableCell>
+                  <TableCell>{test.performancePercentage !== null && test.performancePercentage !== undefined ? `${test.performancePercentage.toFixed(1)}%` : '—'}</TableCell>
                   <TableCell>{formatSubmittedAt(test.submittedAt)}</TableCell>
                   <TableCell>
                     <Button
@@ -690,55 +703,136 @@ function ReviewDialog({ test, onClose }: { test: DrawingTest | null; onClose: ()
 }
 
 /* ---------------- Student: my scores ---------------- */
-export function StudentMyScores({ studentId }: { studentId: string }) {
-  const tests = useStore(s => s.drawingTests).filter(t => t.studentId === studentId);
-  const scored = tests.filter(t => t.status === "Scored" && t.studentScore);
-  const avg = scored.length
-    ? (scored.reduce((a, t) => a + t.studentScore!.duration + t.studentScore!.neatness + t.studentScore!.art, 0) / scored.length).toFixed(1)
-    : "—";
+type StudentScoreRecord = {
+  id: string;
+  submissionId: string;
+  testTitle: string;
+  teacherName: string;
+  batchName: string;
+  courseName: string;
+  timeTaken: number;
+  teacherDrawingImage: string;
+  studentDrawingImage: string;
+  status: string;
+  submittedAt: string | null;
+  evaluatedAt: string | null;
+  evaluation: {
+    drawingMarks: number;
+    coloringMarks: number;
+    speedMarks: number;
+    neatnessMarks: number;
+    creativityMarks: number;
+    accuracyMarks: number;
+    obtainedMarks: number;
+    maxMarks: number;
+    performancePercentage: number;
+    remarks: string;
+    evaluatedAt: string;
+  } | null;
+};
+
+export function StudentMyScores({ studentId }: { studentId?: string }) {
+  const [records, setRecords] = useState<StudentScoreRecord[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(true);
+  const [recordError, setRecordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadRecords() {
+      setLoadingRecords(true);
+      setRecordError(null);
+      try {
+        const res = await fetch('/api/student/evaluations', { credentials: 'include' });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          setRecordError(json?.error || `Failed to load scores (${res.status})`);
+          setRecords([]);
+          return;
+        }
+
+        setRecords(Array.isArray(json?.data?.evaluations) ? json.data.evaluations : []);
+      } catch (error) {
+        console.error('[StudentMyScores] failed to fetch evaluations', error);
+        setRecordError('Unable to load your score history.');
+        setRecords([]);
+      } finally {
+        if (mounted) setLoadingRecords(false);
+      }
+    }
+
+    loadRecords();
+    return () => {
+      mounted = false;
+    };
+  }, [studentId]);
+
+  const evaluatedRecords = records.filter(record => record.evaluation !== null);
+  const averageScore = evaluatedRecords.length
+    ? (evaluatedRecords.reduce((sum, record) => sum + (record.evaluation?.obtainedMarks ?? 0), 0) / evaluatedRecords.length).toFixed(1)
+    : '—';
+  const averagePerformance = evaluatedRecords.length
+    ? Math.round(evaluatedRecords.reduce((sum, record) => sum + (record.evaluation?.performancePercentage ?? 0), 0) / evaluatedRecords.length)
+    : null;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Scores" subtitle="Drawing test results from your teacher" />
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Tests" value={tests.length} icon={ImageIcon} tone="info" />
-        <StatCard label="Scored" value={scored.length} icon={Award} tone="success" />
-        <StatCard label="Avg score" value={`${avg}/30`} icon={Star} tone="primary" />
+      <PageHeader title="My Scores" subtitle="Authenticated evaluation history for your account" />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard label="Total drawing tests" value={records.length} icon={ImageIcon} tone="info" />
+        <StatCard label="Evaluated tests" value={evaluatedRecords.length} icon={Award} tone="success" />
+        <StatCard label="Avg score" value={averageScore === '—' ? '—' : `${averageScore}/30`} icon={Star} tone="primary" />
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tests.length === 0 && (
-          <div className="card-soft p-10 text-center text-muted-foreground col-span-full">
-            No tests yet. Your teacher will share drawing tests here.
+      <div className="rounded-3xl border border-border bg-muted/50 p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Average evaluation performance</p>
+            <p className="text-2xl font-semibold">{averagePerformance !== null ? `${averagePerformance}%` : 'Awaiting reviews'}</p>
           </div>
-        )}
-        {tests.map(t => (
-          <div key={t.id} className="card-soft p-4 space-y-3">
-            <div className="flex justify-between items-start gap-2">
-              <div>
-                <div className="font-display font-bold">{t.title}</div>
-                <div className="text-xs text-muted-foreground">By {t.teacherName} • {t.submittedAt}</div>
-              </div>
-              <StatusPill status={t.status} />
-            </div>
-            <img src={t.studentImage} alt={t.title} className="w-full rounded-lg border border-border bg-muted/30 object-contain max-h-48" />
-            {t.studentScore ? (
-              <div className="space-y-1 text-sm pt-1 border-t border-border/60">
-                <ReadRow label="Duration" v={t.studentScore.duration} />
-                <ReadRow label="Neatness" v={t.studentScore.neatness} />
-                <ReadRow label="Art" v={t.studentScore.art} />
-                <div className="flex justify-between pt-1">
-                  <span className="font-bold">Total</span>
-                  <span className="font-mono font-bold text-success">{t.studentScore.duration + t.studentScore.neatness + t.studentScore.art}/30</span>
-                </div>
-                {t.reviewerNotes && <div className="text-xs italic text-muted-foreground pt-1">"{t.reviewerNotes}"</div>}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground text-center py-2">Awaiting senior teacher review…</div>
-            )}
+          <div className="text-sm text-muted-foreground">
+            {evaluatedRecords.length} evaluated test{evaluatedRecords.length !== 1 ? 's' : ''}
           </div>
-        ))}
+        </div>
+        <Progress value={averagePerformance ?? 0} />
       </div>
+
+      {loadingRecords ? (
+        <div className="rounded-xl border border-border/70 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
+          Loading your scores…
+        </div>
+      ) : recordError ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
+          {recordError}
+        </div>
+      ) : records.length === 0 ? (
+        <div className="rounded-xl border border-border/70 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
+          No drawing tests or evaluations are available yet. Your teacher will share updates here once they are submitted and reviewed.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {records.map(record => (
+            <div key={record.id} className="rounded-2xl border border-border p-4 bg-background shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-lg font-semibold truncate">Drawing Assessment</div>
+                <div className="text-sm text-muted-foreground mt-1 truncate">{record.testTitle} • {record.teacherName}</div>
+                <div className="text-sm text-muted-foreground mt-2">Date: {formatSubmittedAt(record.evaluatedAt ?? record.submittedAt ?? '')}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-2xl font-semibold">{record.evaluation ? `${record.evaluation.obtainedMarks}` : '—'}/{record.evaluation?.maxMarks ?? 30}</div>
+                  <div className="text-sm text-muted-foreground">Performance: {record.evaluation ? `${record.evaluation.performancePercentage}%` : '—'}</div>
+                </div>
+                <div>
+                  <a href={`/student/scores/${record.id}`} className="inline-block">
+                    <Button className="rounded-xl">View Score</Button>
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
