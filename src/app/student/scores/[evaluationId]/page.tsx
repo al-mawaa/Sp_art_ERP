@@ -1,11 +1,41 @@
 "use client";
 
-import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { PageHeader } from '@/components/shared/PageHeader';
+import { use, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { ZoomIn, ZoomOut, RotateCcw, Download, X } from 'lucide-react';
+import { formatPercentage } from '@/lib/utils';
+
+interface EvaluationData {
+  id: string;
+  taskId: string;
+  submissionId: string;
+  drawingMarks: number;
+  coloringMarks: number;
+  speedMarks: number;
+  neatnessMarks: number;
+  creativityMarks: number;
+  accuracyMarks: number;
+  obtainedMarks: number;
+  maxMarks: number;
+  performancePercentage: number;
+  remarks: string;
+  evaluatedAt: string | null;
+}
+
+interface SubmissionData {
+  id: string;
+  testTitle: string;
+  teacherDrawingImage: string;
+  studentDrawingImage: string;
+  timeTaken: number;
+}
+
+interface PageData {
+  evaluation: EvaluationData;
+  submission: SubmissionData | null;
+}
 
 function ReadRow({ label, v }: { label: string; v: number }) {
   return (
@@ -16,13 +46,24 @@ function ReadRow({ label, v }: { label: string; v: number }) {
   );
 }
 
+interface ImageViewerState {
+  isOpen: boolean;
+  imageUrl: string | null;
+  title: string;
+  zoom: number;
+}
+
 export default function StudentScoreDetailPage({ params }: { params: Promise<{ evaluationId: string }> }) {
   const { evaluationId } = use(params);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [data, setData] = useState<PageData | null>(null);
+  const [viewer, setViewer] = useState<ImageViewerState>({
+    isOpen: false,
+    imageUrl: null,
+    title: '',
+    zoom: 1,
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -49,6 +90,45 @@ export default function StudentScoreDetailPage({ params }: { params: Promise<{ e
     return () => { mounted = false; };
   }, [evaluationId]);
 
+  const openImageViewer = (imageUrl: string | null, title: string) => {
+    setViewer({
+      isOpen: true,
+      imageUrl,
+      title,
+      zoom: 1,
+    });
+  };
+
+  const closeImageViewer = () => {
+    setViewer({
+      ...viewer,
+      isOpen: false,
+      zoom: 1,
+    });
+  };
+
+  const handleZoom = (direction: 'in' | 'out') => {
+    setViewer((prev) => ({
+      ...prev,
+      zoom: direction === 'in'
+        ? Math.min(prev.zoom + 0.25, 3)
+        : Math.max(prev.zoom - 0.25, 0.25),
+    }));
+  };
+
+  const handleResetZoom = () => {
+    setViewer((prev) => ({ ...prev, zoom: 1 }));
+  };
+
+
+  const downloadImage = () => {
+    if (!viewer.imageUrl) return;
+    const link = document.createElement('a');
+    link.href = viewer.imageUrl;
+    link.download = viewer.title || 'image';
+    link.click();
+  };
+
   if (loading) return (
     <div className="space-y-3 p-6">
       <div className="h-6 w-1/3 bg-muted/40 rounded-md animate-pulse" />
@@ -60,102 +140,204 @@ export default function StudentScoreDetailPage({ params }: { params: Promise<{ e
   if (!data) return <div className="p-6">No data</div>;
 
   const { evaluation, submission } = data;
-
-  function openPreview(url: string | null) {
-    setPreviewImage(url);
-    setPreviewOpen(true);
-  }
+  const evaluatedDate = evaluation.evaluatedAt 
+    ? new Date(evaluation.evaluatedAt).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    : 'Not evaluated';
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Drawing Assessment" subtitle={submission?.testTitle || 'Evaluation details'} />
+      {/* Header Section */}
+      <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{submission?.testTitle || 'Drawing test'}</h1>
+            <p className="text-sm text-gray-600 mt-1">Evaluated: {evaluatedDate}</p>
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-bold text-gray-900">{evaluation.obtainedMarks}/{evaluation.maxMarks}</div>
+            <div className="text-lg text-gray-600 font-medium mt-1">{formatPercentage(Number(evaluation.performancePercentage))}</div>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="col-span-2 space-y-3">
-          <div className="rounded-2xl border border-border p-4 bg-white shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold">{submission?.testTitle || 'Drawing test'}</div>
-                <div className="text-sm text-muted-foreground">Evaluated: {evaluation.evaluatedAt ?? '—'}</div>
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Images */}
+        <div className="col-span-2 space-y-6">
+          {/* Image Comparison Section */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="relative rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-900">Your Submission</h2>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold">{evaluation.obtainedMarks}/{evaluation.maxMarks}</div>
-                <div className="text-sm text-muted-foreground">{evaluation.performancePercentage}%</div>
+              <button
+                onClick={() => openImageViewer(submission?.studentDrawingImage ?? null, 'Student Submission')}
+                className="absolute top-6 right-6 z-10 rounded-full bg-white/90 p-2 shadow-md transition hover:scale-110"
+                title="Zoom Student Submission"
+              >
+                <ZoomIn size={18} className="text-gray-700" />
+              </button>
+              <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-slate-100">
+                {submission?.studentDrawingImage ? (
+                  <img
+                    src={submission.studentDrawingImage}
+                    alt="Student submission"
+                    className="w-full h-[350px] object-contain rounded-lg bg-slate-100"
+                  />
+                ) : (
+                  <div className="flex h-[350px] items-center justify-center text-gray-500">
+                    No image available
+                  </div>
+                )}
               </div>
             </div>
-            <div className="grid gap-3 lg:grid-cols-2 mt-4">
-              <div>
-                <div className="text-xs font-medium text-muted-foreground mb-2">Your submission</div>
-                <button onClick={() => openPreview(submission?.studentDrawingImage ?? null)} className="w-full">
-                  <img src={submission?.studentDrawingImage} alt="student" className="w-full h-72 object-cover rounded-lg border shadow-sm" />
-                </button>
+
+            <div className="relative rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-900">Teacher Reference</h2>
               </div>
-              <div>
-                <div className="text-xs font-medium text-muted-foreground mb-2">Teacher reference</div>
-                <button onClick={() => openPreview(submission?.teacherDrawingImage ?? null)} className="w-full">
-                  <img src={submission?.teacherDrawingImage} alt="teacher" className="w-full h-72 object-cover rounded-lg border shadow-sm" />
-                </button>
+              <button
+                onClick={() => openImageViewer(submission?.teacherDrawingImage ?? null, 'Teacher Reference')}
+                className="absolute top-6 right-6 z-10 rounded-full bg-white/90 p-2 shadow-md transition hover:scale-110"
+                title="Zoom Teacher Reference"
+              >
+                <ZoomIn size={18} className="text-gray-700" />
+              </button>
+              <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-slate-100">
+                {submission?.teacherDrawingImage ? (
+                  <img
+                    src={submission.teacherDrawingImage}
+                    alt="Teacher reference"
+                    className="w-full h-[350px] object-contain rounded-lg bg-slate-100"
+                  />
+                ) : (
+                  <div className="flex h-[350px] items-center justify-center text-gray-500">
+                    No image available
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border p-4 bg-white shadow-sm">
-            <div className="text-sm font-semibold mb-3">Detailed breakdown</div>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <ReadRow label="Drawing Quality" v={evaluation.drawingMarks} />
-                <Progress value={(evaluation.drawingMarks / 5) * 100} />
-                <div className="text-xs text-muted-foreground mt-1">{Math.round((evaluation.drawingMarks / 5) * 100)}%</div>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <ReadRow label="Coloring" v={evaluation.coloringMarks} />
-                <Progress value={(evaluation.coloringMarks / 5) * 100} />
-                <div className="text-xs text-muted-foreground mt-1">{Math.round((evaluation.coloringMarks / 5) * 100)}%</div>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <ReadRow label="Speed" v={evaluation.speedMarks} />
-                <Progress value={(evaluation.speedMarks / 5) * 100} />
-                <div className="text-xs text-muted-foreground mt-1">{Math.round((evaluation.speedMarks / 5) * 100)}%</div>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <ReadRow label="Neatness" v={evaluation.neatnessMarks} />
-                <Progress value={(evaluation.neatnessMarks / 5) * 100} />
-                <div className="text-xs text-muted-foreground mt-1">{Math.round((evaluation.neatnessMarks / 5) * 100)}%</div>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <ReadRow label="Creativity" v={evaluation.creativityMarks} />
-                <Progress value={(evaluation.creativityMarks / 5) * 100} />
-                <div className="text-xs text-muted-foreground mt-1">{Math.round((evaluation.creativityMarks / 5) * 100)}%</div>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <ReadRow label="Accuracy" v={evaluation.accuracyMarks} />
-                <Progress value={(evaluation.accuracyMarks / 5) * 100} />
-                <div className="text-xs text-muted-foreground mt-1">{Math.round((evaluation.accuracyMarks / 5) * 100)}%</div>
-              </div>
+          {/* Detailed Breakdown Section */}
+          <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-900 mb-6">Detailed breakdown</h2>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+              {[
+                { label: 'Drawing Quality', value: evaluation.drawingMarks },
+                { label: 'Coloring', value: evaluation.coloringMarks },
+                { label: 'Speed', value: evaluation.speedMarks },
+                { label: 'Neatness', value: evaluation.neatnessMarks },
+                { label: 'Creativity', value: evaluation.creativityMarks },
+                { label: 'Accuracy', value: evaluation.accuracyMarks },
+              ].map((item, idx) => (
+                <div key={idx} className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="text-xs font-medium text-gray-700 mb-3">{item.label}</div>
+                  <div className="font-bold text-gray-900 mb-3">{item.value}/5</div>
+                  <Progress value={(item.value / 5) * 100} className="h-2 mb-2" />
+                  <div className="text-xs text-gray-600">{Math.round((item.value / 5) * 100)}%</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        <aside className="space-y-3">
-          <div className="rounded-2xl border border-border p-4 bg-white shadow-sm">
-            <div className="text-sm text-muted-foreground">Remarks</div>
-            <div className="mt-2 text-sm">{evaluation.remarks || 'No remarks provided'}</div>
+        {/* Right Column - Sidebar */}
+        <aside className="space-y-6">
+          {/* Remarks Card */}
+          <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Remarks</h3>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              {evaluation.remarks || 'No remarks provided'}
+            </p>
           </div>
-          <div className="rounded-2xl border border-border p-4 bg-white shadow-sm">
-            <Button onClick={() => window.history.back()}>Back</Button>
+
+          {/* Back Button Card */}
+          <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+            <Button 
+              onClick={() => window.history.back()} 
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium"
+            >
+              Back
+            </Button>
           </div>
         </aside>
       </div>
 
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <DialogTitle>{submission?.testTitle || 'Preview'}</DialogTitle>
-          <div className="p-4 bg-black">
-            {previewImage ? (
-              <img src={previewImage} alt="preview" className="w-full h-[70vh] object-contain bg-black" />
-            ) : (
-              <div className="p-8 text-white">No image</div>
-            )}
+      {/* Image Viewer Modal */}
+      <Dialog open={viewer.isOpen} onOpenChange={closeImageViewer}>
+        <DialogContent className="max-w-5xl p-0 border-0 bg-black">
+          <div className="bg-black">
+            {/* Header with Controls */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <DialogTitle className="text-white">{viewer.title}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleZoom('in')}
+                  className="p-2 hover:bg-gray-800 rounded transition text-gray-400 hover:text-white"
+                  title="Zoom In"
+                >
+                  <ZoomIn size={20} />
+                </button>
+                <button
+                  onClick={() => handleZoom('out')}
+                  className="p-2 hover:bg-gray-800 rounded transition text-gray-400 hover:text-white"
+                  title="Zoom Out"
+                >
+                  <ZoomOut size={20} />
+                </button>
+                <button
+                  onClick={handleResetZoom}
+                  className="p-2 hover:bg-gray-800 rounded transition text-gray-400 hover:text-white"
+                  title="Reset Zoom"
+                >
+                  <RotateCcw size={20} />
+                </button>
+                <button
+                  onClick={downloadImage}
+                  className="p-2 hover:bg-gray-800 rounded transition text-gray-400 hover:text-white"
+                  title="Download"
+                >
+                  <Download size={20} />
+                </button>
+                <button
+                  onClick={closeImageViewer}
+                  className="p-2 hover:bg-gray-800 rounded transition text-gray-400 hover:text-white"
+                  title="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Image Container */}
+            <div className="flex items-center justify-center bg-black min-h-96 p-4 overflow-auto">
+              {viewer.imageUrl ? (
+                <div className="flex items-center justify-center">
+                  <img 
+                    src={viewer.imageUrl} 
+                    alt={viewer.title} 
+                    style={{
+                      transform: `scale(${viewer.zoom})`,
+                      transition: 'transform 0.2s ease-in-out',
+                      maxWidth: '100%',
+                      maxHeight: '70vh',
+                    }}
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center">
+                  <p>No image available</p>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

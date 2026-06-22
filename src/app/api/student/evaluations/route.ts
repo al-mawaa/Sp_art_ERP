@@ -18,7 +18,7 @@ function buildRegex(value: string) {
 }
 
 function buildStudentMatchingFilters(student: { id: string; email?: string; badgeId?: string; fullName?: string }) {
-  const filters: any[] = [];
+  const filters: Record<string, unknown>[] = [];
   if (mongoose.Types.ObjectId.isValid(student.id)) {
     filters.push({ studentId: new mongoose.Types.ObjectId(student.id) });
     filters.push({ studentId: student.id });
@@ -165,8 +165,6 @@ export async function GET(request: NextRequest) {
         const sub = item.submission;
         if (!sub) return false;
         if (String(sub.studentId) === auth.student.id) return true;
-        if (studentSubject.email && normalizeString((sub as any).studentEmail) === studentSubject.email) return true;
-        if (studentSubject.badgeId && normalizeString((sub as any).studentBadgeId) === studentSubject.badgeId) return true;
         if (studentSubject.fullName && normalizeString(sub.studentName) === studentSubject.fullName) return true;
         return false;
       });

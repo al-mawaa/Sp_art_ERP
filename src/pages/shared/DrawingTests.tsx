@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useStore, actions, type DrawingTest, type DrawingScore } from "@/store/dataStore";
 import { useTeacherSessionGuard } from "@/components/teacher/useTeacherSessionGuard";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatPercentage } from "@/lib/utils";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -412,7 +412,7 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
                   <TableCell>{test.batchName}</TableCell>
                   <TableCell>{test.testTitle}</TableCell>
                   <TableCell>{test.timeTaken} min</TableCell>
-                  <TableCell>{test.performancePercentage !== null && test.performancePercentage !== undefined ? `${test.performancePercentage.toFixed(1)}%` : '—'}</TableCell>
+                  <TableCell>{test.performancePercentage !== null && test.performancePercentage !== undefined ? formatPercentage(test.performancePercentage) : '—'}</TableCell>
                   <TableCell>{formatSubmittedAt(test.submittedAt)}</TableCell>
                   <TableCell>
                     <Button
@@ -771,7 +771,7 @@ export function StudentMyScores({ studentId }: { studentId?: string }) {
     ? (evaluatedRecords.reduce((sum, record) => sum + (record.evaluation?.obtainedMarks ?? 0), 0) / evaluatedRecords.length).toFixed(1)
     : '—';
   const averagePerformance = evaluatedRecords.length
-    ? Math.round(evaluatedRecords.reduce((sum, record) => sum + (record.evaluation?.performancePercentage ?? 0), 0) / evaluatedRecords.length)
+    ? evaluatedRecords.reduce((sum, record) => sum + (record.evaluation?.performancePercentage ?? 0), 0) / evaluatedRecords.length
     : null;
 
   return (
@@ -788,7 +788,7 @@ export function StudentMyScores({ studentId }: { studentId?: string }) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <p className="text-sm text-muted-foreground">Average evaluation performance</p>
-            <p className="text-2xl font-semibold">{averagePerformance !== null ? `${averagePerformance}%` : 'Awaiting reviews'}</p>
+            <p className="text-2xl font-semibold">{averagePerformance !== null ? formatPercentage(averagePerformance) : 'Awaiting reviews'}</p>
           </div>
           <div className="text-sm text-muted-foreground">
             {evaluatedRecords.length} evaluated test{evaluatedRecords.length !== 1 ? 's' : ''}
@@ -821,7 +821,7 @@ export function StudentMyScores({ studentId }: { studentId?: string }) {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <div className="text-2xl font-semibold">{record.evaluation ? `${record.evaluation.obtainedMarks}` : '—'}/{record.evaluation?.maxMarks ?? 30}</div>
-                  <div className="text-sm text-muted-foreground">Performance: {record.evaluation ? `${record.evaluation.performancePercentage}%` : '—'}</div>
+                  <div className="text-sm text-muted-foreground">Performance: {record.evaluation ? formatPercentage(record.evaluation.performancePercentage) : '—'}</div>
                 </div>
                 <div>
                   <a href={`/student/scores/${record.id}`} className="inline-block">

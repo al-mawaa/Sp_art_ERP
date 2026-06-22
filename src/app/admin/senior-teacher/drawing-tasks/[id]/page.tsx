@@ -26,6 +26,8 @@ interface Student {
   teacherName: string;
   submissionDate: string;
   status: "Evaluated" | "Pending";
+  performancePercentage: number | null;
+  evaluatedAt?: string | null;
 }
 
 interface TaskDetail {
