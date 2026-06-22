@@ -26,6 +26,8 @@ interface Student {
   teacherName: string;
   submissionDate: string;
   status: "Evaluated" | "Pending";
+  performancePercentage: number | null;
+  evaluatedAt?: string | null;
 }
 
 interface TaskDetail {
@@ -122,6 +124,15 @@ export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: {
   useEffect(() => {
     setPage(1);
   }, [searchQuery, statusFilter]);
+
+  const avgStudentPerformance = useMemo(() => {
+    const vals = students
+      .map(s => s.performancePercentage)
+      .filter((v): v is number => v !== null && v !== undefined);
+    if (!vals.length) return null;
+    const sum = vals.reduce((a, b) => a + Number(b), 0);
+    return sum / vals.length;
+  }, [students]);
 
   function downloadCSV() {
     const header = ["Student Name", "Teacher Name", "Batch", "Submission Date", "Status"];
@@ -222,8 +233,9 @@ export default function TaskDetailPage({ basePath = "/admin/senior-teacher" }: {
             <div className="font-semibold">{new Date(task.taskDate).toLocaleDateString()}</div>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-xs text-muted-foreground">Batch Name</div>
-            <div className="font-semibold">{task.batch.name}</div>
+            <div className="text-xs text-muted-foreground">Student Performance</div>
+            <div className="font-semibold">{avgStudentPerformance !== null ? `${avgStudentPerformance.toFixed(1)}%` : '—'}</div>
+            <div className="text-xs text-muted-foreground mt-1">{students.filter(s => s.performancePercentage !== null && s.performancePercentage !== undefined).length} evaluations</div>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <div className="text-xs text-muted-foreground">Teacher Name</div>

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { requireTeacherFromRequest } from '@/lib/auth/require-teacher';
 import DrawingTest from '@/lib/models/DrawingTest';
+import StudentEvaluation from '@/lib/models/StudentEvaluation';
 
 export const runtime = 'nodejs';
 
@@ -24,24 +25,37 @@ export async function GET(request: NextRequest) {
     }
     const rows = await DrawingTest.find(filter).sort({ createdAt: -1 }).lean();
 
-    const payload = rows.map(r => ({
-      id: String(r._id),
-      teacherId: String(r.teacherId),
-      teacherName: r.teacherName,
-      batchId: String(r.batchId),
-      batchName: r.batchName,
-      courseName: r.courseName,
-      batchMonth: r.batchMonth || '',
-      studentId: String(r.studentId),
-      studentName: r.studentName,
-      testTitle: r.testTitle,
-      timeTaken: r.timeTaken,
-      teacherDrawingImage: r.teacherDrawingImage,
-      studentDrawingImage: r.studentDrawingImage,
-      status: r.status,
-      submittedAt: r.submittedAt,
-      createdAt: r.createdAt,
-    }));
+    const submissionIds = rows.map(r => r._id);
+    const evaluations = submissionIds.length
+      ? await StudentEvaluation.find({ submissionId: { $in: submissionIds } })
+          .select('submissionId performancePercentage evaluatedAt')
+          .lean()
+      : [];
+    const evaluationMap = new Map(evaluations.map(e => [String(e.submissionId), e]));
+
+    const payload = rows.map(r => {
+      const evaluation = evaluationMap.get(String(r._id));
+      return {
+        id: String(r._id),
+        teacherId: String(r.teacherId),
+        teacherName: r.teacherName,
+        batchId: String(r.batchId),
+        batchName: r.batchName,
+        courseName: r.courseName,
+        batchMonth: r.batchMonth || '',
+        studentId: String(r.studentId),
+        studentName: r.studentName,
+        testTitle: r.testTitle,
+        timeTaken: r.timeTaken,
+        teacherDrawingImage: r.teacherDrawingImage,
+        studentDrawingImage: r.studentDrawingImage,
+        status: r.status,
+        submittedAt: r.submittedAt,
+        createdAt: r.createdAt,
+        performancePercentage: evaluation?.performancePercentage ?? null,
+        evaluatedAt: evaluation?.evaluatedAt?.toISOString?.() ?? null,
+      };
+    });
 
     return NextResponse.json({ success: true, data: { tests: payload } });
   } catch (e) {
