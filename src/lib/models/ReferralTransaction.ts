@@ -10,7 +10,12 @@ export interface ReferralTransactionDocument extends mongoose.Document {
   courseId?: mongoose.Types.ObjectId;
   courseTitle?: string;
   courseAmount: number;
+  /** Total referral pool (referrer + enrollee shares). */
   earnedAmount: number;
+  /** Referrer's 50% share of the referral pool. */
+  referrerEarnedAmount?: number;
+  /** Enrollee's 50% share — applied as checkout discount (not wallet). */
+  enrolleeEarnedAmount?: number;
   enrollmentStatus: boolean;
   paymentStatus: string;
   orderId?: string;
@@ -35,6 +40,8 @@ const ReferralTransactionSchema = new mongoose.Schema<ReferralTransactionDocumen
     courseTitle: { type: String },
     courseAmount: { type: Number, default: 0, min: 0 },
     earnedAmount: { type: Number, default: 0, min: 0 },
+    referrerEarnedAmount: { type: Number, default: 0, min: 0 },
+    enrolleeEarnedAmount: { type: Number, default: 0, min: 0 },
     enrollmentStatus: { type: Boolean, default: false, index: true },
     paymentStatus: { type: String, default: "pending" },
     orderId: { type: String, sparse: true },

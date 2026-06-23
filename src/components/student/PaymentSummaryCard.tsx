@@ -38,6 +38,8 @@ type PaymentSummaryCardProps = {
   paymentPlanStatus?: string;
   nextDueDate?: string | null;
   nextTermNo?: number | null;
+  referralDiscountTotal?: number;
+  referralDiscountApplied?: number;
   installments?: Installment[];
   paymentHistory?: PaymentRecord[];
   onPaymentSuccess?: () => void;
@@ -58,11 +60,14 @@ export function PaymentSummaryCard({
   paymentPlanStatus,
   nextDueDate,
   nextTermNo,
+  referralDiscountTotal = 0,
+  referralDiscountApplied = 0,
   installments = [],
   paymentHistory = [],
   onPaymentSuccess,
 }: PaymentSummaryCardProps) {
   const [payModalOpen, setPayModalOpen] = useState(false);
+  const referralDiscountRemaining = Math.max(0, referralDiscountTotal - referralDiscountApplied);
   const canPayNext =
     paymentType === "installment" &&
     remainingAmount > 0 &&
@@ -178,6 +183,7 @@ export function PaymentSummaryCard({
           duration={duration}
           enrollmentId={enrollmentId}
           termNo={nextTermNo!}
+          referralDiscountRemaining={referralDiscountRemaining}
           onSuccess={onPaymentSuccess}
         />
       )}

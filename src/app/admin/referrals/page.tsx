@@ -44,6 +44,8 @@ type ReferralTransaction = {
   enrollmentStatus: boolean;
   paymentStatus: string;
   earnedAmount: number;
+  referrerEarnedAmount: number;
+  enrolleeEarnedAmount: number;
   courseAmount: number;
   courseTitle?: string;
   createdAt: string;
@@ -241,7 +243,7 @@ export default function AdminReferralsPage() {
         </div>
 
         <p className="mb-4 text-sm text-slate-500">
-          Only one percentage can be active at a time. Earnings = Course Fee × Active Percentage.
+          Only one percentage can be active at a time. Total pool = Course Fee × Active Percentage — 50% to referrer wallet, 50% enrollee discount at checkout.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -293,8 +295,9 @@ export default function AdminReferralsPage() {
               </Select>
             </div>
             <p className="text-sm text-slate-500">
-              Example: ₹20,000 course × {selectedPercentage}% ={" "}
-              <strong>{formatInr(20000 * (selectedPercentage / 100))}</strong> reward
+              Example: ₹20,000 × {selectedPercentage}% ={" "}
+              <strong>{formatInr(20000 * (selectedPercentage / 100))}</strong> pool →{" "}
+              <strong>{formatInr((20000 * selectedPercentage) / 100 / 2)}</strong> each to referrer &amp; enrollee
             </p>
           </div>
         )}
@@ -406,14 +409,16 @@ export default function AdminReferralsPage() {
                 <th className="pb-3 pr-3 font-medium">Discount %</th>
                 <th className="pb-3 pr-3 font-medium">Enrollment</th>
                 <th className="pb-3 pr-3 font-medium">Payment</th>
-                <th className="pb-3 pr-3 font-medium">Earnings</th>
+                <th className="pb-3 pr-3 font-medium">Total Pool</th>
+                <th className="pb-3 pr-3 font-medium">Referrer (50%)</th>
+                <th className="pb-3 pr-3 font-medium">Enrollee Discount (50%)</th>
                 <th className="pb-3 font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {data?.transactions.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-500">
+                  <td colSpan={11} className="py-8 text-center text-slate-500">
                     No referral transactions found
                   </td>
                 </tr>
@@ -440,8 +445,14 @@ export default function AdminReferralsPage() {
                     </span>
                   </td>
                   <td className="py-3 pr-3 capitalize">{t.paymentStatus}</td>
-                  <td className="py-3 pr-3 font-semibold text-emerald-700">
+                  <td className="py-3 pr-3 font-semibold text-slate-800">
                     {t.enrollmentStatus ? formatInr(t.earnedAmount) : "—"}
+                  </td>
+                  <td className="py-3 pr-3 font-semibold text-emerald-700">
+                    {t.enrollmentStatus ? formatInr(t.referrerEarnedAmount) : "—"}
+                  </td>
+                  <td className="py-3 pr-3 font-semibold text-blue-700">
+                    {t.enrollmentStatus ? formatInr(t.enrolleeEarnedAmount) : "—"}
                   </td>
                   <td className="py-3 text-slate-500">
                     {new Date(t.createdAt).toLocaleDateString("en-IN")}

@@ -6,7 +6,7 @@ import Course from "@/lib/models/Course";
 import CourseEnrollment from "@/lib/models/CourseEnrollment";
 import { requireStudentFromRequest } from "@/lib/auth/require-student";
 import { processSuccessfulPayment } from "@/lib/enrollment/enrollmentPaymentService";
-import { completeReferralOnPayment } from "@/lib/referral/referralService";
+import { completeReferralOnPayment, applyReferralDiscountToEnrollment, resolveReferralPaymentAdjustment } from "@/lib/referral/referralService";
 import { calculatePaymentBreakdown, type PaymentType } from "@/lib/enrollment/paymentCalculations";
 
 type VerifyPaymentRequest = {
@@ -65,6 +65,21 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
+    let referralDiscount = 0;
+    try {
+      const pricing = await resolveReferralPaymentAdjustment({
+        courseId,
+        studentId: auth.student.id,
+        paymentType: paymentType === "installment" ? "installment" : "full",
+        termNo: Math.max(1, Number(termNo)),
+        enrollmentId,
+        referralCode: typeof referralCode === "string" ? referralCode.trim() : undefined,
+      });
+      referralDiscount = pricing.referralDiscount;
+    } catch {
+      referralDiscount = 0;
+    }
+
     const result = await processSuccessfulPayment({
       studentId: auth.student.id,
       courseId,
@@ -91,6 +106,13 @@ export async function POST(request: NextRequest) {
     if (courseAmount <= 0) {
       courseAmount = Number(amount || 0);
     }
+
+    await applyReferralDiscountToEnrollment({
+      enrollmentId: result.enrollmentId,
+      orderId: razorpay_order_id,
+      referralDiscount,
+      isNewEnrollment: !enrollmentId,
+    });
 
     await completeReferralOnPayment({
       referredStudentId: auth.student.id,

@@ -3,13 +3,11 @@ import Razorpay from "razorpay";
 import dbConnect from "@/lib/mongodb";
 import { requireStudentFromRequest } from "@/lib/auth/require-student";
 import { assertRazorpayConfigured } from "@/lib/razorpay/config";
-import Course from "@/lib/models/Course";
 import Student from "@/lib/models/Student";
-import { resolvePaymentOrder } from "@/lib/enrollment/enrollmentPaymentService";
 import type { PaymentType } from "@/lib/enrollment/paymentCalculations";
 import {
-  validateReferralCode,
   createPendingReferralTransaction,
+  resolveReferralPaymentAdjustment,
 } from "@/lib/referral/referralService";
 
 export const runtime = "nodejs";
@@ -42,35 +40,34 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
-    let resolved;
+    let pricing;
     try {
-      resolved = await resolvePaymentOrder({
+      pricing = await resolveReferralPaymentAdjustment({
         courseId,
         studentId: auth.student.id,
         paymentType,
         termNo,
         enrollmentId,
+        referralCode,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to resolve payment";
-      const status = message.includes("Already enrolled") ? 409 : 400;
+      const status =
+        message.includes("Already enrolled") || message.includes("referral")
+          ? message.includes("Already enrolled")
+            ? 409
+            : 400
+          : 400;
       return NextResponse.json({ error: message }, { status });
     }
 
-    let validatedReferral: Awaited<ReturnType<typeof validateReferralCode>> | null = null;
-    if (referralCode && !enrollmentId) {
-      const validation = await validateReferralCode(referralCode, auth.student.id);
-      if (validation.valid === false) {
-        return NextResponse.json({ error: validation.error }, { status: 400 });
-      }
-      validatedReferral = validation;
-    }
+    const { resolved, chargeAmount, referralDiscount, validatedReferral } = pricing;
 
     const { keyId: razorpayKeyId, keySecret: razorpayKeySecret } = assertRazorpayConfigured();
     const razorpay = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpayKeySecret });
 
     const order = await razorpay.orders.create({
-      amount: Math.round(resolved.amount * 100),
+      amount: Math.round(chargeAmount * 100),
       currency: "INR",
       receipt: `rcpt_${Date.now()}`,
       notes: {
@@ -80,6 +77,7 @@ export async function POST(request: NextRequest) {
         termNo: String(resolved.termNo),
         ...(resolved.enrollmentId ? { enrollmentId: resolved.enrollmentId } : {}),
         ...(validatedReferral?.valid ? { referralCode: validatedReferral.referralCode } : {}),
+        ...(referralDiscount > 0 ? { referralDiscount: String(referralDiscount) } : {}),
       },
     });
 
@@ -92,6 +90,7 @@ export async function POST(request: NextRequest) {
         referralCode: validatedReferral.referralCode,
         referralPercentage: validatedReferral.referralPercentage,
         courseAmount: resolved.breakdown.totalAmount,
+        enrolleeDiscount: referralDiscount,
         orderId: order.id,
       });
     }
@@ -106,7 +105,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       order,
       keyId: razorpayKeyId,
-      amount: resolved.amount,
+      amount: chargeAmount,
+      originalAmount: resolved.amount,
+      referralDiscount,
       breakdown: resolved.breakdown,
       termNo: resolved.termNo,
       paymentType: resolved.paymentType,

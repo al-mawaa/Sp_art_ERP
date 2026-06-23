@@ -86,6 +86,8 @@ export async function GET(request: NextRequest) {
         nextDueDate: nextDue?.dueDate ?? null,
         nextDueAmount: nextDue?.amount ?? null,
         nextTermNo: nextDue?.termNo ?? null,
+        referralDiscountTotal: enrollment.referralDiscountTotal ?? 0,
+        referralDiscountApplied: enrollment.referralDiscountApplied ?? 0,
         installments: installments.map(i => ({
           termNo: i.termNo,
           amount: i.amount,

@@ -35,6 +35,11 @@ export interface CourseEnrollmentDocument extends mongoose.Document {
   installmentCharge?: number;
   invoiceId?: string;
   invoiceGeneratedAt?: Date;
+  referralCode?: string;
+  /** Total enrollee referral discount entitlement (50% of pool). */
+  referralDiscountTotal?: number;
+  /** Cumulative referral discount already applied across payments. */
+  referralDiscountApplied?: number;
 }
 
 const CourseEnrollmentSchema = new mongoose.Schema<CourseEnrollmentDocument>(
@@ -90,6 +95,9 @@ const CourseEnrollmentSchema = new mongoose.Schema<CourseEnrollmentDocument>(
     installmentCharge: { type: Number, default: 0 },
     invoiceId: { type: String, unique: true, sparse: true },
     invoiceGeneratedAt: { type: Date },
+    referralCode: { type: String, uppercase: true, trim: true },
+    referralDiscountTotal: { type: Number, default: 0, min: 0 },
+    referralDiscountApplied: { type: Number, default: 0, min: 0 },
   },
   {
     timestamps: true,
