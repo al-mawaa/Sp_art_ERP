@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Gift,
   Loader2,
@@ -12,6 +13,8 @@ import {
   Clock,
   Wallet,
   TrendingUp,
+  Trophy,
+  Target,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -67,17 +70,43 @@ type DashboardData = {
   walletHistory: WalletRow[];
 };
 
+type RewardSummary = {
+  successfulReferrals: number;
+  rewardsAvailable: number;
+  rewardsUnlocked: number;
+  nextReward: {
+    title: string;
+    requiredReferrals: number;
+    currentReferrals: number;
+    progress: number;
+    remaining: number;
+  } | null;
+};
+
 export default function StudentReferralsPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/student/referrals", { credentials: "include" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load referrals");
+      const [refRes, rewardRes] = await Promise.all([
+        fetch("/api/student/referrals", { credentials: "include" }),
+        fetch("/api/student/rewards", { credentials: "include" }),
+      ]);
+      const json = await refRes.json();
+      if (!refRes.ok) throw new Error(json.error || "Failed to load referrals");
       setData(json);
+      if (rewardRes.ok) {
+        const rewardJson = await rewardRes.json();
+        setRewardSummary({
+          successfulReferrals: rewardJson.successfulReferrals,
+          rewardsAvailable: rewardJson.rewardsAvailable,
+          rewardsUnlocked: rewardJson.rewardsUnlocked,
+          nextReward: rewardJson.nextReward,
+        });
+      }
     } catch (err) {
       toast({
         title: "Error",
@@ -192,6 +221,52 @@ export default function StudentReferralsPage() {
           </div>
         ))}
       </div>
+
+      {rewardSummary && (
+        <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                <Trophy className="h-4 w-4" /> Referral Rewards Progress
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {rewardSummary.rewardsUnlocked} unlocked · {rewardSummary.rewardsAvailable} ready to claim
+              </p>
+              {rewardSummary.nextReward ? (
+                <>
+                  <p className="mt-2 font-bold text-slate-900">
+                    Next: {rewardSummary.nextReward.title}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {rewardSummary.nextReward.currentReferrals} / {rewardSummary.nextReward.requiredReferrals} referrals
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 font-bold text-emerald-700">All catalog rewards unlocked!</p>
+              )}
+            </div>
+            {rewardSummary.nextReward && (
+              <div className="sm:w-48">
+                <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                  <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Progress</span>
+                  <span>{rewardSummary.nextReward.progress}%</span>
+                </div>
+                <div className="h-3 rounded-full bg-white/80 overflow-hidden border border-amber-200">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 to-orange-600"
+                    style={{ width: `${rewardSummary.nextReward.progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <Link href="/student/rewards">
+              <Button className="bg-gradient-to-r from-amber-600 to-orange-600 shrink-0">
+                View Rewards
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Enrollment discounts (when this student enrolled with a code) */}
       {data.enrollmentBonuses.length > 0 && (

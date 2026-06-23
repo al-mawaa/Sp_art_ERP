@@ -7,11 +7,21 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[GET /api/admin/referrals] Step 1: Checking auth...");
     const auth = await requireAdminFromRequest(request);
     if (!auth.ok) return auth.response;
 
+    console.log("[GET /api/admin/referrals] Step 2: Auth passed, reconciling...");
     const { searchParams } = new URL(request.url);
-    await reconcilePendingReferralTransactions();
+
+    // Reconcile is best-effort — don't let it crash the report
+    try {
+      await reconcilePendingReferralTransactions();
+    } catch (reconcileErr) {
+      console.error("[GET /api/admin/referrals] Reconcile failed (non-fatal):", reconcileErr);
+    }
+
+    console.log("[GET /api/admin/referrals] Step 3: Fetching report...");
     const report = await getAdminReferralReport({
       studentId: searchParams.get("studentId") ?? undefined,
       referralCode: searchParams.get("referralCode") ?? undefined,
@@ -20,8 +30,10 @@ export async function GET(request: NextRequest) {
       to: searchParams.get("to") ?? undefined,
     });
 
+    console.log("[GET /api/admin/referrals] Step 4: Report fetched successfully");
     return NextResponse.json(report);
   } catch (error) {
+    console.error("[GET /api/admin/referrals] Error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to load referrals" },
       { status: 500 },

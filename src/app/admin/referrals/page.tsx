@@ -319,7 +319,7 @@ export default function AdminReferralsPage() {
               </thead>
               <tbody>
                 {data.topReferrers.map(r => (
-                  <tr key={r.studentId} className="border-b border-slate-100">
+                  <tr key={r.referralCode} className="border-b border-slate-100">
                     <td className="py-3 pr-4 font-medium text-slate-900">{r.studentName}</td>
                     <td className="py-3 pr-4 font-mono text-violet-700">{r.referralCode}</td>
                     <td className="py-3 pr-4">{r.totalReferrals}</td>
