@@ -421,6 +421,13 @@ export async function completeReferralOnPayment(params: {
     }
   }
 
+  try {
+    const { processReferralRewardUnlock } = await import("@/lib/rewards/rewardService");
+    await processReferralRewardUnlock(transaction.referrerId.toString());
+  } catch (err) {
+    console.error("Referral reward unlock failed:", err);
+  }
+
   return transaction;
 }
 
@@ -596,9 +603,9 @@ export async function getAdminReferralReport(filters?: {
       referralRevenue: round2(totalRevenue),
     },
     topReferrers: profiles.map(p => {
-      const student = p.studentId as { fullName?: string; email?: string } | null;
+      const student = p.studentId as { _id?: mongoose.Types.ObjectId; fullName?: string; email?: string } | null;
       return {
-        studentId: p.studentId.toString(),
+        studentId: student?._id?.toString() ?? p._id.toString(),
         studentName: student?.fullName ?? "Unknown",
         referralCode: p.referralCode,
         totalReferrals: p.totalReferrals,
@@ -612,9 +619,9 @@ export async function getAdminReferralReport(filters?: {
         id: t._id.toString(),
         referralCode: t.referralCode,
         referrerName: referrer?.fullName ?? "Unknown",
-        referrerId: referrer?._id?.toString() ?? t.referrerId.toString(),
+        referrerId: referrer?._id?.toString() ?? t._id.toString(),
         referredStudentName: t.referredStudentName,
-        referredStudentId: t.referredStudentId.toString(),
+        referredStudentId: t.referredStudentId?.toString() ?? "",
         referralPercentage: t.referralPercentage,
         enrollmentStatus: t.enrollmentStatus,
         paymentStatus: t.paymentStatus,
