@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, RefreshCcw, Search } from "lucide-react";
+import { Download, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { downloadSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
+import { downloadAllSalarySlipsPdf, downloadSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
+
+const INSTITUTE_NAME = "Little Brushes Art Academy";
 
 type SalaryProfileRow = {
   id: string;
@@ -207,6 +209,75 @@ export function PayrollDashboard() {
     }
   };
 
+  const syncStaffToSalaryMaster = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/payroll/salary-profiles", {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to sync staff");
+      setProfiles(json.data.profiles as SalaryProfileRow[]);
+      setSalaryDraft(
+        Object.fromEntries((json.data.profiles as SalaryProfileRow[]).map(p => [p.id, String(p.monthlySalary)])),
+      );
+      toast.success(json.message || "Staff added to salary master");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteProfiles = async (profileIds: string[]) => {
+    if (profileIds.length === 0) return;
+    const label = profileIds.length === 1 ? "this salary profile" : `${profileIds.length} salary profiles`;
+    if (!window.confirm(`Remove ${label}? Payroll entries for those staff will also be deleted.`)) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/payroll/salary-profiles", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ids: profileIds, month }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to delete");
+      setProfiles(json.data.profiles as SalaryProfileRow[]);
+      setSalaryDraft(
+        Object.fromEntries((json.data.profiles as SalaryProfileRow[]).map(p => [p.id, String(p.monthlySalary)])),
+      );
+      if (json.data.payroll) applyPayrollPayload(json.data.payroll as PayrollResponse);
+      setSelectedProfileIds(prev => prev.filter(id => !profileIds.includes(id)));
+      toast.success(json.message || "Deleted successfully");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getSlipEntries = (profileIds?: string[]) => {
+    const targets = profileIds?.length
+      ? profiles.filter(p => profileIds.includes(p.id))
+      : profiles;
+    return targets
+      .map(p => entryByStaff.get(entryKey(p.staffType, p.staffId)))
+      .filter((entry): entry is PayrollEntry => Boolean(entry));
+  };
+
+  const downloadSlips = (profileIds?: string[]) => {
+    const slipEntries = getSlipEntries(profileIds);
+    if (slipEntries.length === 0) {
+      toast.error("Generate payroll first to download slips.");
+      return;
+    }
+    downloadAllSalarySlipsPdf(slipEntries, INSTITUTE_NAME, month);
+    toast.success(`Downloaded ${slipEntries.length} salary slip(s) in one PDF`);
+  };
+
   const updateProfileSalary = async (profileId: string) => {
     const raw = salaryDraft[profileId] ?? "0";
     const monthlySalary = Number(raw);
@@ -327,9 +398,29 @@ export function PayrollDashboard() {
       <div className="card-soft p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display font-bold text-lg">Teacher Salary Master</h3>
-          {selectedProfileIds.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-muted-foreground">{selectedProfileIds.length} selected</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              className="rounded-lg gradient-primary text-white border-0"
+              disabled={loading}
+              onClick={() => void syncStaffToSalaryMaster()}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Staff
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-lg"
+              disabled={loading || entries.length === 0}
+              onClick={() => downloadSlips()}
+            >
+              <Download className="w-3.5 h-3.5 mr-1" /> Download All Slips
+            </Button>
+          </div>
+        </div>
+        {selectedProfileIds.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2">
+              <span className="text-xs font-medium text-emerald-800">{selectedProfileIds.length} selected</span>
               <Button
                 size="sm"
                 className="rounded-lg gradient-primary text-white border-0"
@@ -356,9 +447,26 @@ export function PayrollDashboard() {
               >
                 Mark Selected Paid
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-lg"
+                disabled={loading}
+                onClick={() => downloadSlips(selectedProfileIds)}
+              >
+                <Download className="w-3.5 h-3.5 mr-1" /> Download Selected
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-lg text-destructive border-destructive/40 hover:bg-destructive/10"
+                disabled={loading}
+                onClick={() => void deleteProfiles(selectedProfileIds)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Selected
+              </Button>
             </div>
           ) : null}
-        </div>
 
         <div className="flex flex-wrap gap-3 items-end border-b border-border pb-3">
           <div className="flex-1 min-w-[220px]">
@@ -520,7 +628,7 @@ export function PayrollDashboard() {
                       className="rounded-lg"
                       onClick={() =>
                         downloadSalarySlipPdf({
-                          instituteName: "Little Brushes Art Academy",
+                          instituteName: INSTITUTE_NAME,
                           ...entry,
                         })
                       }
@@ -528,6 +636,15 @@ export function PayrollDashboard() {
                       <Download className="w-3.5 h-3.5 mr-1" /> Slip
                     </Button>
                   ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-lg text-destructive border-destructive/40 hover:bg-destructive/10"
+                    disabled={rowDisabled}
+                    onClick={() => void deleteProfiles([p.id])}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                  </Button>
                 </div>
               </div>
             );

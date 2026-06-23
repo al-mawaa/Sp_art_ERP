@@ -337,6 +337,64 @@ export async function updateSalaryProfile(input: {
   }
 }
 
+export async function syncSalaryProfilesFromStaff() {
+  await ensureSalaryProfiles();
+  const rows = await SalaryProfile.find({}).sort({ staffType: 1, staffName: 1 }).lean();
+  return rows.map(r => ({
+    id: r._id.toString(),
+    staffType: r.staffType,
+    staffId: r.staffId.toString(),
+    staffName: r.staffName,
+    employeeId: r.employeeId,
+    monthlySalary: r.monthlySalary,
+    joiningDate: r.joiningDate ? new Date(r.joiningDate).toISOString() : "",
+    status: r.status,
+  }));
+}
+
+export async function deleteSalaryProfiles(profileIds: string[]) {
+  const ids = profileIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+  if (ids.length === 0) throw new Error("No valid salary profiles selected");
+
+  const profiles = await SalaryProfile.find({ _id: { $in: ids } }).lean();
+  if (profiles.length === 0) throw new Error("Salary profile not found");
+
+  const monthsToRecalc = new Set<string>();
+  for (const profile of profiles) {
+    const entries = await PayrollEntry.find({
+      staffType: profile.staffType,
+      staffId: profile.staffId,
+    })
+      .select("month")
+      .lean();
+    for (const entry of entries) {
+      monthsToRecalc.add(entry.month);
+    }
+    await PayrollEntry.deleteMany({
+      staffType: profile.staffType,
+      staffId: profile.staffId,
+    });
+  }
+
+  await SalaryProfile.deleteMany({ _id: { $in: ids } });
+
+  for (const month of monthsToRecalc) {
+    await recalculatePayrollRunSummary(month);
+  }
+
+  const rows = await SalaryProfile.find({}).sort({ staffType: 1, staffName: 1 }).lean();
+  return rows.map(r => ({
+    id: r._id.toString(),
+    staffType: r.staffType,
+    staffId: r.staffId.toString(),
+    staffName: r.staffName,
+    employeeId: r.employeeId,
+    monthlySalary: r.monthlySalary,
+    joiningDate: r.joiningDate ? new Date(r.joiningDate).toISOString() : "",
+    status: r.status,
+  }));
+}
+
 type SalaryProfileDoc = {
   staffType: PayrollStaffType;
   staffId: mongoose.Types.ObjectId;
