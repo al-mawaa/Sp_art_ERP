@@ -34,6 +34,8 @@ interface EnrolledCourse {
   paymentPlanStatus?: string;
   nextDueDate?: string | null;
   nextTermNo?: number | null;
+  referralDiscountTotal?: number;
+  referralDiscountApplied?: number;
   installments?: Array<{
     termNo: number;
     amount: number;
@@ -284,6 +286,8 @@ export default function MyCoursesPage() {
                     paymentPlanStatus={course.paymentPlanStatus}
                     nextDueDate={course.nextDueDate}
                     nextTermNo={course.nextTermNo}
+                    referralDiscountTotal={course.referralDiscountTotal}
+                    referralDiscountApplied={course.referralDiscountApplied}
                     installments={course.installments}
                     paymentHistory={course.paymentHistory}
                     onPaymentSuccess={fetchEnrolledCourses}

@@ -42,6 +42,17 @@ type WalletRow = {
   createdAt: string;
 };
 
+type EnrollmentBonusRow = {
+  id: string;
+  referralCode: string;
+  courseTitle?: string;
+  courseAmount?: number;
+  referralPercentage: number;
+  earnedAmount: number;
+  totalPool: number;
+  createdAt: string;
+};
+
 type DashboardData = {
   referralCode: string;
   totalReferrals: number;
@@ -50,7 +61,9 @@ type DashboardData = {
   successfulEnrollments: number;
   pendingReferrals: number;
   activeReferralPercentage: number | null;
+  splitNote?: string;
   referrals: ReferralRow[];
+  enrollmentBonuses: EnrollmentBonusRow[];
   walletHistory: WalletRow[];
 };
 
@@ -118,7 +131,7 @@ export default function StudentReferralsPage() {
     <div className="space-y-6">
       <PageHeader
         title="My Referrals"
-        subtitle="Share your code, earn rewards when friends enroll"
+        subtitle="Share your code — 50% wallet reward for you, 50% enrollment discount for your friend"
       />
 
       {/* Referral Code Card */}
@@ -134,7 +147,7 @@ export default function StudentReferralsPage() {
             </p>
             {data.activeReferralPercentage !== null && (
               <p className="mt-2 text-sm text-violet-200">
-                Active program: {data.activeReferralPercentage}% reward on successful enrollments
+                Active program: {data.activeReferralPercentage}% of course fee — 50% to referrer wallet, 50% enrollee discount at checkout
               </p>
             )}
           </div>
@@ -179,6 +192,45 @@ export default function StudentReferralsPage() {
           </div>
         ))}
       </div>
+
+      {/* Enrollment discounts (when this student enrolled with a code) */}
+      {data.enrollmentBonuses.length > 0 && (
+        <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Gift className="h-5 w-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-slate-900">Enrollment Discounts</h2>
+          </div>
+          <p className="mb-4 text-sm text-slate-500">
+            Discount applied when you enrolled using someone else&apos;s referral code (your 50% share).
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-slate-500">
+                  <th className="pb-3 pr-3 font-medium">Code Used</th>
+                  <th className="pb-3 pr-3 font-medium">Course</th>
+                  <th className="pb-3 pr-3 font-medium">Pool</th>
+                  <th className="pb-3 pr-3 font-medium">Discount (50%)</th>
+                  <th className="pb-3 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.enrollmentBonuses.map(b => (
+                  <tr key={b.id} className="border-b border-slate-100">
+                    <td className="py-3 pr-3 font-mono text-violet-700">{b.referralCode}</td>
+                    <td className="py-3 pr-3">{b.courseTitle ?? "—"}</td>
+                    <td className="py-3 pr-3">{formatInr(b.totalPool)}</td>
+                    <td className="py-3 pr-3 font-semibold text-blue-700">{formatInr(b.earnedAmount)}</td>
+                    <td className="py-3 text-slate-500">
+                      {new Date(b.createdAt).toLocaleDateString("en-IN")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Wallet */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -228,7 +280,7 @@ export default function StudentReferralsPage() {
                 <th className="pb-3 pr-3 font-medium">Discount %</th>
                 <th className="pb-3 pr-3 font-medium">Enrollment</th>
                 <th className="pb-3 pr-3 font-medium">Payment</th>
-                <th className="pb-3 pr-3 font-medium">Earnings</th>
+                <th className="pb-3 pr-3 font-medium">Your Share (50%)</th>
                 <th className="pb-3 font-medium">Date</th>
               </tr>
             </thead>

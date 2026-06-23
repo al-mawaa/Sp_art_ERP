@@ -18,6 +18,7 @@ import {
   formatInr,
   type PaymentType,
 } from "@/lib/enrollment/paymentCalculations";
+import { calculateReferralCheckoutDiscount, applyReferralDiscountToPayment } from "@/lib/referral/referralCalculations";
 import { cn } from "@/lib/utils";
 
 declare global {
@@ -47,6 +48,7 @@ type EnrollmentPaymentModalProps = {
   duration: number;
   enrollmentId?: string;
   termNo?: number;
+  referralDiscountRemaining?: number;
   onSuccess?: () => void;
 };
 
@@ -59,6 +61,7 @@ export function EnrollmentPaymentModal({
   duration,
   enrollmentId,
   termNo = 1,
+  referralDiscountRemaining = 0,
   onSuccess,
 }: EnrollmentPaymentModalProps) {
   const isSubsequentPay = Boolean(enrollmentId);
@@ -86,6 +89,26 @@ export function EnrollmentPaymentModal({
       ? fullBreakdown.totalAmount
       : installmentBreakdown.termAmounts[0];
 
+  const referralCheckout =
+    appliedReferral && !isSubsequentPay
+      ? calculateReferralCheckoutDiscount({
+          courseTotalAmount: activeBreakdown.totalAmount,
+          payAmount,
+          referralPercentage: appliedReferral.percentage,
+        })
+      : isSubsequentPay && referralDiscountRemaining > 0
+        ? (() => {
+            const applied = applyReferralDiscountToPayment(payAmount, referralDiscountRemaining);
+            return {
+              enrolleeDiscount: applied.enrolleeDiscount,
+              finalPayAmount: applied.finalPayAmount,
+            };
+          })()
+        : null;
+
+  const referralDiscount = referralCheckout?.enrolleeDiscount ?? 0;
+  const finalPayAmount = referralCheckout?.finalPayAmount ?? payAmount;
+
   const handleApplyReferral = async () => {
     const code = referralInput.trim();
     if (!code) {
@@ -98,7 +121,11 @@ export function EnrollmentPaymentModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ referralCode: code }),
+        body: JSON.stringify({
+          referralCode: code,
+          courseTotalAmount: activeBreakdown.totalAmount,
+          payAmount,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.valid) {
@@ -115,7 +142,12 @@ export function EnrollmentPaymentModal({
         referrerName: data.referrerName,
         percentage: data.referralPercentage,
       });
-      toast({ title: "Referral Applied Successfully", description: `Referrer: ${data.referrerName}` });
+      toast({
+        title: "Referral Applied Successfully",
+        description: data.enrolleeDiscount
+          ? `${data.referrerName} · ${formatInr(data.enrolleeDiscount)} discount on this payment`
+          : `${data.referrerName} · ${data.referralPercentage}% referral discount at checkout`,
+      });
     } catch {
       toast({ title: "Error", description: "Failed to validate referral code", variant: "destructive" });
     } finally {
@@ -285,6 +317,7 @@ export function EnrollmentPaymentModal({
     termNo,
     appliedReferral,
     referralInput,
+    referralDiscountRemaining,
   ]);
 
   return (
@@ -367,7 +400,7 @@ export function EnrollmentPaymentModal({
                   <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Valid Referral Found</p>
-                    <p>{appliedReferral.referrerName} · {appliedReferral.percentage}% program active</p>
+                    <p>{appliedReferral.referrerName} · {appliedReferral.percentage}% pool — 50% to referrer, {formatInr(referralDiscount)} discount for you</p>
                   </div>
                 </div>
               )}
@@ -389,13 +422,27 @@ export function EnrollmentPaymentModal({
                 <span>{formatInr(activeBreakdown.installmentCharge)}</span>
               </div>
             )}
+            {referralDiscount > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Referral Discount{isSubsequentPay ? "" : " (50%)"}</span>
+                <span>-{formatInr(referralDiscount)}</span>
+              </div>
+            )}
             <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold text-slate-900">
-              <span>{isSubsequentPay ? `Term ${termNo} Payable` : "Total Payable"}</span>
-              <span>{formatInr(payAmount)}</span>
+              <span>{isSubsequentPay ? `Term ${termNo} Payable` : "Amount to Pay"}</span>
+              <span>{formatInr(finalPayAmount)}</span>
             </div>
-            {!isSubsequentPay && paymentType === "installment" && (
+            {referralDiscount > 0 && payAmount !== finalPayAmount && (
+              <p className="text-xs text-slate-500 line-through">{formatInr(payAmount)} before discount</p>
+            )}
+            {!isSubsequentPay && paymentType === "installment" && appliedReferral && (
               <p className="text-xs text-slate-500 pt-1">
-                {activeBreakdown.termCount} terms · First payment now · Remaining from My Courses
+                {activeBreakdown.termCount} terms · First payment now · Any unused referral discount applies on later terms
+              </p>
+            )}
+            {isSubsequentPay && referralDiscount > 0 && (
+              <p className="text-xs text-emerald-700 pt-1">
+                Referral discount from your enrollment is applied to this installment
               </p>
             )}
           </div>
@@ -417,7 +464,7 @@ export function EnrollmentPaymentModal({
                 Processing...
               </>
             ) : (
-              `Pay ${formatInr(payAmount)}`
+              `Pay ${formatInr(finalPayAmount)}`
             )}
           </Button>
         </DialogFooter>

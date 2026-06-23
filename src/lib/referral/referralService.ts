@@ -8,13 +8,55 @@ import ReferralWalletTransaction from "@/lib/models/ReferralWalletTransaction";
 import EnrollmentPaymentRecord from "@/lib/models/EnrollmentPaymentRecord";
 import CourseEnrollment from "@/lib/models/CourseEnrollment";
 import Course from "@/lib/models/Course";
-import { sendReferralUsedEmail } from "@/lib/email/referralEmail";
+import { sendEnrolleeReferralDiscountEmail, sendReferralUsedEmail } from "@/lib/email/referralEmail";
+import { resolvePaymentOrder } from "@/lib/enrollment/enrollmentPaymentService";
+import type { PaymentType } from "@/lib/enrollment/paymentCalculations";
+import {
+  REFERRAL_SHARE_RATIO,
+  applyReferralDiscountToPayment,
+  calculateReferralCheckoutDiscount,
+  getReferralEnrolleeDiscountTotal,
+} from "@/lib/referral/referralCalculations";
+
+export { calculateReferralCheckoutDiscount, getReferralEnrolleeDiscountTotal };
 
 const ALLOWED_PERCENTAGES: ReferralPercentage[] = [5, 10, 15, 20];
 const REFERRAL_CODE_PREFIX = "SPARTRF-";
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;
+}
+
+function splitReferralPool(totalPool: number) {
+  if (totalPool <= 0) {
+    return { totalPool: 0, referrerAmount: 0, enrolleeAmount: 0 };
+  }
+  const referrerAmount = round2(totalPool * REFERRAL_SHARE_RATIO);
+  const enrolleeAmount = round2(totalPool - referrerAmount);
+  return { totalPool: round2(totalPool), referrerAmount, enrolleeAmount };
+}
+
+function resolveReferralSplit(transaction: {
+  earnedAmount: number;
+  referrerEarnedAmount?: number;
+  enrolleeEarnedAmount?: number;
+}) {
+  if (
+    transaction.referrerEarnedAmount != null &&
+    transaction.enrolleeEarnedAmount != null &&
+    (transaction.referrerEarnedAmount > 0 || transaction.enrolleeEarnedAmount > 0)
+  ) {
+    return {
+      totalPool: transaction.earnedAmount,
+      referrerAmount: transaction.referrerEarnedAmount,
+      enrolleeAmount: transaction.enrolleeEarnedAmount,
+    };
+  }
+  return {
+    totalPool: transaction.earnedAmount,
+    referrerAmount: transaction.earnedAmount,
+    enrolleeAmount: 0,
+  };
 }
 
 function formatReferralCode(sequence: number) {
@@ -140,6 +182,98 @@ export async function validateReferralCode(
   };
 }
 
+export async function resolveReferralPaymentAdjustment(params: {
+  studentId: string;
+  courseId: string;
+  paymentType: PaymentType;
+  termNo: number;
+  enrollmentId?: string;
+  referralCode?: string;
+}) {
+  const resolved = await resolvePaymentOrder({
+    courseId: params.courseId,
+    studentId: params.studentId,
+    paymentType: params.paymentType,
+    termNo: params.termNo,
+    enrollmentId: params.enrollmentId,
+  });
+
+  let validatedReferral: Awaited<ReturnType<typeof validateReferralCode>> | null = null;
+  let referralDiscount = 0;
+  let chargeAmount = resolved.amount;
+
+  if (params.enrollmentId) {
+    const enrollment = await CourseEnrollment.findOne({
+      _id: params.enrollmentId,
+      studentId: new mongoose.Types.ObjectId(params.studentId),
+    });
+    const discountTotal = enrollment?.referralDiscountTotal ?? 0;
+    const discountApplied = enrollment?.referralDiscountApplied ?? 0;
+    const discountRemaining = round2(Math.max(0, discountTotal - discountApplied));
+
+    if (discountRemaining > 0) {
+      const applied = applyReferralDiscountToPayment(resolved.amount, discountRemaining);
+      referralDiscount = applied.enrolleeDiscount;
+      chargeAmount = applied.finalPayAmount;
+    }
+
+    return {
+      resolved,
+      chargeAmount,
+      referralDiscount,
+      validatedReferral,
+    };
+  }
+
+  const referralCode = params.referralCode?.trim();
+  if (referralCode) {
+    const validation = await validateReferralCode(referralCode, params.studentId);
+    if (validation.valid === false) {
+      throw new Error(validation.error);
+    }
+    validatedReferral = validation;
+
+    const checkout = calculateReferralCheckoutDiscount({
+      courseTotalAmount: resolved.breakdown.totalAmount,
+      payAmount: resolved.amount,
+      referralPercentage: validation.referralPercentage,
+    });
+    referralDiscount = checkout.enrolleeDiscount;
+    chargeAmount = checkout.finalPayAmount;
+  }
+
+  return { resolved, chargeAmount, referralDiscount, validatedReferral };
+}
+
+export async function applyReferralDiscountToEnrollment(params: {
+  enrollmentId: string;
+  orderId: string;
+  referralDiscount: number;
+  isNewEnrollment: boolean;
+}) {
+  if (params.referralDiscount <= 0) return;
+
+  const enrollment = await CourseEnrollment.findById(params.enrollmentId);
+  if (!enrollment) return;
+
+  if (params.isNewEnrollment) {
+    const referralTx = await ReferralTransaction.findOne({ orderId: params.orderId });
+    if (referralTx) {
+      const { enrolleeDiscountTotal } = getReferralEnrolleeDiscountTotal(
+        enrollment.totalAmount ?? enrollment.amount ?? referralTx.courseAmount,
+        referralTx.referralPercentage,
+      );
+      enrollment.referralCode = referralTx.referralCode;
+      enrollment.referralDiscountTotal = enrolleeDiscountTotal;
+    }
+  }
+
+  enrollment.referralDiscountApplied = round2(
+    (enrollment.referralDiscountApplied ?? 0) + params.referralDiscount,
+  );
+  await enrollment.save();
+}
+
 export async function createPendingReferralTransaction(params: {
   referrerId: string;
   referredStudentId: string;
@@ -147,6 +281,7 @@ export async function createPendingReferralTransaction(params: {
   referralCode: string;
   referralPercentage: number;
   courseAmount: number;
+  enrolleeDiscount: number;
   orderId: string;
 }) {
   await dbConnect();
@@ -161,6 +296,7 @@ export async function createPendingReferralTransaction(params: {
     referralCode: params.referralCode.toUpperCase(),
     referralPercentage: params.referralPercentage,
     courseAmount: params.courseAmount,
+    enrolleeEarnedAmount: round2(params.enrolleeDiscount),
     earnedAmount: 0,
     enrollmentStatus: false,
     paymentStatus: "pending",
@@ -212,50 +348,76 @@ export async function completeReferralOnPayment(params: {
     courseAmount,
     transaction.courseAmount ?? 0,
   );
-  const earnedAmount = round2((effectiveCourseAmount * transaction.referralPercentage) / 100);
+  const totalPool = round2((effectiveCourseAmount * transaction.referralPercentage) / 100);
+  const { referrerAmount, enrolleeAmount: poolEnrolleeShare } = splitReferralPool(totalPool);
+  const pendingDiscount = transaction.enrolleeEarnedAmount ?? 0;
+  const enrolleeDiscountApplied =
+    pendingDiscount > 0 ? pendingDiscount : poolEnrolleeShare;
 
   transaction.enrollmentId = new mongoose.Types.ObjectId(enrollmentId);
   transaction.courseId = new mongoose.Types.ObjectId(courseId);
   transaction.courseTitle = courseTitle;
   transaction.courseAmount = effectiveCourseAmount;
-  transaction.earnedAmount = earnedAmount;
+  transaction.earnedAmount = totalPool;
+  transaction.referrerEarnedAmount = referrerAmount;
+  transaction.enrolleeEarnedAmount = enrolleeDiscountApplied;
   transaction.enrollmentStatus = true;
   transaction.paymentStatus = "paid";
   await transaction.save();
 
-  const profile = await ensureStudentReferralProfile(transaction.referrerId.toString());
-
-  profile.totalReferrals += 1;
-  if (earnedAmount > 0) {
-    profile.totalEarnings = round2(profile.totalEarnings + earnedAmount);
-    profile.availableBalance = round2(profile.availableBalance + earnedAmount);
+  const referrerProfile = await ensureStudentReferralProfile(transaction.referrerId.toString());
+  referrerProfile.totalReferrals += 1;
+  if (referrerAmount > 0) {
+    referrerProfile.totalEarnings = round2(referrerProfile.totalEarnings + referrerAmount);
+    referrerProfile.availableBalance = round2(referrerProfile.availableBalance + referrerAmount);
   }
-  await profile.save();
+  await referrerProfile.save();
 
-  if (earnedAmount > 0) {
+  if (referrerAmount > 0) {
     await ReferralWalletTransaction.create({
-      studentId: profile.studentId,
+      studentId: referrerProfile.studentId,
       type: "credit",
-      amount: earnedAmount,
-      description: `Referral reward — ${courseTitle}`,
+      amount: referrerAmount,
+      description: `Referral reward (50%) — ${courseTitle}`,
       referralTransactionId: transaction._id,
-      balanceAfter: profile.availableBalance,
+      balanceAfter: referrerProfile.availableBalance,
     });
   }
 
-  const referrer = await Student.findById(transaction.referrerId);
-  if (referrer?.email) {
+  const [referrer, enrollee] = await Promise.all([
+    Student.findById(transaction.referrerId),
+    Student.findById(referredStudentId),
+  ]);
+
+  if (referrer?.email && referrerAmount > 0) {
     try {
       await sendReferralUsedEmail({
         referrerEmail: referrer.email,
         referrerName: referrer.fullName,
         referredStudentName: transaction.referredStudentName,
         courseTitle,
-        earnedAmount,
+        earnedAmount: referrerAmount,
+        totalPool,
         referralCode: transaction.referralCode,
       });
     } catch (err) {
       console.error("Referral email failed:", err);
+    }
+  }
+
+  if (enrollee?.email && enrolleeDiscountApplied > 0) {
+    try {
+      await sendEnrolleeReferralDiscountEmail({
+        enrolleeEmail: enrollee.email,
+        enrolleeName: enrollee.fullName,
+        referrerName: referrer?.fullName ?? "Referrer",
+        courseTitle,
+        discountAmount: enrolleeDiscountApplied,
+        totalPool,
+        referralCode: transaction.referralCode,
+      });
+    } catch (err) {
+      console.error("Enrollee referral email failed:", err);
     }
   }
 
@@ -304,17 +466,18 @@ export async function reconcilePendingReferralTransactions() {
 export async function getStudentReferralDashboard(studentId: string) {
   await dbConnect();
   const profile = await ensureStudentReferralProfile(studentId);
+  const studentOid = new mongoose.Types.ObjectId(studentId);
 
-  const transactions = await ReferralTransaction.find({ referrerId: profile.studentId }).sort({
-    createdAt: -1,
-  });
+  const [referralTransactions, enrollmentBonuses, walletHistory] = await Promise.all([
+    ReferralTransaction.find({ referrerId: studentOid }).sort({ createdAt: -1 }),
+    ReferralTransaction.find({ referredStudentId: studentOid, enrollmentStatus: true }).sort({
+      createdAt: -1,
+    }),
+    ReferralWalletTransaction.find({ studentId: studentOid }).sort({ createdAt: -1 }).limit(50),
+  ]);
 
-  const walletHistory = await ReferralWalletTransaction.find({ studentId: profile.studentId })
-    .sort({ createdAt: -1 })
-    .limit(50);
-
-  const successful = transactions.filter(t => t.enrollmentStatus).length;
-  const pending = transactions.filter(t => !t.enrollmentStatus).length;
+  const successful = referralTransactions.filter(t => t.enrollmentStatus).length;
+  const pending = referralTransactions.filter(t => !t.enrollmentStatus).length;
   const activePercentage = await getActiveReferralPercentage();
 
   return {
@@ -325,19 +488,40 @@ export async function getStudentReferralDashboard(studentId: string) {
     successfulEnrollments: successful,
     pendingReferrals: pending,
     activeReferralPercentage: activePercentage,
-    referrals: transactions.map(t => ({
-      id: t._id.toString(),
-      referralCode: t.referralCode,
-      referredStudentName: t.referredStudentName,
-      referredStudentId: t.referredStudentId.toString(),
-      referralPercentage: t.referralPercentage,
-      enrollmentStatus: t.enrollmentStatus,
-      paymentStatus: t.paymentStatus,
-      earnedAmount: t.earnedAmount,
-      courseTitle: t.courseTitle,
-      courseAmount: t.courseAmount,
-      createdAt: t.createdAt,
-    })),
+    splitNote:
+      "Referral pool is split 50% to referrer (wallet) and 50% enrollee discount at checkout — full and installment payments.",
+    referrals: referralTransactions.map(t => {
+      const split = resolveReferralSplit(t);
+      return {
+        id: t._id.toString(),
+        referralCode: t.referralCode,
+        referredStudentName: t.referredStudentName,
+        referredStudentId: t.referredStudentId.toString(),
+        referralPercentage: t.referralPercentage,
+        enrollmentStatus: t.enrollmentStatus,
+        paymentStatus: t.paymentStatus,
+        earnedAmount: split.referrerAmount,
+        totalPool: split.totalPool,
+        referrerEarnedAmount: split.referrerAmount,
+        enrolleeEarnedAmount: split.enrolleeAmount,
+        courseTitle: t.courseTitle,
+        courseAmount: t.courseAmount,
+        createdAt: t.createdAt,
+      };
+    }),
+    enrollmentBonuses: enrollmentBonuses.map(t => {
+      const split = resolveReferralSplit(t);
+      return {
+        id: t._id.toString(),
+        referralCode: t.referralCode,
+        courseTitle: t.courseTitle,
+        courseAmount: t.courseAmount,
+        referralPercentage: t.referralPercentage,
+        earnedAmount: split.enrolleeAmount,
+        totalPool: split.totalPool,
+        createdAt: t.createdAt,
+      };
+    }),
     walletHistory: walletHistory.map(w => ({
       id: w._id.toString(),
       type: w.type,
@@ -423,6 +607,7 @@ export async function getAdminReferralReport(filters?: {
     }),
     transactions: transactions.map(t => {
       const referrer = t.referrerId as { fullName?: string; _id?: mongoose.Types.ObjectId } | null;
+      const split = resolveReferralSplit(t);
       return {
         id: t._id.toString(),
         referralCode: t.referralCode,
@@ -433,7 +618,9 @@ export async function getAdminReferralReport(filters?: {
         referralPercentage: t.referralPercentage,
         enrollmentStatus: t.enrollmentStatus,
         paymentStatus: t.paymentStatus,
-        earnedAmount: t.earnedAmount,
+        earnedAmount: split.totalPool,
+        referrerEarnedAmount: split.referrerAmount,
+        enrolleeEarnedAmount: split.enrolleeAmount,
         courseAmount: t.courseAmount,
         courseTitle: t.courseTitle,
         createdAt: t.createdAt,
