@@ -350,6 +350,17 @@ export async function processSuccessfulPayment(input: ProcessPaymentInput) {
     }
   }
 
+  let nextDueDateStr: string | undefined;
+  if (paymentType === "installment") {
+    const nextInst = await EnrollmentInstallment.findOne({
+      enrollmentId: enrollment._id,
+      paymentStatus: { $in: ["pending", "overdue"] }
+    }).sort({ termNo: 1 });
+    if (nextInst) {
+      nextDueDateStr = nextInst.dueDate.toISOString();
+    }
+  }
+
   if (student.email) {
     try {
       await sendCourseEnrollmentEmail({
@@ -374,6 +385,7 @@ export async function processSuccessfulPayment(input: ProcessPaymentInput) {
         installmentCharge: breakdown.installmentCharge,
         termNo: paymentType === "full" ? undefined : termNo,
         paymentType,
+        nextDueDate: nextDueDateStr,
       });
     } catch (mailErr) {
       console.error("Failed to send enrollment email:", mailErr);

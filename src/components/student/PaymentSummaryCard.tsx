@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IndianRupee, Calendar, History } from "lucide-react";
+import { IndianRupee, Calendar, History, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PaymentStatusBadge } from "@/components/student/PaymentStatusBadge";
 import { EnrollmentPaymentModal } from "@/components/student/EnrollmentPaymentModal";
@@ -112,7 +112,8 @@ export function PaymentSummaryCard({
               <p className="text-slate-500 flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> Next Due Date
               </p>
-              <p className="font-bold text-slate-900">
+              <p className="font-bold text-red-600 flex items-center gap-1 mt-0.5">
+                <AlertCircle className="h-4 w-4" />
                 {new Date(nextDueDate).toLocaleDateString("en-IN", {
                   day: "2-digit",
                   month: "short",
