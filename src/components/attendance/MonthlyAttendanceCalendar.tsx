@@ -1,13 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-export type CalendarDayStatus = "Present" | "Absent" | "Half Day" | null;
+export type CalendarDayStatus = "Present" | "Absent" | "Half Day" | "Summary" | null;
 
 export type MonthlyCalendarRecord = {
   date: string;
   status: string;
+  summary?: {
+    present: number;
+    absent: number;
+    halfDay: number;
+  };
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -54,10 +60,10 @@ export function MonthlyAttendanceCalendar({
     const [y, mo] = month.split("-").map(Number);
     const firstDay = new Date(y, mo - 1, 1).getDay();
     const daysInMonth = new Date(y, mo, 0).getDate();
-    const map: Record<string, string> = {};
+    const map: Record<string, MonthlyCalendarRecord> = {};
     records.forEach(r => {
       const key = r.date.split("T")[0];
-      map[key] = r.status;
+      map[key] = r;
     });
     return {
       year: y,
@@ -68,6 +74,8 @@ export function MonthlyAttendanceCalendar({
       attendanceMap: map,
     };
   }, [month, records]);
+
+  const [selectedRecord, setSelectedRecord] = useState<MonthlyCalendarRecord | null>(null);
 
   if (loading) {
     return (
@@ -101,16 +109,58 @@ export function MonthlyAttendanceCalendar({
 
       <div className="grid grid-cols-7 gap-1.5 sm:gap-3">
         {emptyDays.map((_, i) => (
-          <div key={`e-${i}`} className="aspect-square min-h-[2.5rem] sm:min-h-[3.5rem]" />
+          <div key={`e-${i}`} className="aspect-square sm:aspect-[4/3] min-h-[3rem] sm:min-h-[4.5rem]" />
         ))}
         {days.map(day => {
           const dateStr = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const st = dayStatus(attendanceMap[dateStr]);
+          const rec = attendanceMap[dateStr];
+
+          if (!rec) {
+            return (
+              <div
+                key={dateStr}
+                className="aspect-square sm:aspect-[4/3] min-h-[3rem] sm:min-h-[4.5rem] rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-0.5 p-1 transition-all duration-200 bg-muted/50 text-muted-foreground border border-border/80"
+              >
+                <span className="text-sm sm:text-lg font-bold leading-none">{day}</span>
+              </div>
+            );
+          }
+
+          if (rec.summary) {
+            return (
+              <button
+                key={dateStr}
+                onClick={() => setSelectedRecord(rec)}
+                className="aspect-square sm:aspect-[4/3] min-h-[3rem] sm:min-h-[4.5rem] rounded-xl sm:rounded-2xl flex flex-col items-start p-1.5 sm:p-2 transition-all duration-200 bg-card border border-border/80 shadow-sm hover:border-primary/50 hover:shadow-md cursor-pointer text-left"
+              >
+                <span className="text-xs sm:text-sm font-bold leading-none mb-1 text-foreground">{day}</span>
+                <div className="flex flex-col gap-0.5 w-full">
+                  {rec.summary.present > 0 && (
+                    <div className="text-[9px] sm:text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"></span> P - {rec.summary.present}
+                    </div>
+                  )}
+                  {rec.summary.absent > 0 && (
+                    <div className="text-[9px] sm:text-[10px] font-semibold text-red-600 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0"></span> A - {rec.summary.absent}
+                    </div>
+                  )}
+                  {rec.summary.halfDay > 0 && (
+                    <div className="text-[9px] sm:text-[10px] font-semibold text-amber-600 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0"></span> H - {rec.summary.halfDay}
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          }
+
+          const st = dayStatus(rec.status);
           return (
             <div
               key={dateStr}
               className={cn(
-                "aspect-square min-h-[2.5rem] sm:min-h-[3.5rem] rounded-xl sm:rounded-2xl",
+                "aspect-square sm:aspect-[4/3] min-h-[3rem] sm:min-h-[4.5rem] rounded-xl sm:rounded-2xl",
                 "flex flex-col items-center justify-center gap-0.5 p-1 transition-all duration-200",
                 cellClass(st),
               )}
@@ -131,6 +181,44 @@ export function MonthlyAttendanceCalendar({
         <LegendDot className="bg-amber-500" label="Half day" />
         <LegendDot className="bg-muted/50 border border-border" label="No attendance" />
       </div>
+
+      <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
+        <DialogContent className="sm:max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {selectedRecord && new Date(selectedRecord.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedRecord?.summary && (
+            <div className="space-y-4 py-2 mt-2">
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Present Batches
+                </span>
+                <span className="font-semibold text-emerald-600">{selectedRecord.summary.present}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-red-500"></span> Absent Batches
+                </span>
+                <span className="font-semibold text-red-600">{selectedRecord.summary.absent}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-500"></span> Half Day Batches
+                </span>
+                <span className="font-semibold text-amber-600">{selectedRecord.summary.halfDay}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 pt-5 mt-2 bg-muted/20 rounded-xl px-4 border border-border/60">
+                <span className="text-base font-semibold text-foreground">Total Batches</span>
+                <span className="text-lg font-bold text-primary">
+                  {selectedRecord.summary.present + selectedRecord.summary.absent + selectedRecord.summary.halfDay}
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

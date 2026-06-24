@@ -226,9 +226,8 @@ export async function buildStaffAttendanceReport(filters: StaffReportFilters) {
 export type StaffListRow = {
   id: string;
   userId: string;
-  batchId: string;
   staffName: string;
-  batchName: string;
+  batchesCount: number;
   remarks: string;
 };
 
@@ -246,8 +245,8 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
   }
 
   const grouped = await TeacherAttendance.aggregate<{
-    _id: { teacherId: mongoose.Types.ObjectId; batchId: mongoose.Types.ObjectId };
-    batchName: string;
+    _id: { teacherId: mongoose.Types.ObjectId };
+    batchesCount: mongoose.Types.ObjectId[];
     remarks: string;
     recordId: mongoose.Types.ObjectId;
   }>([
@@ -255,13 +254,12 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
     { $sort: { attendanceDate: -1, createdAt: -1 } },
     {
       $group: {
-        _id: { teacherId: "$teacherId", batchId: "$batchId" },
-        batchName: { $first: "$batchName" },
+        _id: { teacherId: "$teacherId" },
+        batchesCount: { $addToSet: "$batchId" },
         remarks: { $first: "$remarks" },
         recordId: { $first: "$_id" },
       },
     },
-    { $sort: { batchName: 1 } },
   ]);
 
   const userIds = [...new Set(grouped.map(g => g._id.teacherId.toString()))];
@@ -277,13 +275,11 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
 
   let rows: StaffListRow[] = grouped.map(g => {
     const userId = g._id.teacherId.toString();
-    const batchId = g._id.batchId.toString();
     return {
-      id: `${userId}_${batchId}`,
+      id: userId,
       userId,
-      batchId,
       staffName: nameMap.get(userId) ?? (filters.role === "teacher" ? "Teacher" : "Senior Teacher"),
-      batchName: g.batchName || "",
+      batchesCount: g.batchesCount.length,
       remarks: g.remarks ?? "",
     };
   });
@@ -293,7 +289,6 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
     rows = rows.filter(
       row =>
         row.staffName.toLowerCase().includes(q) ||
-        row.batchName.toLowerCase().includes(q) ||
         row.remarks.toLowerCase().includes(q),
     );
   }
@@ -313,14 +308,20 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
   };
 }
 
-export function parseStaffPreviewId(id: string): { userId: string; batchId: string } | null {
-  const parts = decodeURIComponent(id).split("_");
-  if (parts.length !== 2) return null;
-  const [userId, batchId] = parts;
-  if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(batchId)) {
-    return null;
+export function parseStaffPreviewId(id: string): { userId: string; batchId?: string } | null {
+  const decoded = decodeURIComponent(id);
+  if (decoded.includes("_")) {
+    const parts = decoded.split("_");
+    if (parts.length !== 2) return null;
+    const [userId, batchId] = parts;
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(batchId)) {
+      return null;
+    }
+    return { userId, batchId };
+  } else {
+    if (!mongoose.Types.ObjectId.isValid(decoded)) return null;
+    return { userId: decoded };
   }
-  return { userId, batchId };
 }
 
 export async function resolveStaffPreviewFromRecordId(recordId: string) {
@@ -337,7 +338,7 @@ export async function resolveStaffPreviewFromRecordId(recordId: string) {
 export async function buildStaffAttendancePreview(input: {
   role: StaffRole;
   userId: string;
-  batchId: string;
+  batchId?: string;
   month: string;
 }) {
   const { role, userId, batchId, month } = input;
@@ -350,29 +351,39 @@ export async function buildStaffAttendancePreview(input: {
   const endDay = new Date(year, mo, 0).getDate();
   const end = `${month}-${String(endDay).padStart(2, "0")}`;
 
-  const match = {
+  const match: Record<string, unknown> = {
     role,
     teacherId: new mongoose.Types.ObjectId(userId),
-    batchId: new mongoose.Types.ObjectId(batchId),
     attendanceDate: { $gte: start, $lte: end },
   };
 
-  const [records, batch, staffProfile] = await Promise.all([
+  const [records, staffProfile, assignedBatchesCount] = await Promise.all([
     TeacherAttendance.find(match).sort({ attendanceDate: 1 }).lean(),
-    Batch.findById(batchId).select("batchName courseName batchDay batchTime").lean(),
     role === "teacher"
       ? Teacher.findById(userId).select("fullName email").lean()
       : SeniorTeacher.findById(userId).select("fullName email").lean(),
+    Batch.countDocuments(
+      role === "teacher" ? teacherAssignedBatchFilter(userId) : seniorTeacherAssignedBatchFilter(userId)
+    )
   ]);
 
-  if (!batch) throw new Error("NOT_FOUND");
+  const dateMap = new Map<string, { present: number; absent: number; halfDay: number }>();
+  let totalPresent = 0;
+  let totalAbsent = 0;
+  let totalHalfDay = 0;
 
-  const present = records.filter(r => r.status === "Present").length;
-  const absent = records.filter(r => r.status === "Absent").length;
-  const halfDay = records.filter(r => r.status === "Half Day").length;
-  const total = records.length;
+  for (const r of records) {
+    const d = r.attendanceDate;
+    if (!dateMap.has(d)) dateMap.set(d, { present: 0, absent: 0, halfDay: 0 });
+    const stat = dateMap.get(d)!;
+    if (r.status === "Present") { stat.present++; totalPresent++; }
+    else if (r.status === "Absent") { stat.absent++; totalAbsent++; }
+    else if (r.status === "Half Day") { stat.halfDay++; totalHalfDay++; }
+  }
+
+  const totalAttendances = records.length;
   const attendancePercentage =
-    total > 0 ? Math.round(((present + halfDay * 0.5) / total) * 100) : 0;
+    totalAttendances > 0 ? Math.round(((totalPresent + totalHalfDay * 0.5) / totalAttendances) * 100) : 0;
 
   const name =
     staffProfile && "fullName" in staffProfile
@@ -390,23 +401,25 @@ export async function buildStaffAttendancePreview(input: {
       role,
     },
     batch: {
-      id: batchId,
-      name: batch.batchName,
-      course: batch.courseName || "—",
-      schedule: batch.batchTiming || `${batch.batchDay} · ${batch.batchTime}`,
+      id: batchId ?? "all",
+      name: batchId ? "Specific Batch" : "Multiple Batches",
+      course: "—",
+      schedule: "—",
+      totalAssigned: assignedBatchesCount,
     },
     month,
     summary: {
-      present,
-      absent,
-      halfDay,
-      total,
+      present: totalPresent,
+      absent: totalAbsent,
+      halfDay: totalHalfDay,
+      total: totalAttendances,
       attendancePercentage,
     },
-    records: records.map(r => ({
-      date: r.attendanceDate,
-      status: r.status as TeacherAttendanceStatus,
-      remarks: r.remarks ?? "",
+    records: Array.from(dateMap.entries()).map(([date, counts]) => ({
+      date,
+      status: "Summary",
+      summary: counts,
+      remarks: "",
     })),
   };
 }

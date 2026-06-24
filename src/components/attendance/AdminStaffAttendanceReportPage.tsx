@@ -28,9 +28,8 @@ import { toast } from "sonner";
 type ReportRow = {
   id: string;
   userId: string;
-  batchId: string;
   staffName: string;
-  batchName: string;
+  batchesCount: number;
   remarks: string;
 };
 
@@ -132,7 +131,7 @@ export function AdminStaffAttendanceReportPage({
       title,
       records.map(r => ({
         staffName: r.staffName,
-        batchName: r.batchName,
+        batchName: `Total Batches: ${r.batchesCount}`,
         attendanceStatus: "—",
         attendanceDate: "—",
         remarks: r.remarks,
@@ -258,7 +257,7 @@ export function AdminStaffAttendanceReportPage({
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/80">
                 <TableHead className="font-semibold">{staffColumnLabel}</TableHead>
-                <TableHead className="font-semibold">Batch</TableHead>
+                <TableHead className="font-semibold text-center w-[140px]">Batches Assigned</TableHead>
                 <TableHead className="font-semibold">Remarks</TableHead>
                 <TableHead className="font-semibold text-right w-[120px]">Actions</TableHead>
               </TableRow>
@@ -294,7 +293,11 @@ export function AdminStaffAttendanceReportPage({
                     )}
                   >
                     <TableCell className="font-medium">{row.staffName}</TableCell>
-                    <TableCell>{row.batchName}</TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800">
+                        {row.batchesCount}
+                      </span>
+                    </TableCell>
                     <TableCell className="max-w-[280px] truncate text-muted-foreground" title={row.remarks}>
                       {row.remarks || "—"}
                     </TableCell>
