@@ -402,6 +402,7 @@ export function BatchesWithAttendancePage({
                     <TableHead className="px-6 py-4 text-xs font-semibold uppercase text-slate-600">Course</TableHead>
                     <TableHead className="px-6 py-4 text-xs font-semibold uppercase text-slate-600">Timing</TableHead>
                     <TableHead className="px-6 py-4 text-xs font-semibold uppercase text-slate-600">Students</TableHead>
+                    <TableHead className="px-6 py-4 text-xs font-semibold uppercase text-slate-600">Capacity</TableHead>
                     <TableHead className="px-6 py-4 text-xs font-semibold uppercase text-slate-600">Status</TableHead>
                     <TableHead className="px-6 py-4 text-xs font-semibold uppercase text-slate-600 min-w-[240px]">
                       Attendance
@@ -420,6 +421,17 @@ export function BatchesWithAttendancePage({
                         {b.batchTiming || `${b.batchDay} · ${b.batchTime}`}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-center">{b.totalStudents}</TableCell>
+                      <TableCell className="px-4 py-3">
+                        {b.isFull ? (
+                          <span className="inline-flex items-center rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-xs font-medium">
+                            Full
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-800 px-2 py-0.5 text-xs font-medium">
+                            {b.remainingSeats} left
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="px-4 py-3">
                         <BatchStatusBadge status={b.batchStatus || "Active"} />
                       </TableCell>
@@ -467,8 +479,19 @@ export function BatchesWithAttendancePage({
                     {b.batchTiming || `${b.batchDay} · ${b.batchTime}`}
                   </p>
                   <p className="text-xs flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" /> {b.totalStudents} students
+                    <Users className="w-3.5 h-3.5" /> {b.totalStudents} / {b.batchCapacity} students
                   </p>
+                  {b.isFull ? (
+                    <p className="text-xs text-red-600 font-medium">Batch Full</p>
+                  ) : (
+                    <p className="text-xs text-emerald-600 font-medium">Vacancy: {b.remainingSeats} Remaining</p>
+                  )}
+                  {(b.seniorTeachers || []).length > 0 && (
+                    <p className="text-xs text-slate-600">
+                      <span className="font-medium">Senior Teacher: </span>
+                      {(b.seniorTeachers || []).map(t => t.fullName).join(", ")}
+                    </p>
+                  )}
                   <BatchAttendanceControls
                     batch={b}
                     draft={drafts[b.id] ?? { status: null, remarks: "" }}

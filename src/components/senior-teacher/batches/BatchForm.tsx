@@ -51,7 +51,7 @@ function batchToFormInput(b: SerializedBatch): BatchWriteInput {
     branch: b.branch,
     batchCapacity: b.batchCapacity,
     description: b.description || "",
-    teacherIds: b.teacherIds || [],
+    teacherIds: [...(b.teacherIds || []), ...(b.seniorTeacherIds || [])],
     students: b.students.map(s => ({
       studentId: s.id || "",
       studentName: s.studentName,
@@ -397,10 +397,31 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-display font-semibold text-lg">Students in this batch</h2>
-            <Button type="button" variant="secondary" className="rounded-xl" onClick={() => setStudentModal(true)}>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">
+                {fields.length} / {form.watch("batchCapacity")} Students
+              </span>
+              {fields.length >= form.watch("batchCapacity") && (
+                <span className="inline-flex items-center rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-xs font-medium">
+                  Batch Full
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="rounded-xl"
+              onClick={() => setStudentModal(true)}
+              disabled={fields.length >= form.watch("batchCapacity")}
+            >
               <UserPlus className="w-4 h-4 mr-2" />
               Add New Student
             </Button>
+            {fields.length >= form.watch("batchCapacity") && (
+              <p className="text-sm text-red-600">Batch is full. Maximum {form.watch("batchCapacity")} students are allowed in this batch.</p>
+            )}
           </div>
           {fields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No students added yet. You can add multiple entries (including duplicates).</p>

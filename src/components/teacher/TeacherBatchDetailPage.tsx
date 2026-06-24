@@ -234,6 +234,15 @@ export function TeacherBatchDetailPage({ batchId }: { batchId: string }) {
         </div>
       </div>
 
+      {(batch.seniorTeachers || []).length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Senior Teacher</p>
+          <p className="font-semibold mt-1">
+            {(batch.seniorTeachers || []).map(t => t.fullName).join(", ")}
+          </p>
+        </div>
+      )}
+
       {/* Teacher Attendance Card */}
       <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 shadow-sm space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

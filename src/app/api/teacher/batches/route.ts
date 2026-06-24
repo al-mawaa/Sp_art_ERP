@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(pageSize)
-        .populate("teacherIds", "fullName email"),
+        .populate("teacherIds", "fullName email")
+        .populate("seniorTeacherIds", "fullName email"),
     ]);
 
     const batchIds = rows.map(d => d._id as mongoose.Types.ObjectId);

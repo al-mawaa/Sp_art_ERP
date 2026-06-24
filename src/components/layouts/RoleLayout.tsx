@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Bell, BookOpen, ChevronDown, LogOut, Menu, Palette, User, X, type LucideIcon } from "lucide-react";
+import { Bell, BookOpen, ChevronDown, HelpCircle, LogOut, Menu, Palette, User, X, type LucideIcon } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
@@ -242,6 +242,12 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
                         <Link href="/student/my-courses" className="cursor-pointer">
                           <BookOpen className="mr-2 h-4 w-4" />
                           My Courses
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/student/support" className="cursor-pointer">
+                          <HelpCircle className="mr-2 h-4 w-4" />
+                          Support
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

@@ -36,7 +36,10 @@ export type SerializedBatch = {
   seniorTeacherIds?: string[];
   assignedTeachers: string[];
   teachers?: SerializedTeacherMini[];
+  seniorTeachers?: SerializedTeacherMini[];
   totalStudents: number;
+  remainingSeats: number;
+  isFull: boolean;
   attendanceSummary: {
     totalSessions: number;
     completedSessions: number;

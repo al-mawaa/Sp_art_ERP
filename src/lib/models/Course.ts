@@ -17,6 +17,8 @@ export interface CourseDocument extends mongoose.Document {
   notes?: string;
   rulesAndRegulations?: string;
   materialsRequired?: string;
+  category?: string;
+  categorySlug?: string;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +40,8 @@ const CourseSchema = new mongoose.Schema<CourseDocument>(
     notes: { type: String },
     rulesAndRegulations: { type: String, default: '' },
     materialsRequired: { type: String, default: '' },
+    category: { type: String },
+    categorySlug: { type: String },
     createdBy: { type: String },
   },
   {

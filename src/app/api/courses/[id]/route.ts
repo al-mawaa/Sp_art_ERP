@@ -17,6 +17,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       course: {
         id: course._id.toString(),
         courseTitle: course.courseTitle,
+        category: course.category,
+        categorySlug: course.categorySlug,
         courseCode: course.courseCode,
         image: course.image,
         instructor: course.instructor,
@@ -47,6 +49,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const body = await request.json();
     const {
       courseTitle,
+      category,
       courseCode,
       image,
       instructor,
@@ -68,6 +71,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const updateData: Record<string, unknown> = {};
     if (courseTitle) updateData.courseTitle = courseTitle;
+    if (category) {
+      updateData.category = category;
+      updateData.categorySlug = category.trim().toLowerCase();
+    }
     if (courseCode) {
       const existingCourse = await Course.findOne({ courseCode, _id: { $ne: id } });
       if (existingCourse) {
@@ -122,6 +129,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       course: {
         id: updatedCourse._id.toString(),
         courseTitle: updatedCourse.courseTitle,
+        category: updatedCourse.category,
+        categorySlug: updatedCourse.categorySlug,
         courseCode: updatedCourse.courseCode,
         image: updatedCourse.image,
         instructor: updatedCourse.instructor,

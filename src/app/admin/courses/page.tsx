@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 
 const courseSchema = z.object({
   courseTitle: z.string().min(1, 'Course title is required'),
+  category: z.string().min(1, 'Course category is required'),
   courseCode: z.string().min(1, 'Course code is required'),
   image: z.string().optional(),
   duration: z.coerce.number().min(1, 'Duration is required'),
@@ -33,6 +34,8 @@ type CourseForm = z.infer<typeof courseSchema>;
 type CourseRow = {
   id: string;
   courseTitle: string;
+  category?: string;
+  categorySlug?: string;
   courseCode: string;
   image?: string;
   instructor?: string;
@@ -66,6 +69,7 @@ export default function AdminCoursesPage() {
     resolver: zodResolver(courseSchema),
     defaultValues: {
       courseTitle: '',
+      category: '',
       courseCode: '',
       image: '',
       duration: 1,
@@ -164,6 +168,7 @@ export default function AdminCoursesPage() {
   const clearForm = () => {
     form.reset({
       courseTitle: '',
+      category: '',
       courseCode: '',
       image: '',
       duration: 1,
@@ -186,6 +191,7 @@ export default function AdminCoursesPage() {
     setEditing(row);
     form.reset({
       courseTitle: row.courseTitle,
+      category: row.category ?? '',
       courseCode: row.courseCode,
       image: row.image ?? '',
       duration: row.duration,
@@ -228,6 +234,7 @@ export default function AdminCoursesPage() {
 
       const payload = {
         courseTitle: values.courseTitle,
+        category: values.category,
         courseCode: values.courseCode,
         image: values.image || undefined,
         duration: Number(values.duration),
@@ -256,6 +263,8 @@ export default function AdminCoursesPage() {
       const newCourse: CourseRow = {
         id: result.course.id,
         courseTitle: result.course.courseTitle,
+        category: result.course.category,
+        categorySlug: result.course.categorySlug,
         courseCode: result.course.courseCode,
         image: result.course.image,
         duration: result.course.duration,
@@ -425,6 +434,12 @@ export default function AdminCoursesPage() {
                 <Label htmlFor="courseTitle">Course Title</Label>
                 <Input id="courseTitle" className="h-11 rounded-lg shadow-sm" {...form.register('courseTitle')} />
                 {form.formState.errors.courseTitle && <p className="text-xs text-red-500">{form.formState.errors.courseTitle.message}</p>}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="category">Course Category</Label>
+                <Input id="category" className="h-11 rounded-lg shadow-sm" {...form.register('category')} />
+                {form.formState.errors.category && <p className="text-xs text-red-500">{form.formState.errors.category.message}</p>}
               </div>
 
               <div className="grid gap-2">

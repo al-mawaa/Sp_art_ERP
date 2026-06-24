@@ -24,6 +24,7 @@ type StudentClassCard = {
   courseName: string;
   batchDays: string;
   teachers: string;
+  seniorTeachers: string;
   branch: string;
 };
 
@@ -150,6 +151,23 @@ export function StudentMyClassesPage() {
                   )}
                 </div>
 
+                {c.seniorTeachers && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-medium text-muted-foreground">Senior Teacher</span>
+                    <div className="flex flex-col gap-1.5">
+                      {parseTeachers(c.seniorTeachers).map(name => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2 py-1 text-xs font-medium w-fit max-w-full"
+                        >
+                          <Avatar name={name} size={20} />
+                          <span className="truncate">{name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2 pt-1 mt-auto">
                   <Button
                     type="button"
@@ -218,6 +236,23 @@ export function StudentMyClassesPage() {
                   )}
                 </div>
               </div>
+
+              {detailOpen.seniorTeachers && (
+                <div>
+                  <span className="text-muted-foreground block mb-2">Senior Teacher</span>
+                  <div className="flex flex-wrap gap-2">
+                    {parseTeachers(detailOpen.seniorTeachers).map(name => (
+                      <span
+                        key={name}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-xs font-medium"
+                      >
+                        <Avatar name={name} size={22} />
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
         </DialogContent>

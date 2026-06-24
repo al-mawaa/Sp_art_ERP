@@ -173,6 +173,23 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
         </ul>
       </div>
 
+      {(batch.seniorTeachers || []).length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="font-display font-semibold flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-primary" />
+            Senior Teachers ({(batch.seniorTeachers || []).length})
+          </h2>
+          <ul className="divide-y divide-slate-100">
+            {(batch.seniorTeachers || []).map(t => (
+              <li key={t.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm">
+                <span className="font-medium">{t.fullName}</span>
+                <span className="text-muted-foreground">{t.email}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm overflow-x-auto">
         <h2 className="font-display font-semibold flex items-center gap-2 mb-4">
           <Users className="w-4 h-4 text-primary" />

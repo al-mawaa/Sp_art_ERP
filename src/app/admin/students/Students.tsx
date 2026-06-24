@@ -650,21 +650,12 @@ export default function StudentsPage() {
 
               <div className="grid gap-2">
                 <Label htmlFor="howYouKnowUs">How you came to know us</Label>
-                <Select value={form.howYouKnowUs} onValueChange={(value) => setForm(current => ({ ...current, howYouKnowUs: value }))}>
-                  <SelectTrigger id="howYouKnowUs">
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Social Media">Social Media</SelectItem>
-                    <SelectItem value="Google Search">Google Search</SelectItem>
-                    <SelectItem value="Friend / Relative">Friend / Relative</SelectItem>
-                    <SelectItem value="School">School</SelectItem>
-                    <SelectItem value="Newspaper">Newspaper</SelectItem>
-                    <SelectItem value="Walk In">Walk In</SelectItem>
-                    <SelectItem value="Existing Student">Existing Student</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="howYouKnowUs"
+                  value={form.howYouKnowUs}
+                  onChange={(e) => setForm(current => ({ ...current, howYouKnowUs: e.target.value }))}
+                  placeholder="Enter how you came to know us"
+                />
               </div>
             </div>
 

@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
       courses: courses.map((course) => ({
         id: course._id.toString(),
         courseTitle: course.courseTitle,
+        category: course.category,
+        categorySlug: course.categorySlug,
         courseCode: course.courseCode,
         image: course.image,
         instructor: course.instructor,
@@ -41,6 +43,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       courseTitle,
+      category,
       courseCode,
       image,
       instructor,
@@ -59,6 +62,9 @@ export async function POST(request: NextRequest) {
     // Basic validation and coercion
     if (!courseTitle || typeof courseTitle !== 'string' || !courseTitle.trim()) {
       return NextResponse.json({ error: 'Course title is required' }, { status: 400 });
+    }
+    if (!category || typeof category !== 'string' || !category.trim()) {
+      return NextResponse.json({ error: 'Course category is required' }, { status: 400 });
     }
     if (!courseCode || typeof courseCode !== 'string' || !courseCode.trim()) {
       return NextResponse.json({ error: 'Course code is required' }, { status: 400 });
@@ -101,8 +107,12 @@ export async function POST(request: NextRequest) {
       ? Math.max(0, Math.round(((totalFeesNumber - discountFeesNumber) / totalFeesNumber) * 100))
       : 0;
 
+    const categorySlug = category.trim().toLowerCase();
+
     const course = await Course.create({
       courseTitle: courseTitle.trim(),
+      category: category.trim(),
+      categorySlug,
       courseCode: courseCode.trim(),
       image: image || undefined,
       instructor: instructor || undefined,
@@ -125,6 +135,8 @@ export async function POST(request: NextRequest) {
         course: {
           id: course._id.toString(),
           courseTitle: course.courseTitle,
+          category: course.category,
+          categorySlug: course.categorySlug,
           courseCode: course.courseCode,
           image: course.image,
           instructor: course.instructor,

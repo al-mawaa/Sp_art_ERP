@@ -36,8 +36,25 @@ export function serializeBatch(doc: BatchDocument) {
     teacherIds = (doc.teacherIds as mongoose.Types.ObjectId[]).map(id => id.toString());
   }
 
+  const seniorPopulated = doc.populated("seniorTeacherIds");
+  let seniorTeachers: ReturnType<typeof serializeTeacher>[] | undefined;
+  let seniorTeacherIds: string[];
+
+  if (seniorPopulated) {
+    const pts = doc.seniorTeacherIds as unknown as { _id: mongoose.Types.ObjectId; fullName?: string; email?: string }[];
+    seniorTeachers = pts.map(serializeTeacher);
+    seniorTeacherIds = seniorTeachers.map(t => t.id);
+  } else {
+    seniorTeacherIds = (doc.seniorTeacherIds ?? []).map((id: mongoose.Types.ObjectId) => id.toString());
+  }
+
   const batchTiming =
     doc.batchTiming || (doc.batchDay && doc.batchTime ? `${doc.batchDay} · ${doc.batchTime}` : "");
+
+  const totalStudents = doc.students.length;
+  const capacity = doc.batchCapacity;
+  const remainingSeats = Math.max(0, capacity - totalStudents);
+  const isFull = totalStudents >= capacity;
 
   return {
     id: doc._id.toString(),
@@ -60,10 +77,13 @@ export function serializeBatch(doc: BatchDocument) {
     students: doc.students.map(serializeStudent),
     assignedStudents: doc.students.map(serializeStudent),
     teacherIds,
-    seniorTeacherIds: (doc.seniorTeacherIds ?? []).map((id: mongoose.Types.ObjectId) => id.toString()),
+    seniorTeacherIds,
     assignedTeachers: teacherIds,
     teachers,
-    totalStudents: doc.students.length,
+    seniorTeachers,
+    totalStudents,
+    remainingSeats,
+    isFull,
     attendanceSummary: doc.attendanceSummary,
     createdBy: doc.createdBy?.toString() ?? "",
     createdAt: doc.createdAt.toISOString(),

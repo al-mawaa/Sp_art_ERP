@@ -244,7 +244,19 @@ export function StudentProfilePage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto min-h-screen pb-10">
-      <PageHeader title="My Profile" subtitle="View and update your student details" />
+      <PageHeader 
+        title="My Profile" 
+        subtitle="View and update your student details"
+        action={
+          <Button
+            variant="outline"
+            className="rounded-xl border-primary/30 text-primary hover:bg-primary/5"
+            onClick={() => setQueryOpen(true)}
+          >
+            <MessageSquarePlus className="w-4 h-4 mr-1" /> Request Query Form
+          </Button>
+        }
+      />
 
       <div className="card-soft overflow-hidden">
         <div className="gradient-mint text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
@@ -327,13 +339,6 @@ export function StudentProfilePage() {
                 <Pencil className="w-4 h-4 mr-1" /> Edit Profile
               </Button>
             ) : null}
-            <Button
-              variant="outline"
-              className="rounded-xl border-primary/30 text-primary hover:bg-primary/5"
-              onClick={() => setQueryOpen(true)}
-            >
-              <MessageSquarePlus className="w-4 h-4 mr-1" /> Request Query Form
-            </Button>
             <Button variant="outline" className="rounded-xl" onClick={() => router.push("/student/dashboard")}>
               <Home className="w-4 h-4 mr-1" /> Home
             </Button>
