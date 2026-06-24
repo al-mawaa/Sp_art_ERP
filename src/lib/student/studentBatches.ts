@@ -10,6 +10,7 @@ export type StudentClassCard = {
   batchDays: string;
   teachers: string;
   teacherName: string;
+  seniorTeachers: string;
   branch: string;
 };
 
@@ -54,12 +55,26 @@ function formatTeacherNames(
     .join(", ");
 }
 
+function formatSeniorTeacherNames(
+  seniorTeacherIds: BatchDocument["seniorTeacherIds"],
+  populated: boolean,
+): string {
+  if (!populated || !seniorTeacherIds?.length) return "";
+  const teachers = seniorTeacherIds as unknown as { fullName?: string }[];
+  return teachers
+    .map(t => (t.fullName || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 export function toStudentClassCard(doc: BatchDocument): StudentClassCard {
   const populated = doc.populated("teacherIds");
+  const seniorPopulated = doc.populated("seniorTeacherIds");
   const batchDays = doc.batchDay?.trim() || "";
   const batchTime = doc.batchTime?.trim() || doc.batchTiming?.trim() || "";
 
   const teacherNames = formatTeacherNames(doc.teacherIds, Boolean(populated));
+  const seniorTeacherNames = formatSeniorTeacherNames(doc.seniorTeacherIds, Boolean(seniorPopulated));
   return {
     id: doc._id.toString(),
     batchTime,
@@ -68,6 +83,7 @@ export function toStudentClassCard(doc: BatchDocument): StudentClassCard {
     batchDays,
     teachers: teacherNames,
     teacherName: teacherNames,
+    seniorTeachers: seniorTeacherNames,
     branch: doc.branch?.trim() || "",
   };
 }
@@ -76,7 +92,8 @@ export async function findBatchesForStudent(student: StudentDocument): Promise<S
   const filter = buildStudentBatchFilter(student);
   const rows = await Batch.find(filter)
     .sort({ batchTime: 1, batchName: 1 })
-    .populate("teacherIds", "fullName");
+    .populate("teacherIds", "fullName")
+    .populate("seniorTeacherIds", "fullName");
 
   return rows.map(d => toStudentClassCard(d as BatchDocument));
 }

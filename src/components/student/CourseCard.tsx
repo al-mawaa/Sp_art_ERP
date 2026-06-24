@@ -105,13 +105,22 @@ export function CourseCard({
       const match = disposition.match(/filename="?([^";]+)"?/i);
       const filename = match?.[1] || getInvoiceFileName();
       const downloadUrl = window.URL.createObjectURL(blob);
+      
+      // Open in new tab first
+      window.open(downloadUrl, '_blank');
+      
+      // Then download the file
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+      
+      // Revoke URL after a delay to allow the new tab to load
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+      }, 1000);
 
       toast({ title: 'Invoice downloaded successfully', description: 'Your invoice has been downloaded.', variant: 'default' });
     } catch (error) {

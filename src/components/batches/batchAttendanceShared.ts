@@ -20,8 +20,12 @@ export type BatchRow = {
   batchDay: string;
   batchTime: string;
   totalStudents: number;
+  batchCapacity: number;
+  remainingSeats: number;
+  isFull: boolean;
   batchStatus: string;
   todayAttendance: TodayAttendance;
+  seniorTeachers?: { id: string; fullName: string; email: string }[];
 };
 
 export function normalizeBatchRow(batch: BatchRow): BatchRow {

@@ -125,7 +125,8 @@ export async function GET(request: NextRequest) {
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(pageSize)
-        .populate("teacherIds", "fullName email"),
+        .populate("teacherIds", "fullName email")
+        .populate("seniorTeacherIds", "fullName email"),
     ]);
 
     const batchIds = rows.map(d => d._id as mongoose.Types.ObjectId);
@@ -220,6 +221,16 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const { teacherIds, seniorTeacherIds } = await resolveBatchAssignees(data.teacherIds);
+
+    // Validate student count against capacity
+    const studentCount = data.students?.length || 0;
+    const capacity = data.batchCapacity;
+    if (studentCount > capacity) {
+      return NextResponse.json(
+        { success: false, error: `Batch is full. Maximum ${capacity} students are allowed in this batch.` },
+        { status: 400 },
+      );
+    }
 
     const batch = new Batch({
       batchName: data.batchName,

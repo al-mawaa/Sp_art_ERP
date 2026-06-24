@@ -17,6 +17,8 @@ import { toast } from "@/hooks/use-toast";
 interface Course {
   id: string;
   courseTitle: string;
+  category?: string;
+  categorySlug?: string;
   courseCode: string;
   image?: string;
   instructor?: string;
@@ -43,6 +45,7 @@ export function StudentCoursesPage() {
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Fetch all courses
   useEffect(() => {
@@ -100,11 +103,27 @@ export function StudentCoursesPage() {
     fetchEnrolledCourses();
   }, []);
 
+  // Extract unique categories
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    courses.forEach((course) => {
+      if (course.category) {
+        uniqueCategories.add(course.category);
+      }
+    });
+    return Array.from(uniqueCategories).sort();
+  }, [courses]);
+
   // Filter and search courses
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
       // Status filter
       if (filterStatus !== "All" && course.status !== filterStatus.toLowerCase()) {
+        return false;
+      }
+
+      // Category filter
+      if (selectedCategory !== "All" && course.category !== selectedCategory) {
         return false;
       }
 
@@ -120,7 +139,7 @@ export function StudentCoursesPage() {
 
       return true;
     });
-  }, [courses, filterStatus, searchQuery]);
+  }, [courses, filterStatus, searchQuery, selectedCategory]);
 
   const handleRefresh = async () => {
     try {
@@ -158,6 +177,29 @@ export function StudentCoursesPage() {
           Enroll in available academy programs and expand your skills
         </p>
       </div>
+
+      {/* Category Filter Tabs */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={selectedCategory === "All" ? "secondary" : "outline"}
+            onClick={() => setSelectedCategory("All")}
+          >
+            All
+          </Button>
+          {categories.map((category) => (
+            <Button
+              key={category}
+              size="sm"
+              variant={selectedCategory === category ? "secondary" : "outline"}
+              onClick={() => setSelectedCategory(category)}
+            >
+              {category}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Search and Filter Section */}
       <div className="card-soft space-y-3 p-4">

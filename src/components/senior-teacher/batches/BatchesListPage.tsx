@@ -229,8 +229,17 @@ export function BatchesListPage() {
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
                       <Users className="w-3 h-3" />
-                      {b.totalStudents} students
+                      {b.totalStudents} / {b.batchCapacity} Seats
                     </span>
+                    {b.isFull ? (
+                      <span className="inline-flex items-center rounded-full bg-red-100 text-red-800 px-2.5 py-1 border border-red-200 font-medium">
+                        Batch Full
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-800 px-2.5 py-1 border border-emerald-100 font-medium">
+                        Vacancy: {b.remainingSeats} Remaining
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-slate-500">
                     <span className="font-medium text-slate-700">Teachers: </span>
@@ -238,6 +247,12 @@ export function BatchesListPage() {
                       ? (b.teachers || []).map(t => t.fullName).join(", ")
                       : "None assigned"}
                   </div>
+                  {(b.seniorTeachers || []).length > 0 && (
+                    <div className="text-xs text-slate-500">
+                      <span className="font-medium text-slate-700">Senior Teacher: </span>
+                      {(b.seniorTeachers || []).map(t => t.fullName).join(", ")}
+                    </div>
+                  )}
                   <div className="text-xs text-slate-500 mt-auto">
                     {b.startMonth} → {b.endMonth} · {b.branch}
                   </div>

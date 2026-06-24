@@ -24,7 +24,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     await dbConnect();
-    const doc = await Batch.findById(id).populate("teacherIds", "fullName email phone");
+    const doc = await Batch.findById(id)
+      .populate("teacherIds", "fullName email phone")
+      .populate("seniorTeacherIds", "fullName email");
     if (!doc) {
       return NextResponse.json({ success: false, error: "Batch not found" }, { status: 404 });
     }
@@ -68,13 +70,26 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     applyBatchWriteToDocument(batch, data);
     batch.teacherIds = teacherIds;
     applySeniorOwnership(batch, seniorTeacherIds, write.access);
+
+    // Validate student count against capacity
+    const studentCount = data.students?.length || 0;
+    const capacity = data.batchCapacity || batch.batchCapacity;
+    if (studentCount > capacity) {
+      return NextResponse.json(
+        { success: false, error: `Batch is full. Maximum ${capacity} students are allowed in this batch.` },
+        { status: 400 },
+      );
+    }
+
     await batch.save();
 
     await syncTeacherAssignedBatches(id, teacherIds.map(t => t.toString()));
 
     await batch.save();
 
-    const populated = await Batch.findById(batch._id).populate("teacherIds", "fullName email phone");
+    const populated = await Batch.findById(batch._id)
+      .populate("teacherIds", "fullName email phone")
+      .populate("seniorTeacherIds", "fullName email");
     return NextResponse.json({
       success: true,
       data: { batch: serializeBatch(populated as BatchDocument) },

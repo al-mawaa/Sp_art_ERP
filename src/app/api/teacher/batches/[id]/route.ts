@@ -30,7 +30,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const doc = await Batch.findById(id).populate("teacherIds", "fullName email");
+    const doc = await Batch.findById(id)
+      .populate("teacherIds", "fullName email")
+      .populate("seniorTeacherIds", "fullName email");
     if (!doc) {
       return NextResponse.json({ success: false, error: "Batch not found" }, { status: 404 });
     }
