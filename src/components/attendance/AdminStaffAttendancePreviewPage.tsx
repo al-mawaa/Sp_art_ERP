@@ -12,6 +12,7 @@ import {
   XCircle,
   BookOpen,
   Layers,
+  Clock,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { MonthlyAttendanceCalendar } from "@/components/attendance/MonthlyAttendanceCalendar";
@@ -28,7 +29,7 @@ import { currentMonthString } from "@/lib/dates/attendanceDate";
 
 type PreviewData = {
   staff: { userId: string; name: string; email: string; role: string };
-  batch: { id: string; name: string; course: string; schedule: string };
+  batch: { id: string; name: string; course: string; schedule: string; totalAssigned?: number };
   month: string;
   summary: {
     present: number;
@@ -37,7 +38,12 @@ type PreviewData = {
     total: number;
     attendancePercentage: number;
   };
-  records: { date: string; status: string; remarks: string }[];
+  records: { 
+    date: string; 
+    status: string; 
+    remarks: string;
+    summary?: { present: number; absent: number; halfDay: number };
+  }[];
 };
 
 export function AdminStaffAttendancePreviewPage({
@@ -89,7 +95,7 @@ export function AdminStaffAttendancePreviewPage({
     <div className="space-y-6 pb-8">
       <PageHeader
         title="Attendance report preview"
-        subtitle={data ? `${data.staff.name} · ${data.batch.name}` : `Detailed ${staffLabel.toLowerCase()} attendance`}
+        subtitle={data ? `Detailed attendance for ${data.staff.name}` : `Detailed ${staffLabel.toLowerCase()} attendance`}
         action={
           <Button variant="outline" size="sm" className="h-9 rounded-xl" asChild>
             <Link href={returnTo}>
@@ -129,17 +135,16 @@ export function AdminStaffAttendancePreviewPage({
           ) : error ? (
             <p className="text-sm text-destructive py-4">{error}</p>
           ) : data ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <InfoTile icon={User} label="Name" value={data.staff.name} />
               <InfoTile icon={Mail} label="Email" value={data.staff.email || "—"} />
-              <InfoTile icon={Layers} label="Batch" value={data.batch.name} />
-              <InfoTile icon={BookOpen} label="Course" value={data.batch.course} />
+              <InfoTile icon={Layers} label="Assigned Batches" value={String(data.batch.totalAssigned ?? 0)} />
             </div>
           ) : null}
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryStat
           label="Present"
           value={data?.summary.present ?? 0}
@@ -152,6 +157,13 @@ export function AdminStaffAttendancePreviewPage({
           value={data?.summary.absent ?? 0}
           icon={XCircle}
           tone="red"
+          loading={loading}
+        />
+        <SummaryStat
+          label="Half Day"
+          value={data?.summary.halfDay ?? 0}
+          icon={Clock}
+          tone="amber"
           loading={loading}
         />
         <SummaryStat
@@ -210,17 +222,19 @@ function SummaryStat({
   value: number;
   suffix?: string;
   icon: typeof BarChart3;
-  tone: "emerald" | "red" | "primary";
+  tone: "emerald" | "red" | "amber" | "primary";
   loading?: boolean;
 }) {
   const tones = {
     emerald: "from-emerald-500/10 border-emerald-200/80",
     red: "from-red-500/10 border-red-200/80",
+    amber: "from-amber-500/10 border-amber-200/80",
     primary: "from-primary/10 border-primary/20",
   };
   const iconTones = {
     emerald: "bg-emerald-100 text-emerald-700",
     red: "bg-red-100 text-red-700",
+    amber: "bg-amber-100 text-amber-700",
     primary: "bg-primary/15 text-primary",
   };
 

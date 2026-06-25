@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 
 type Col<T> = { key: string; header: string; render?: (row: T) => ReactNode; className?: string };
 
-export function DataTable<T extends Record<string, string | number | boolean>>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataTable<T extends Record<string, any>>(
   {
     columns, rows, searchKeys, pageSize = 8, emptyMessage = "Nothing here yet",
   }: {

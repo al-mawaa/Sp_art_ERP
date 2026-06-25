@@ -4,6 +4,8 @@ import dbConnect from '@/lib/mongodb';
 import Student from '@/lib/models/Student';
 import Course from '@/lib/models/Course';
 import OfflinePayment from '@/lib/models/OfflinePayment';
+import CourseEnrollment from '@/lib/models/CourseEnrollment';
+import EnrollmentInstallment from '@/lib/models/EnrollmentInstallment';
 import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -124,7 +126,37 @@ export async function GET(request: NextRequest) {
     .sort(sort)
     .skip(offset)
     .limit(limit)
-    .lean();
+    .lean() as Array<{ _id: mongoose.Types.ObjectId; studentId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId }; courseId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId }; paymentType: string; createdAt: Date; offlinePaymentReference: string; currency: string; offlineMethod: string; paymentStatus: string; expectedPaymentDate: Date; completedAt: Date; paymentReceivedByAdminId: mongoose.Types.ObjectId; notes: string; amount: number; }>;
+
+  const installmentPayments = payments.filter(p => p.paymentType === 'installment');
+  const enrollmentMap = new Map();
+  const nextDueDateMap = new Map();
+
+  if (installmentPayments.length > 0) {
+    const studentIds = installmentPayments.map(p => (p.studentId as { _id?: mongoose.Types.ObjectId })._id || p.studentId);
+    const courseIds = installmentPayments.map(p => (p.courseId as { _id?: mongoose.Types.ObjectId })._id || p.courseId);
+
+    const enrollments = await CourseEnrollment.find({
+      studentId: { $in: studentIds },
+      courseId: { $in: courseIds },
+      paymentType: 'installment'
+    } as Record<string, unknown>).lean() as Array<{ _id: mongoose.Types.ObjectId; studentId: mongoose.Types.ObjectId; courseId: mongoose.Types.ObjectId; totalAmount: number; installmentCharge: number; paidAmount: number; remainingAmount: number; paymentPlanStatus: string; }>;
+
+    const enrollIds = enrollments.map(e => e._id);
+    const allInstallments = await EnrollmentInstallment.find({
+      enrollmentId: { $in: enrollIds },
+    }).sort({ termNo: 1 }).lean() as Array<{ _id: mongoose.Types.ObjectId; enrollmentId: mongoose.Types.ObjectId; paymentStatus: string; dueDate: Date; termNo: number; amount: number; paidAmount?: number; paidDate?: Date; }>;
+
+    for (const enroll of enrollments) {
+      enrollmentMap.set(`${enroll.studentId.toString()}_${enroll.courseId.toString()}`, enroll);
+      const enrollInstalls = allInstallments.filter(i => i.enrollmentId.toString() === enroll._id.toString());
+      const nextInstallment = enrollInstalls.find(i => i.paymentStatus === 'pending');
+      if (nextInstallment) {
+        nextDueDateMap.set(enroll._id.toString(), nextInstallment.dueDate);
+      }
+      enrollmentMap.set(`inst_${enroll._id.toString()}`, enrollInstalls);
+    }
+  }
 
   const now = new Date();
   const formattedPayments = payments.map(payment => {
@@ -134,6 +166,20 @@ export async function GET(request: NextRequest) {
     const hoursPending = payment.paymentStatus === 'pending'
       ? Math.floor((now.getTime() - createdAt.getTime()) / 3600000)
       : 0;
+
+    let enrollment = null;
+    let nextDueDate = null;
+    let installmentsList = [];
+    if (payment.paymentType === 'installment') {
+      const sId = student?._id?.toString() || payment.studentId?.toString();
+      const cId = course?._id?.toString() || payment.courseId?.toString();
+      enrollment = enrollmentMap.get(`${sId}_${cId}`);
+      if (enrollment) {
+        nextDueDate = nextDueDateMap.get(enrollment._id.toString());
+        installmentsList = enrollmentMap.get(`inst_${enrollment._id.toString()}`) || [];
+      }
+    }
+
     return {
       payment_id: payment._id.toString(),
       reference_id: payment.offlinePaymentReference || null,
@@ -154,6 +200,22 @@ export async function GET(request: NextRequest) {
       hours_pending: hoursPending,
       is_overdue: payment.paymentStatus === 'pending' ? hoursPending > 48 : false,
       notes: payment.notes || null,
+      payment_type: payment.paymentType || 'full',
+      total_amount: enrollment?.totalAmount || undefined,
+      installment_charge: enrollment?.installmentCharge || undefined,
+      paid_amount: enrollment?.paidAmount || undefined,
+      remaining_amount: enrollment?.remainingAmount || undefined,
+      installment_status: enrollment?.paymentPlanStatus || undefined,
+      next_due_date: nextDueDate ? new Date(nextDueDate).toISOString() : undefined,
+      installments: installmentsList.map((i: { _id: mongoose.Types.ObjectId; termNo: number; amount: number; paidAmount?: number; dueDate: Date; paymentStatus: string; paidDate?: Date; }) => ({
+        id: i._id.toString(),
+        termNo: i.termNo,
+        amount: i.amount,
+        paidAmount: i.paidAmount,
+        dueDate: i.dueDate ? new Date(i.dueDate).toISOString() : null,
+        paymentStatus: i.paymentStatus,
+        paidDate: i.paidDate ? new Date(i.paidDate).toISOString() : null,
+      })),
     };
   });
 

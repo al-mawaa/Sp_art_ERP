@@ -4,6 +4,8 @@ import dbConnect from '@/lib/mongodb';
 import Student from '@/lib/models/Student';
 import Course from '@/lib/models/Course';
 import OfflinePayment from '@/lib/models/OfflinePayment';
+import CourseEnrollment from '@/lib/models/CourseEnrollment';
+import EnrollmentInstallment from '@/lib/models/EnrollmentInstallment';
 import PaymentAuditLog from '@/lib/models/PaymentAuditLog';
 import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 import { sendTransactionalEmail } from '@/lib/email/mailer';
@@ -21,6 +23,10 @@ type CreateOfflinePaymentPayload = {
   payment_method: OfflineChannel;
   expected_payment_date?: string;
   notes?: string;
+  paymentType?: 'full' | 'installment';
+  upfrontPayment?: number;
+  installmentTerms?: number;
+  dueDates?: string[];
 };
 
 function formatDateToYYYYMMDD(date: Date) {
@@ -135,6 +141,67 @@ function buildPaymentInstructionEmail(params: {
 </html>`;
 }
 
+function buildInstallmentPlanEmail(params: {
+  studentName: string;
+  courseName: string;
+  courseFee: number;
+  installmentCharge: number;
+  totalAmount: number;
+  termsCount: number;
+  dueDates: Date[];
+  amountPerTerm: number;
+  academyName: string;
+  supportEmail: string;
+  supportPhone: string;
+}) {
+  const {
+    studentName, courseName, courseFee, installmentCharge, totalAmount,
+    termsCount, dueDates, amountPerTerm, academyName, supportEmail, supportPhone
+  } = params;
+
+  const scheduleHtml = dueDates.map((date, i) => `
+    <tr>
+      <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Term ${i + 1}</td>
+      <td style="padding:12px;border-bottom:1px solid #e5e7eb;">₹${amountPerTerm.toFixed(2)}</td>
+      <td style="padding:12px;border-bottom:1px solid #e5e7eb;">${date.toISOString().split('T')[0]}</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+  <body style="font-family:sans-serif;margin:0;padding:0;background:#f4f6fb;color:#111827;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px;">
+      <tr>
+        <td align="center">
+          <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 20px 56px rgba(0,0,0,0.08);">
+            <tr><td style="background:#1d4ed8;color:#ffffff;padding:28px 32px;"><h1 style="margin:0;font-size:24px;">Course Installment Plan Created</h1></td></tr>
+            <tr>
+              <td style="padding:32px;">
+                <p>Hi ${studentName},</p>
+                <p>An installment plan has been created for <strong>${courseName}</strong>.</p>
+                <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:20px;">
+                  <tr><td style="padding:16px;"><strong>Course Fee</strong></td><td style="padding:16px;">₹${courseFee.toFixed(2)}</td></tr>
+                  <tr><td style="padding:16px;"><strong>Installment Charge (20%)</strong></td><td style="padding:16px;">₹${installmentCharge.toFixed(2)}</td></tr>
+                  <tr><td style="padding:16px;"><strong>Total Amount</strong></td><td style="padding:16px;">₹${totalAmount.toFixed(2)}</td></tr>
+                </table>
+                <h3 style="margin:20px 0 10px;">Installment Schedule</h3>
+                <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;">
+                  <thead><tr><th style="padding:12px;text-align:left;border-bottom:1px solid #e5e7eb;">Term</th><th style="padding:12px;text-align:left;border-bottom:1px solid #e5e7eb;">Amount</th><th style="padding:12px;text-align:left;border-bottom:1px solid #e5e7eb;">Due Date</th></tr></thead>
+                  <tbody>${scheduleHtml}</tbody>
+                </table>
+                <hr style="margin:28px 0;border:none;border-top:1px solid #e5e7eb;" />
+                <p style="font-size:14px;color:#6b7280;">Need help? Email: ${supportEmail} | Phone: ${supportPhone}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdminFromRequest(request);
@@ -155,6 +222,10 @@ export async function POST(request: NextRequest) {
     const paymentMethod = String(payload.payment_method || '').trim() as OfflineChannel;
     const expectedPaymentDate = parseDate(payload.expected_payment_date);
     const notes = String(payload.notes || '').trim();
+    const paymentType = payload.paymentType === 'installment' ? 'installment' : 'full';
+    const upfrontPayment = payload.upfrontPayment ? Number(payload.upfrontPayment) : 0;
+    const installmentTerms = payload.installmentTerms ? Number(payload.installmentTerms) : 0;
+    const dueDates = payload.dueDates || [];
 
     if (!mongoose.Types.ObjectId.isValid(studentId)) {
       return NextResponse.json({ success: false, error: `Student ID is invalid` }, { status: 400 });
@@ -162,8 +233,14 @@ export async function POST(request: NextRequest) {
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return NextResponse.json({ success: false, error: `Course ID is invalid` }, { status: 400 });
     }
-    if (!Number.isFinite(amount) || amount <= 0) {
+    if (paymentType === 'full' && (!Number.isFinite(amount) || amount <= 0)) {
       return NextResponse.json({ success: false, error: 'Amount must be greater than 0' }, { status: 400 });
+    }
+    if (paymentType === 'installment' && (installmentTerms < 2 || installmentTerms > 4)) {
+      return NextResponse.json({ success: false, error: 'Installment terms must be between 2 and 4' }, { status: 400 });
+    }
+    if (paymentType === 'installment' && dueDates.length !== installmentTerms) {
+      return NextResponse.json({ success: false, error: 'Due dates must match installment terms' }, { status: 400 });
     }
     if (!ALLOWED_OFFLINE_METHODS.includes(paymentMethod)) {
       return NextResponse.json({ success: false, error: 'payment_method must be cash, cheque, or bank_transfer' }, { status: 400 });
@@ -209,6 +286,130 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Too many requests. Try again in 60 seconds' }, { status: 429 });
     }
 
+    const existingEnrollment = await CourseEnrollment.findOne({
+      studentId: new mongoose.Types.ObjectId(studentId),
+      courseId: new mongoose.Types.ObjectId(courseId),
+    });
+    if (existingEnrollment) {
+      return NextResponse.json({ success: false, error: 'Student is already enrolled in this course' }, { status: 409 });
+    }
+
+    const studentName = student.fullName || 'Student';
+    const studentEmail = String(student.email || '');
+    const courseName = String(course.courseTitle || course.courseCode || 'Course');
+    const academyName = process.env.ACADEMY_NAME || 'Little Brushes Academy';
+    const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'support@littlebrushes.com';
+    const supportPhone = process.env.SUPPORT_PHONE || '+91 99999 99999';
+
+    if (paymentType === 'installment') {
+      const courseFee = course.discountFees || course.totalFees || 0;
+      const installmentCharge = courseFee * 0.20;
+      const totalAmount = courseFee + installmentCharge;
+      const amountPerTerm = Math.round(totalAmount / installmentTerms);
+      const parsedDueDates = dueDates.map(d => new Date(d));
+
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      let enrollment;
+      try {
+        enrollment = await CourseEnrollment.create([{
+          studentId: student._id,
+          courseId: course._id,
+          enrollmentDate: new Date(),
+          status: 'active',
+          paymentType: 'installment',
+          baseAmount: courseFee,
+          installmentCharge,
+          totalAmount,
+          paidAmount: upfrontPayment,
+          remainingAmount: totalAmount - upfrontPayment,
+          paymentPlanStatus: upfrontPayment >= totalAmount ? 'paid' : upfrontPayment > 0 ? 'partially_paid' : 'pending',
+          paymentMethod: 'offline'
+        }], { session });
+
+        const enrollId = enrollment[0]._id;
+        
+        const installmentsToCreate = parsedDueDates.map((date, i) => {
+          let paidAmt = 0;
+          let pStatus = 'pending';
+          let pDate = undefined;
+          
+          if (i === 0 && upfrontPayment > 0) {
+            paidAmt = upfrontPayment;
+            if (paidAmt >= amountPerTerm) {
+              pStatus = 'paid';
+              pDate = new Date();
+            } else {
+              pStatus = 'partially_paid';
+            }
+          }
+
+          return {
+            enrollmentId: enrollId,
+            termNo: i + 1,
+            amount: amountPerTerm,
+            dueDate: date,
+            paidAmount: paidAmt,
+            paymentStatus: pStatus,
+            paidDate: pDate
+          };
+        });
+
+        await EnrollmentInstallment.insertMany(installmentsToCreate, { session });
+
+        await session.commitTransaction();
+      } catch (e) {
+        await session.abortTransaction();
+        throw e;
+      } finally {
+        session.endSession();
+      }
+
+      const referenceId = await generateReferenceId();
+      try {
+        await OfflinePayment.create({
+          studentId: student._id,
+          courseId: course._id,
+          amount: totalAmount,
+          paymentMethod: 'offline',
+          offlineMethod: paymentMethod,
+          paymentStatus: 'pending', // It acts as the plan tracker
+          offlinePaymentReference: referenceId,
+          expectedPaymentDate: parsedDueDates[0] || undefined,
+          notes: notes || undefined,
+          currency: 'INR',
+          paymentType: 'installment'
+        });
+      } catch (err) {
+        console.error("Failed to create offline payment record for installment", err);
+      }
+
+      if (studentEmail) {
+        try {
+          await sendTransactionalEmail({
+            to: studentEmail,
+            subject: `Course Installment Plan Created — ${academyName}`,
+            html: buildInstallmentPlanEmail({
+              studentName, courseName, courseFee, installmentCharge, totalAmount,
+              termsCount: installmentTerms, dueDates: parsedDueDates, amountPerTerm,
+              academyName, supportEmail, supportPhone
+            })
+          });
+        } catch (emailErr) {
+          console.error("Installment plan email error:", emailErr);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Installment plan created successfully',
+        status: 'active',
+        student_name: studentName,
+        course_name: courseName,
+        created_at: new Date().toISOString()
+      }, { status: 201 });
+    }
+
   const referenceId = await generateReferenceId();
 
   const offlinePayment = new OfflinePayment({
@@ -242,19 +443,12 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || undefined,
       reasonNotes: notes || undefined,
     });
-  } catch (auditError) {
-    console.error('Could not write audit log for offline payment', auditError);
-  }
+    } catch (auditError) {
+      console.error('Could not write audit log for offline payment', auditError);
+    }
 
-  const studentName = student.fullName || 'Student';
-  const studentEmail = String(student.email || '');
-  const courseName = String(course.courseTitle || course.courseCode || 'Course');
-  const academyName = process.env.ACADEMY_NAME || 'Little Brushes Academy';
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'support@littlebrushes.com';
-  const supportPhone = process.env.SUPPORT_PHONE || '+91 99999 99999';
-
-  if (studentEmail) {
-    try {
+    if (studentEmail) {
+      try {
       await sendTransactionalEmail({
         to: studentEmail,
         subject: `Payment Request Created — ${academyName}`,

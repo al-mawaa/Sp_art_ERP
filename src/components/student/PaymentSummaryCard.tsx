@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IndianRupee, Calendar, History } from "lucide-react";
+import { IndianRupee, Calendar, History, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PaymentStatusBadge } from "@/components/student/PaymentStatusBadge";
 import { EnrollmentPaymentModal } from "@/components/student/EnrollmentPaymentModal";
@@ -12,6 +12,7 @@ type Installment = {
   amount: number;
   dueDate: string;
   paidDate?: string;
+  paidAmount?: number;
   paymentStatus: string;
 };
 
@@ -112,7 +113,8 @@ export function PaymentSummaryCard({
               <p className="text-slate-500 flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> Next Due Date
               </p>
-              <p className="font-bold text-slate-900">
+              <p className="font-bold text-red-600 flex items-center gap-1 mt-0.5">
+                <AlertCircle className="h-4 w-4" />
                 {new Date(nextDueDate).toLocaleDateString("en-IN", {
                   day: "2-digit",
                   month: "short",
@@ -133,7 +135,12 @@ export function PaymentSummaryCard({
                 className="flex items-center justify-between text-xs rounded-lg bg-white/70 px-2.5 py-1.5 border border-slate-100"
               >
                 <span>Term {inst.termNo}</span>
-                <span className="font-medium">{formatInr(inst.amount)}</span>
+                <div>
+                  <span className="font-medium">{formatInr(inst.amount)}</span>
+                  {inst.paymentStatus === 'partially_paid' && inst.paidAmount && (
+                    <span className="text-[10px] text-blue-600 ml-2">(Paid: {formatInr(inst.paidAmount)})</span>
+                  )}
+                </div>
                 <PaymentStatusBadge status={inst.paymentStatus} />
               </div>
             ))}

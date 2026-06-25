@@ -317,7 +317,6 @@ export function EnrollmentPaymentModal({
     termNo,
     appliedReferral,
     referralInput,
-    referralDiscountRemaining,
   ]);
 
   return (

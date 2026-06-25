@@ -15,6 +15,7 @@ export function buildCourseEnrollmentEmailHtml(params: {
   supportPhone: string;
   discountPercentage: number;
   discountAmount: number;
+  nextDueDate?: string;
 }): string {
   const {
     studentName,
@@ -30,6 +31,7 @@ export function buildCourseEnrollmentEmailHtml(params: {
     supportPhone,
     discountPercentage,
     discountAmount,
+    nextDueDate,
   } = params;
 
   return `
@@ -63,6 +65,11 @@ export function buildCourseEnrollmentEmailHtml(params: {
                 ${buildDetailRow('Payment Method', paymentMethod)}
                 ${buildDetailRow('Transaction ID', transactionId)}
                 ${buildDetailRow('Order ID', orderId)}
+                ${nextDueDate ? `
+                <tr>
+                  <td style="padding:12px 0;border-bottom:1px solid #e2e8f0;font-size:14px;color:#64748b;width:30%;">Next Due Date</td>
+                  <td style="padding:12px 0;border-bottom:1px solid #e2e8f0;font-size:14px;color:#dc2626;font-weight:600;">${escapeHtml(new Date(nextDueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }))}</td>
+                </tr>` : ''}
               </table>
               <div style="margin:30px 0 0;padding:22px;border-radius:18px;background:#f8fafc;border:1px solid #e2e8f0;">
                 <p style="margin:0;font-size:15px;color:#0f172a;font-weight:700;">Invoice ID: ${invoiceId}</p>
@@ -133,6 +140,7 @@ export async function sendCourseEnrollmentEmail(params: {
   installmentCharge?: number;
   termNo?: number;
   paymentType?: 'full' | 'installment';
+  nextDueDate?: string;
 }): Promise<void> {
   const {
     studentEmail,
@@ -198,6 +206,7 @@ export async function sendCourseEnrollmentEmail(params: {
     invoiceId,
     discountPercentage,
     discountAmount,
+    nextDueDate: params.nextDueDate,
   });
 
   await sendTransactionalEmail({

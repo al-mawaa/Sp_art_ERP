@@ -43,7 +43,7 @@ const PORTAL_DEFAULTS: Record<
     emptyDescription: "When a senior teacher assigns you to a batch, it will appear here automatically.",
     listApiPath: "/api/teacher/batches",
     useBatchFetch: false,
-    showHalfDay: false,
+    showHalfDay: true,
     pageSize: 200,
   },
   "senior-teacher": {

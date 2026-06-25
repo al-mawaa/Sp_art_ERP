@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ADMIN_SESSION_COOKIE } from "@/lib/auth/admin-session";
+const ADMIN_SESSION_COOKIE = "lba_admin_session";
 import { SENIOR_TEACHER_SESSION_COOKIE } from "@/lib/auth/portal-session";
 import { adminBatchPathFromSeniorPath } from "@/lib/batch/routes";
 

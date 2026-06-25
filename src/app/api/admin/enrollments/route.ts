@@ -3,12 +3,14 @@ import mongoose from "mongoose";
 import type { CourseDocument } from "@/lib/models/Course";
 import type { CourseEnrollmentDocument } from "@/lib/models/CourseEnrollment";
 import type { StudentDocument } from "@/lib/models/Student";
+import type { BatchDocument } from "@/lib/models/Batch";
 import dbConnect from "@/lib/mongodb";
 import CourseEnrollment from "@/lib/models/CourseEnrollment";
 import EnrollmentInstallment from "@/lib/models/EnrollmentInstallment";
 import EnrollmentPaymentRecord from "@/lib/models/EnrollmentPaymentRecord";
 import Student from "@/lib/models/Student";
 import Course from "@/lib/models/Course";
+import Batch from "@/lib/models/Batch";
 import { requireAdminFromRequest } from "@/lib/auth/require-admin";
 import { refreshEnrollmentPaymentStatus } from "@/lib/enrollment/enrollmentPaymentService";
 
@@ -17,6 +19,7 @@ export const runtime = "nodejs";
 type PopulatedEnrollment = CourseEnrollmentDocument & {
   studentId: StudentDocument;
   courseId: CourseDocument;
+  batchId?: BatchDocument | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -32,6 +35,7 @@ export async function GET(request: NextRequest) {
     const enrollments = await CourseEnrollment.find()
       .populate({ path: "studentId", model: Student })
       .populate({ path: "courseId", model: Course })
+      .populate({ path: "batchId", model: Batch })
       .sort({ enrollmentDate: -1 });
 
     const populatedEnrollments = enrollments as unknown as PopulatedEnrollment[];
@@ -54,14 +58,20 @@ export async function GET(request: NextRequest) {
       if (filter === "pending" && !["pending", "partially_paid"].includes(planStatus)) continue;
       if (filter === "overdue" && planStatus !== "overdue") continue;
 
+      const batch = enrollment.batchId;
+
       formattedEnrollments.push({
         enrollmentId: enrollment._id.toString(),
         studentId: student._id?.toString() ?? enrollment.studentId.toString(),
         studentName: student.fullName,
         studentEmail: student.email ?? "",
+        studentBadgeId: student.badgeId ?? "",
         courseId: course._id?.toString() ?? enrollment.courseId.toString(),
         courseTitle: course.courseTitle,
         courseCode: course.courseCode,
+        courseDuration: course.duration ?? 0,
+        courseFee: course.discountFees ?? course.totalFees ?? 0,
+        batchName: batch?.batchName ?? "Not Assigned",
         enrollmentDate: enrollment.enrollmentDate,
         status: enrollment.status,
         completionPercentage: enrollment.completionPercentage,
@@ -69,12 +79,16 @@ export async function GET(request: NextRequest) {
         baseAmount: enrollment.baseAmount ?? 0,
         gstAmount: enrollment.taxAmount ?? 0,
         installmentCharge: enrollment.installmentCharge ?? 0,
+        referralDiscount: enrollment.referralDiscountApplied ?? 0,
         totalAmount: enrollment.totalAmount ?? enrollment.amount ?? 0,
         paidAmount: enrollment.paidAmount ?? 0,
         remainingAmount: enrollment.remainingAmount ?? 0,
         amount: enrollment.amount,
         paymentStatus: enrollment.paymentStatus,
         paymentPlanStatus: planStatus,
+        totalInstallments: installments.length,
+        paidInstallments: installments.filter(i => i.paymentStatus === "paid").length,
+        pendingInstallments: installments.filter(i => i.paymentStatus !== "paid").length,
         installments: installments.map(i => ({
           installmentId: i._id.toString(),
           termNo: i.termNo,
@@ -84,11 +98,13 @@ export async function GET(request: NextRequest) {
           paymentStatus: i.paymentStatus,
         })),
         paymentHistory: paymentHistory.map(p => ({
+          transactionId: p.paymentId,
           paymentDate: p.paidAt,
-          paymentId: p.paymentId,
           amount: p.amount,
-          termNo: p.termNo,
+          paymentMethod: p.paymentMethod ?? "Razorpay",
           status: p.paymentStatus,
+          orderId: p.orderId,
+          termNo: p.termNo,
         })),
       });
     }
