@@ -42,11 +42,12 @@ export async function POST(request: NextRequest) {
       url: result.secure_url,
       public_id: result.public_id,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ 
       error: 'Upload failed', 
-      details: error?.message || String(error)
+      details: errorMessage
     }, { status: 500 });
   }
 }
