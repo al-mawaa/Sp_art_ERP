@@ -12,7 +12,7 @@ const studentNav: NavItem[] = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/student/profile", label: "My Profile", icon: User },
   { to: "/student/courses", label: "Courses", icon: BookOpen },
-  { to: "/student/referrals", label: "My Referrals", icon: Gift },
+  { to: "/student/referrals", label: "Refer & Earn", icon: Gift },
   { to: "/student/rewards", label: "My Rewards", icon: Trophy },
   { to: "/student/classes", label: "My Classes", icon: CalendarDays },
   { to: "/student/scores", label: "My Scores", icon: Star },
