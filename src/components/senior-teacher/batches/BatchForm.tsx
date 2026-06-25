@@ -187,6 +187,19 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
       return;
     }
     const existing = form.getValues('students') || [];
+    const capacity = form.getValues('batchCapacity');
+    const remainingCapacity = capacity - existing.length;
+    
+    // Check if adding selected students would exceed capacity
+    if (selectedStudentIds.length > remainingCapacity) {
+      if (remainingCapacity === 0) {
+        toast.error(`Batch capacity is ${capacity} students. You cannot add more students because the maximum capacity has been reached.`);
+      } else {
+        toast.error(`Only ${remainingCapacity} seat${remainingCapacity === 1 ? '' : 's'} ${remainingCapacity === 1 ? 'is' : 'are'} available. Please remove the extra selected students before adding them to the batch.`);
+      }
+      return;
+    }
+    
     let added = 0;
     let skipped = 0;
     for (const sid of selectedStudentIds) {
@@ -401,13 +414,36 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
               <span className="text-muted-foreground">
                 {fields.length} / {form.watch("batchCapacity")} Students
               </span>
-              {fields.length >= form.watch("batchCapacity") && (
+              {fields.length === form.watch("batchCapacity") && (
+                <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 px-2 py-0.5 text-xs font-medium">
+                  Full
+                </span>
+              )}
+              {fields.length > form.watch("batchCapacity") && (
                 <span className="inline-flex items-center rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-xs font-medium">
-                  Batch Full
+                  Over Capacity
                 </span>
               )}
             </div>
           </div>
+          {(() => {
+            const capacity = form.watch("batchCapacity");
+            const studentCount = fields.length;
+            if (studentCount === 0) {
+              return (
+                <p className="text-sm text-amber-600">
+                  Please add at least one student to save this batch.
+                </p>
+              );
+            } else if (studentCount > capacity) {
+              return (
+                <p className="text-sm text-red-600">
+                  Batch capacity exceeded. Remove {studentCount - capacity} student(s) to continue.
+                </p>
+              );
+            }
+            return null;
+          })()}
           <div className="flex items-center justify-between gap-2">
             <Button
               type="button"
@@ -419,9 +455,6 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
               <UserPlus className="w-4 h-4 mr-2" />
               Add New Student
             </Button>
-            {fields.length >= form.watch("batchCapacity") && (
-              <p className="text-sm text-red-600">Batch is full. Maximum {form.watch("batchCapacity")} students are allowed in this batch.</p>
-            )}
           </div>
           {fields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No students added yet. You can add multiple entries (including duplicates).</p>
@@ -444,7 +477,11 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving} className="rounded-xl gradient-primary text-white border-0 px-8">
+          <Button 
+            type="submit" 
+            disabled={saving || fields.length === 0 || fields.length > form.watch("batchCapacity")} 
+            className="rounded-xl gradient-primary text-white border-0 px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {saving ? "Saving…" : mode === "create" ? "Create batch" : "Save changes"}
           </Button>
           <Button type="button" variant="outline" className="rounded-xl" asChild>
@@ -460,40 +497,38 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
               <SheetTitle>Add student to roster</SheetTitle>
             </SheetHeader>
 
-            <div className="px-4 py-4 flex-1 overflow-y-auto">
-              <div className="grid gap-3">
-                <div>
-                  <Label>Search students</Label>
-                  <Input className="rounded-xl" placeholder="Search by name, email or id" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
-                </div>
+            <div className="px-4 py-4 flex-1 overflow-hidden flex flex-col">
+              <div className="mb-3">
+                <Label>Search students</Label>
+                <Input className="rounded-xl" placeholder="Search by name, email or id" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} />
+              </div>
 
-                <div className="h-56 overflow-auto rounded-lg border border-slate-100">
-                  {filteredStudents.length === 0 ? (
-                    <div className="p-4 text-sm text-muted-foreground">No students found.</div>
-                  ) : (
-                    <ul className="p-2 space-y-1">
-                      {filteredStudents.map(s => {
-                        const checked = selectedStudentIds.includes(s.id);
-                        return (
-                          <label key={s.id} className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 hover:bg-slate-50 cursor-pointer ${checked ? 'bg-primary/10' : ''}`}>
-                            <div className="flex items-center gap-3">
-                              <Checkbox checked={checked} onCheckedChange={(v) => {
-                                const isChecked = Boolean(v);
-                                if (isChecked) setSelectedStudentIds(prev => prev.includes(s.id) ? prev : [...prev, s.id]);
-                                else setSelectedStudentIds(prev => prev.filter(id => id !== s.id));
-                              }} />
-                              <div>
-                                <div className="font-medium">{s.name}</div>
-                                <div className="text-xs text-muted-foreground">{s.email}</div>
-                              </div>
+              <div className="flex-1 overflow-y-auto rounded-lg border border-slate-100">
+                {filteredStudents.length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground">No students found.</div>
+                ) : (
+                  <ul className="p-2 space-y-1">
+                    {filteredStudents.map(s => {
+                      const checked = selectedStudentIds.includes(s.id);
+                      return (
+                        <label key={s.id} className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 hover:bg-slate-50 cursor-pointer ${checked ? 'bg-primary/10' : ''}`}>
+                          <div className="flex items-center gap-3">
+                            <Checkbox checked={checked} onCheckedChange={(v) => {
+                              const isChecked = Boolean(v);
+                              if (isChecked) setSelectedStudentIds(prev => prev.includes(s.id) ? prev : [...prev, s.id]);
+                              else setSelectedStudentIds(prev => prev.filter(id => id !== s.id));
+                            }} />
+                            <div>
+                              <div className="font-medium">{s.name}</div>
+                              <div className="text-xs text-muted-foreground">{s.email}</div>
                             </div>
-                            <div className="text-sm text-muted-foreground">{s.badgeId}</div>
-                          </label>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">{s.badgeId}</div>
+                        </label>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             </div>
 
