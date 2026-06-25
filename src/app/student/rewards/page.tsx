@@ -316,7 +316,7 @@ export default function StudentRewardsPage() {
       <p className="text-sm text-slate-500 text-center">
         Share your referral code from{" "}
         <Link href="/student/referrals" className="text-blue-600 font-medium hover:underline">
-          My Referrals
+          Refer & Earn
         </Link>{" "}
         to unlock more rewards.
       </p>

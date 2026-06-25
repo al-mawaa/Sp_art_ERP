@@ -159,7 +159,7 @@ export default function StudentReferralsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Referrals"
+        title="Refer & Earn"
         subtitle="Share your code — 50% wallet reward for you, 50% enrollment discount for your friend"
       />
 
