@@ -12,6 +12,7 @@ type Installment = {
   amount: number;
   dueDate: string;
   paidDate?: string;
+  paidAmount?: number;
   paymentStatus: string;
 };
 
@@ -134,7 +135,12 @@ export function PaymentSummaryCard({
                 className="flex items-center justify-between text-xs rounded-lg bg-white/70 px-2.5 py-1.5 border border-slate-100"
               >
                 <span>Term {inst.termNo}</span>
-                <span className="font-medium">{formatInr(inst.amount)}</span>
+                <div>
+                  <span className="font-medium">{formatInr(inst.amount)}</span>
+                  {inst.paymentStatus === 'partially_paid' && inst.paidAmount && (
+                    <span className="text-[10px] text-blue-600 ml-2">(Paid: {formatInr(inst.paidAmount)})</span>
+                  )}
+                </div>
                 <PaymentStatusBadge status={inst.paymentStatus} />
               </div>
             ))}

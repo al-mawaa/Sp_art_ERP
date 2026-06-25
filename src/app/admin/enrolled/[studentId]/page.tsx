@@ -162,7 +162,8 @@ export default function StudentEnrollmentDetailPage({
       const res = await fetch(`/api/admin/enrollments/${studentId}`, {
         credentials: "include",
       });
-      const data = await res.json();
+      const _st = await res.text();
+      const data = _st ? JSON.parse(_st) : {};
       if (!res.ok) throw new Error(data?.error || "Failed to fetch student data");
 
       setStudent(data.student);
@@ -201,7 +202,8 @@ export default function StudentEnrollmentDetailPage({
         credentials: "include",
         body: JSON.stringify({ installmentId }),
       });
-      const data = await res.json();
+      const _rt = await res.text();
+      const data = _rt ? JSON.parse(_rt) : {};
       if (!res.ok) throw new Error(data.error || "Failed to send reminder");
       toast({
         title: "Reminder sent",

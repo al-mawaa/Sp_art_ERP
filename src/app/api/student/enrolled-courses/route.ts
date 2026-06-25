@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
           amount: i.amount,
           dueDate: i.dueDate,
           paidDate: i.paidDate,
+          paidAmount: i.paidAmount,
           paymentStatus: i.paymentStatus,
         })),
         paymentHistory: paymentHistory.map(p => ({

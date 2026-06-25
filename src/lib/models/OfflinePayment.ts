@@ -22,6 +22,9 @@ export interface OfflinePaymentDocument extends mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+  paymentType: 'full' | 'installment';
+  installmentId?: mongoose.Types.ObjectId;
+  termNumber?: number;
 }
 
 const OfflinePaymentSchema = new mongoose.Schema<OfflinePaymentDocument>(
@@ -47,11 +50,14 @@ const OfflinePaymentSchema = new mongoose.Schema<OfflinePaymentDocument>(
     notes: { type: String },
     currency: { type: String, default: 'INR' },
     completedAt: { type: Date },
+    paymentType: { type: String, enum: ['full', 'installment'], default: 'full' },
+    installmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'EnrollmentInstallment' },
+    termNumber: { type: Number },
   },
   {
     timestamps: true,
     collection: 'offlinepayments',
-  },
+  }
 );
 
 OfflinePaymentSchema.index({ createdAt: 1 });

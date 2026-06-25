@@ -130,7 +130,8 @@ export default function EnrolledPage() {
       setLoading(true);
       const query = filter === "all" ? "" : `?filter=${filter}`;
       const res = await fetch(`/api/admin/enrollments${query}`, { credentials: "include" });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (!res.ok) {
         const errorMsg = data?.details || data?.error || "Failed to fetch enrollments";

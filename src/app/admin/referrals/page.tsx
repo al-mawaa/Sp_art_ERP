@@ -99,7 +99,8 @@ export default function AdminReferralsPage() {
       const res = await fetch(`/api/admin/referrals?${params.toString()}`, {
         credentials: "include",
       });
-      const json = await res.json();
+      const text = await res.text();
+      const json = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(json.error || "Failed to load referrals");
 
       setData(json);
@@ -136,7 +137,8 @@ export default function AdminReferralsPage() {
           status: selectedStatus,
         }),
       });
-      const json = await res.json();
+      const resText = await res.text();
+      const json = resText ? JSON.parse(resText) : {};
       if (!res.ok) throw new Error(json.error || "Failed to save settings");
 
       toast({

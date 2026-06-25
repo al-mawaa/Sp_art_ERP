@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export type InstallmentPaymentStatus = "pending" | "paid" | "overdue" | "failed";
+export type InstallmentPaymentStatus = "pending" | "paid" | "partially_paid" | "overdue" | "failed";
 
 export interface EnrollmentInstallmentDocument extends mongoose.Document {
   enrollmentId: mongoose.Types.ObjectId;
@@ -8,7 +8,8 @@ export interface EnrollmentInstallmentDocument extends mongoose.Document {
   amount: number;
   dueDate: Date;
   paidDate?: Date;
-  paymentStatus: InstallmentPaymentStatus;
+  paidAmount?: number;
+  paymentStatus: "pending" | "paid" | "partially_paid" | "overdue" | "failed";
   remindersSent: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -26,9 +27,10 @@ const EnrollmentInstallmentSchema = new mongoose.Schema<EnrollmentInstallmentDoc
     amount: { type: Number, required: true, min: 0 },
     dueDate: { type: Date, required: true },
     paidDate: { type: Date },
+    paidAmount: { type: Number, default: 0 },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "overdue", "failed"],
+      enum: ["pending", "paid", "partially_paid", "overdue", "failed"],
       default: "pending",
       index: true,
     },
