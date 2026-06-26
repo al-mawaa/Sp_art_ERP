@@ -17,25 +17,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Convert file to buffer
+    // Convert file to base64 data URI
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const fileBase64 = buffer.toString('base64');
+    const dataUri = `data:${file.type};base64,${fileBase64}`;
 
-    // Upload to Cloudinary
-    const result = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        {
-          folder: folder,
-          resource_type: 'auto',
-        },
-        (error, result) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(result as CloudinaryUploadResult);
-          }
-        }
-      ).end(buffer);
+    // Upload to Cloudinary using data URI
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder: folder,
+      resource_type: 'auto',
     });
 
     return NextResponse.json({
@@ -44,9 +35,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('Upload error:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    let errorMessage = 'Upload failed';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object') {
+      errorMessage = 'message' in error && typeof error.message === 'string' ? error.message : JSON.stringify(error);
+    } else {
+      errorMessage = String(error);
+    }
+
     return NextResponse.json({ 
-      error: 'Upload failed', 
+      error: errorMessage, 
       details: errorMessage
     }, { status: 500 });
   }
