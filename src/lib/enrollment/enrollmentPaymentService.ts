@@ -106,12 +106,14 @@ export async function refreshEnrollmentPaymentStatus(enrollment: CourseEnrollmen
       }
     }
 
-    if (paidAmount >= totalAmount - 0.01 && totalAmount > 0) {
-      paidAmount = totalAmount;
+    const effectiveTotal = round2(Math.max(0, totalAmount - (enrollment.referralDiscountApplied ?? 0)));
+
+    if (paidAmount >= effectiveTotal - 0.01 && effectiveTotal > 0) {
+      paidAmount = Math.max(paidAmount, effectiveTotal);
     }
 
-    const remainingAmount = round2(Math.max(0, totalAmount - paidAmount));
-    const paymentPlanStatus = derivePaymentPlanStatus(paidAmount, totalAmount, false, false);
+    const remainingAmount = round2(Math.max(0, effectiveTotal - paidAmount));
+    const paymentPlanStatus = derivePaymentPlanStatus(paidAmount, effectiveTotal, false, false);
 
     enrollment.paidAmount = paidAmount;
     enrollment.remainingAmount = remainingAmount;
@@ -122,7 +124,7 @@ export async function refreshEnrollmentPaymentStatus(enrollment: CourseEnrollmen
         : paymentPlanStatus === "partially_paid"
           ? "partially_paid"
           : paymentPlanStatus;
-    if (!enrollment.paymentType && paidAmount >= totalAmount - 0.01 && totalAmount > 0) {
+    if (!enrollment.paymentType && paidAmount >= effectiveTotal - 0.01 && effectiveTotal > 0) {
       enrollment.paymentType = paymentType === "installment" ? "installment" : "full";
     }
     await enrollment.save();
