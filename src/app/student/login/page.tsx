@@ -51,24 +51,24 @@ export default function StudentLoginPage() {
       <div className="lg:w-1/2 relative overflow-hidden gradient-party text-white p-8 lg:p-12 flex flex-col justify-between min-h-[40vh] lg:min-h-screen">
         <DecorBlobs />
         <div className="relative">
-          <Logo size={48} />
+          <Logo size={40} />
         </div>
         <div className="relative space-y-4 max-w-md">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur px-3 py-1 text-xs font-bold">
-            <Sparkles className="w-3.5 h-3.5" /> All-in-one ERP
+            {/* <Sparkles className="w-3.5 h-3.5" /> All-in-one ERP */}
           </div>
-          <h1 className="font-display text-4xl lg:text-5xl font-bold leading-tight">
-            Where every child paints their world. 🎨
+          <h1 className="font-display text-3xl lg:text-4xl font-bold leading-tight">
+            ART SKILL SOUL 🎨
           </h1>
-          <p className="text-white/90 text-base">
-            Manage students, teachers, classes, fees, inventory and certificates — all in one playful, powerful workspace.
+          <p className="text-white/90 text-sm">
+            Learn Art at Any Age — Drawing, Sketching, Painting & Mixed Classes for Kids and Adults.
           </p>
         </div>
         <div className="relative grid grid-cols-3 gap-3 max-w-md">
           {[
             { k: "Students", v: "156+" },
             { k: "Classes",  v: "24/wk" },
-            { k: "Modules",  v: "10" },
+            { k: "Modules",  v: "10+" },
           ].map(s => (
             <div key={s.k} className="rounded-xl bg-white/15 backdrop-blur p-3">
               <div className="font-display text-2xl font-bold">{s.v}</div>
@@ -110,7 +110,7 @@ export default function StudentLoginPage() {
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
-            © {new Date().getFullYear()} Little Brushes Art Academy
+            © {new Date().getFullYear()} SP Art hub
           </p>
         </div>
       </div>

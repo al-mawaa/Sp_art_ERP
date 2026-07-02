@@ -113,18 +113,11 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="px-5 h-16 border-b border-sidebar-border flex items-center justify-between">
-          <Logo />
+        <div className="px-5 h-14 border-b border-sidebar-border flex items-center justify-between">
+          <Logo size={32} compact />
           <button onClick={() => setOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-muted">
             <X className="w-5 h-5" />
           </button>
-        </div>
-        <div className="mx-3 mt-4 mb-2 rounded-lg px-3 py-2.5 bg-muted/60 border border-border">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Signed in as</div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: `hsl(${theme.hsl})` }} />
-            <div className="font-display font-semibold text-sm text-foreground">{ROLE_LABELS[role]}</div>
-          </div>
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4 scroll-smooth scrollbar-thin scrollbar-thumb-muted/40 scrollbar-track-transparent">
           {navItems.map((item, index) => {
@@ -167,10 +160,6 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
             <button className="lg:hidden p-2 rounded-lg hover:bg-muted" onClick={() => setOpen(true)}>
               <Menu className="w-5 h-5" />
             </button>
-            <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
-              <Palette className="w-4 h-4 text-primary" />
-              <span className="font-medium">Little Brushes Art Academy</span>
-            </div>
             <div className="flex items-center gap-2 ml-auto">
               <span
                 className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground"

@@ -6,6 +6,9 @@ import "@/index.css";
 export const metadata: Metadata = {
   title: "Little Brushes Studio - ERP System",
   description: "ERP system for Little Brushes Studio",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
