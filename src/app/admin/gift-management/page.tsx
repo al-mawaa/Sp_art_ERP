@@ -36,6 +36,7 @@ type Reward = {
   requiredReferrals: number;
   status: string;
   image?: string;
+  createdAt?: string;
 };
 
 type ReportData = {
@@ -324,6 +325,7 @@ export default function AdminGiftManagementPage() {
                 <th className="pb-3 pr-3 font-medium">Referrals</th>
                 <th className="pb-3 pr-3 font-medium">Value</th>
                 <th className="pb-3 pr-3 font-medium">Status</th>
+                <th className="pb-3 pr-3 font-medium">Created</th>
                 <th className="pb-3 font-medium">Actions</th>
               </tr>
             </thead>
@@ -338,6 +340,15 @@ export default function AdminGiftManagementPage() {
                     {r.walletAmount > 0 ? formatInr(r.walletAmount) : "—"}
                   </td>
                   <td className="py-3 pr-3 capitalize">{r.status}</td>
+                  <td className="py-3 pr-3 text-slate-500">
+                    {r.createdAt ? new Date(r.createdAt).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : "—"}
+                  </td>
                   <td className="py-3">
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => openEditReward(r)}>

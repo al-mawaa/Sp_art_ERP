@@ -40,21 +40,28 @@ export function TeacherSalaryPage() {
   const [history, setHistory] = useState<SalaryHistoryRow[]>([]);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
+    let timeoutId: NodeJS.Timeout;
+
+    const load = async (isBackground = false) => {
+      if (!isBackground) setLoading(true);
       try {
         const res = await fetch("/api/teacher/salary", { credentials: "include" });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Failed to load salary");
+        
+        // Update state
         setCurrent((json.data.current as SalaryHistoryRow | null) ?? null);
         setHistory((json.data.history as SalaryHistoryRow[]) ?? []);
       } catch (error) {
-        toast.error((error as Error).message);
+        if (!isBackground) toast.error((error as Error).message);
       } finally {
-        setLoading(false);
+        if (!isBackground) setLoading(false);
+        timeoutId = setTimeout(() => void load(true), 10000); // 10s polling for real-time updates
       }
     };
     void load();
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return (
