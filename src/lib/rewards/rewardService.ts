@@ -423,6 +423,7 @@ export async function getAdminRewardReport() {
         requiredReferrals: r.requiredReferrals,
         status: r.status,
         sortOrder: r.sortOrder,
+        createdAt: r.createdAt ? r.createdAt.toISOString() : null,
       };
     }),
     claims: claims.map(c => {

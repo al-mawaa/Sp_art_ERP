@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
+import { Download, Plus, RefreshCcw, Search, Trash2, MoreHorizontal } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { downloadAllSalarySlipsPdf, downloadSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
 
@@ -513,142 +529,127 @@ export function PayrollDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={checked => toggleSelectAll(checked === true)}
-            aria-label="Select all visible staff"
-          />
-          <span className="text-xs text-muted-foreground">
-            Select all{visibleProfiles.length !== profiles.length ? ` (${visibleProfiles.length} shown)` : ""}
-          </span>
-        </div>
-
-        <div className="space-y-2">
-          {visibleProfiles.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">
-              {searchQuery || filterStaff !== "All"
-                ? "No staff match your search or filter."
-                : "No salary profiles found."}
-            </div>
-          ) : null}
-          {visibleProfiles.map(p => {
-            const entry = entryByStaff.get(entryKey(p.staffType, p.staffId));
-            const isRowLoading = rowLoadingId === p.id;
-            const rowDisabled = loading || isRowLoading;
-
-            return (
-              <div key={p.id} className="border border-border/70 rounded-xl p-3 space-y-3">
-                <div className="flex flex-wrap gap-3 items-start">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-[40px] px-4">
                   <Checkbox
-                    checked={selectedProfileIds.includes(p.id)}
-                    onCheckedChange={checked => toggleProfileSelection(p.id, checked === true)}
-                    aria-label={`Select ${p.staffName}`}
-                    className="mt-1"
+                    checked={allSelected}
+                    onCheckedChange={checked => toggleSelectAll(checked === true)}
+                    aria-label="Select all visible staff"
                   />
+                </TableHead>
+                <TableHead>Staff Info</TableHead>
+                <TableHead>Salary</TableHead>
+                <TableHead>Deduction</TableHead>
+                <TableHead>Net Payout</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleProfiles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    {searchQuery || filterStaff !== "All"
+                      ? "No staff match your search or filter."
+                      : "No salary profiles found."}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {visibleProfiles.map(p => {
+                const entry = entryByStaff.get(entryKey(p.staffType, p.staffId));
+                const isRowLoading = rowLoadingId === p.id;
+                const rowDisabled = loading || isRowLoading;
 
-                  <div className="min-w-[200px] flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-medium">{p.staffName}</div>
-                      <StaffTypeBadge staffType={p.staffType} variant="short" />
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{p.employeeId}</div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      step={100}
-                      className="w-32 rounded-xl"
-                      value={salaryDraft[p.id] ?? ""}
-                      onChange={e => setSalaryDraft(prev => ({ ...prev, [p.id]: e.target.value }))}
-                    />
-                    <Button size="sm" className="rounded-lg" onClick={() => void updateProfileSalary(p.id)}>
-                      Save Salary
-                    </Button>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground ml-auto">{p.status}</div>
-                </div>
-
-                <div className="flex flex-wrap gap-4 items-center pl-7 text-sm">
-                  <div>
-                    <span className="text-muted-foreground text-xs">Deduction</span>
-                    <div className="font-medium">{entry ? money(entry.deductionAmount) : "—"}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-xs">Net</span>
-                    <div className="font-semibold">{entry ? money(entry.netSalary) : "—"}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-xs">Status</span>
-                    <div className="mt-0.5">
+                return (
+                  <TableRow key={p.id} className={selectedProfileIds.includes(p.id) ? "bg-muted/30" : ""}>
+                    <TableCell className="px-4 py-3 align-top">
+                      <Checkbox
+                        checked={selectedProfileIds.includes(p.id)}
+                        onCheckedChange={checked => toggleProfileSelection(p.id, checked === true)}
+                        aria-label={`Select ${p.staffName}`}
+                      />
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="font-medium flex items-center gap-2">
+                        {p.staffName}
+                        <StaffTypeBadge staffType={p.staffType} variant="short" />
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{p.employeeId}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+                         {p.status}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          step={100}
+                          className="w-24 h-8 text-sm bg-background"
+                          value={salaryDraft[p.id] ?? ""}
+                          onChange={e => setSalaryDraft(prev => ({ ...prev, [p.id]: e.target.value }))}
+                          onBlur={() => {
+                             if (salaryDraft[p.id] !== String(p.monthlySalary)) {
+                                void updateProfileSalary(p.id);
+                             }
+                          }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="font-medium text-sm">{entry ? money(entry.deductionAmount) : "—"}</div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="font-semibold text-sm">{entry ? money(entry.netSalary) : "—"}</div>
+                      {entry ? (
+                        <div className="text-[10px] text-muted-foreground whitespace-nowrap mt-1">
+                          P {entry.presentCount} / A {entry.absentCount} / H {entry.halfDayCount}
+                        </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="align-top">
                       {entry ? <StatusPill status={entry.payrollStatus} /> : <span className="text-xs text-muted-foreground">Not generated</span>}
-                    </div>
-                  </div>
-                  {entry ? (
-                    <div className="text-xs text-muted-foreground">
-                      Batches {entry.totalBatches} · P {entry.presentCount} / A {entry.absentCount} / H {entry.halfDayCount}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap gap-2 pl-7">
-                  <Button
-                    size="sm"
-                    className="rounded-lg gradient-primary text-white border-0"
-                    disabled={rowDisabled}
-                    onClick={() => void runAction("generate", [p.id])}
-                  >
-                    Generate
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg"
-                    disabled={rowDisabled || !entry}
-                    onClick={() => void runAction("approve", [p.id])}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg"
-                    disabled={rowDisabled || !entry}
-                    onClick={() => void runAction("paid", [p.id])}
-                  >
-                    Mark Paid
-                  </Button>
-                  {entry ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-lg"
-                      onClick={() =>
-                        downloadSalarySlipPdf({
-                          instituteName: INSTITUTE_NAME,
-                          ...entry,
-                        })
-                      }
-                    >
-                      <Download className="w-3.5 h-3.5 mr-1" /> Slip
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg text-destructive border-destructive/40 hover:bg-destructive/10"
-                    disabled={rowDisabled}
-                    onClick={() => void deleteProfiles([p.id])}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+                    </TableCell>
+                    <TableCell className="align-top text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={rowDisabled}>
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => void runAction("generate", [p.id])}>
+                            Generate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled={!entry} onClick={() => void runAction("approve", [p.id])}>
+                            Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled={!entry} onClick={() => void runAction("paid", [p.id])}>
+                            Mark Paid
+                          </DropdownMenuItem>
+                          {entry ? (
+                            <DropdownMenuItem onClick={() => downloadSalarySlipPdf({ instituteName: INSTITUTE_NAME, ...entry })}>
+                              Download Slip
+                            </DropdownMenuItem>
+                          ) : null}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => void deleteProfiles([p.id])}>
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>
