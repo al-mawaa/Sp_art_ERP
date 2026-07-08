@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Upload to Cloudinary using data URI
     const result = await cloudinary.uploader.upload(dataUri, {
       folder: folder,
-      resource_type: 'auto',
+      resource_type: file.type === 'application/pdf' ? 'raw' : 'auto',
     });
 
     return NextResponse.json({
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Upload error:', error);
     let errorMessage = 'Upload failed';
-    
+
     if (error instanceof Error) {
       errorMessage = error.message;
     } else if (error && typeof error === 'object') {
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
       errorMessage = String(error);
     }
 
-    return NextResponse.json({ 
-      error: errorMessage, 
+    return NextResponse.json({
+      error: errorMessage,
       details: errorMessage
     }, { status: 500 });
   }

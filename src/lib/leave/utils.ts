@@ -26,6 +26,9 @@ export function serializeLeave(doc: LeaveDocument) {
     status: doc.status,
     adminRemark: doc.adminRemark ?? "",
     daysCount: doc.daysCount,
+    documentUrl: doc.documentUrl,
+    documentName: doc.documentName,
+    documentType: doc.documentType,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };

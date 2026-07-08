@@ -106,3 +106,40 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ success: false, error: "Failed to update leave" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  try {
+    const auth = await requireAdminFromRequest(request);
+    if (!auth.ok) return auth.response;
+
+    const { id } = await context.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
+    }
+
+    await dbConnect();
+    const doc = await SeniorTeacherLeave.findById(id);
+    if (!doc) {
+      return NextResponse.json({ success: false, error: "Leave not found" }, { status: 404 });
+    }
+
+    // Import AuditLog inside the function to avoid circular/missing import at top level
+    const AuditLog = (await import("@/lib/models/AuditLog")).default;
+    
+    await AuditLog.create({
+      action: "DELETE_LEAVE",
+      entityId: doc._id.toString(),
+      entityType: "SeniorTeacherLeave",
+      details: JSON.stringify(doc.toJSON()),
+      performedBy: auth.adminEmail,
+    });
+
+    await SeniorTeacherLeave.findByIdAndDelete(id);
+
+    return NextResponse.json({ success: true, message: "Leave deleted successfully" });
+  } catch (e) {
+    console.error("[admin/leaves/senior-teacher/[id] DELETE]", e);
+    return NextResponse.json({ success: false, error: "Failed to delete leave" }, { status: 500 });
+  }
+}
+
