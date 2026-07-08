@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Upload, X as XIcon, FileText, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ export function LeaveApplyPage({
 }: LeaveApplyPageConfig) {
   const router = useRouter();
   const [form, setForm] = useState({ type: "Casual", from: "", to: "", reason: "" });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRow[]>([]);
   const [balance, setBalance] = useState<Balance>({ casual: 6, sick: 8, personal: 3 });
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,23 @@ export function LeaveApplyPage({
     }
     return false;
   }, [loginRoleLabel, router]);
+
+  const deleteLeave = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this leave request?")) return;
+    try {
+      const res = await fetch(`${apiPath}/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (handleAuthError(res)) return;
+      const json = await parseJsonResponse<{ error?: string; message?: string }>(res);
+      if (!res.ok) throw new Error(json.error || "Failed to delete");
+      toast.success(json.message || "Leave deleted successfully");
+      void load();
+    } catch (e) {
+      toast.error(messageFromUnknown(e, "Failed to delete leave"));
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,6 +146,28 @@ export function LeaveApplyPage({
               }
               setSubmitting(true);
               try {
+                let documentUrl = "";
+                let documentName = "";
+                let documentType = "";
+
+                if (selectedFile) {
+                  const formData = new FormData();
+                  formData.append("file", selectedFile);
+                  formData.append("folder", "leaves");
+                  const uploadRes = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                  });
+                  if (!uploadRes.ok) {
+                    const uploadErr = await uploadRes.json();
+                    throw new Error(uploadErr.error || "Failed to upload document");
+                  }
+                  const uploadData = await uploadRes.json();
+                  documentUrl = uploadData.url;
+                  documentName = selectedFile.name;
+                  documentType = "application/pdf";
+                }
+
                 const res = await fetch(apiPath, {
                   method: "POST",
                   credentials: "include",
@@ -137,6 +177,7 @@ export function LeaveApplyPage({
                     fromDate: form.from,
                     toDate: form.to,
                     reason: form.reason,
+                    ...(documentUrl ? { documentUrl, documentName, documentType } : {}),
                   }),
                 });
                 if (handleAuthError(res)) return;
@@ -144,6 +185,7 @@ export function LeaveApplyPage({
                 if (!res.ok) throw new Error(json.error || "Submit failed");
                 toast.success(json.message || "Leave request submitted!");
                 setForm({ type: "Casual", from: "", to: "", reason: "" });
+                setSelectedFile(null);
                 void load();
               } catch (err) {
                 toast.error(messageFromUnknown(err, "Failed to submit leave"));
@@ -194,6 +236,57 @@ export function LeaveApplyPage({
                 onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Supporting Document (Optional)</Label>
+              <div className="flex flex-wrap items-center gap-3">
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  id="document-upload"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type !== "application/pdf") {
+                      toast.error("Only PDF files are allowed.");
+                      e.target.value = "";
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("File size must be less than 5MB.");
+                      e.target.value = "";
+                      return;
+                    }
+                    setSelectedFile(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => document.getElementById("document-upload")?.click()}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Browse PDF
+                </Button>
+                {selectedFile && (
+                  <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-lg border text-sm max-w-full">
+                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                    <span className="truncate max-w-[150px]">{selectedFile.name}</span>
+                    <span className="text-muted-foreground text-xs whitespace-nowrap">
+                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-red-500 transition-colors ml-1 shrink-0"
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      <XIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
             <Button
               type="submit"
               disabled={submitting}
@@ -225,6 +318,7 @@ export function LeaveApplyPage({
                   <th className="px-3 py-2 text-left">To</th>
                   <th className="px-3 py-2 text-left">Reason</th>
                   <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,6 +330,19 @@ export function LeaveApplyPage({
                     <td className="px-3 py-2">{l.reason}</td>
                     <td className="px-3 py-2">
                       <StatusPill status={l.status} className={leaveStatusPillClass(l.status)} />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {l.status === "Pending" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                          onClick={() => deleteLeave(l.id)}
+                          title="Delete Request"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

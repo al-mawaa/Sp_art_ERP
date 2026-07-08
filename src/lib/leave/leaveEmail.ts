@@ -16,6 +16,8 @@ type LeaveEmailFields = {
   reason: string;
   status: string;
   adminRemark?: string;
+  documentUrl?: string;
+  documentName?: string;
 };
 
 function leaveDetailsHtml(f: LeaveEmailFields) {
@@ -28,6 +30,7 @@ function leaveDetailsHtml(f: LeaveEmailFields) {
       <tr><td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;"><strong>Reason</strong><br/>${escapeHtml(f.reason || "—")}</td></tr>
       <tr><td style="padding:12px 16px;"><strong>Status</strong><br/>${escapeHtml(f.status)}</td></tr>
       ${f.adminRemark ? `<tr><td style="padding:12px 16px;border-top:1px solid #e2e8f0;"><strong>Admin remarks</strong><br/>${escapeHtml(f.adminRemark)}</td></tr>` : ""}
+      ${f.documentUrl ? `<tr><td style="padding:12px 16px;border-top:1px solid #e2e8f0;"><strong>Document</strong><br/><a href="${escapeHtml(f.documentUrl)}" target="_blank" style="color:#ea580c;text-decoration:none;">${escapeHtml(f.documentName || "View Document")}</a></td></tr>` : ""}
     </table>
   `;
 }
@@ -101,6 +104,8 @@ type SeniorLeaveEmailFields = {
   reason: string;
   status: string;
   adminRemark?: string;
+  documentUrl?: string;
+  documentName?: string;
 };
 
 function seniorLeaveDetailsHtml(f: SeniorLeaveEmailFields) {
@@ -113,6 +118,7 @@ function seniorLeaveDetailsHtml(f: SeniorLeaveEmailFields) {
       <tr><td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;"><strong>Reason</strong><br/>${escapeHtml(f.reason || "—")}</td></tr>
       <tr><td style="padding:12px 16px;"><strong>Status</strong><br/>${escapeHtml(f.status)}</td></tr>
       ${f.adminRemark ? `<tr><td style="padding:12px 16px;border-top:1px solid #e2e8f0;"><strong>Admin remarks</strong><br/>${escapeHtml(f.adminRemark)}</td></tr>` : ""}
+      ${f.documentUrl ? `<tr><td style="padding:12px 16px;border-top:1px solid #e2e8f0;"><strong>Document</strong><br/><a href="${escapeHtml(f.documentUrl)}" target="_blank" style="color:#ea580c;text-decoration:none;">${escapeHtml(f.documentName || "View Document")}</a></td></tr>` : ""}
     </table>
   `;
 }

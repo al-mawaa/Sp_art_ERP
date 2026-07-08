@@ -14,6 +14,9 @@ export interface LeaveDocument extends mongoose.Document {
   status: LeaveStatus;
   adminRemark: string;
   daysCount: number;
+  documentUrl?: string;
+  documentName?: string;
+  documentType?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +38,9 @@ const LeaveSchema = new mongoose.Schema<LeaveDocument>(
     },
     adminRemark: { type: String, default: "", trim: true },
     daysCount: { type: Number, default: 1, min: 1 },
+    documentUrl: { type: String, trim: true },
+    documentName: { type: String, trim: true },
+    documentType: { type: String, trim: true },
   },
   { timestamps: true, collection: "leaves" },
 );
@@ -48,8 +54,9 @@ LeaveSchema.index(
   },
 );
 
-const LeaveModel =
-  (mongoose.models.Leave as mongoose.Model<LeaveDocument> | undefined) ??
-  mongoose.model<LeaveDocument>("Leave", LeaveSchema);
+if (mongoose.models.Leave) {
+  delete mongoose.models.Leave;
+}
+const LeaveModel = mongoose.model<LeaveDocument>("Leave", LeaveSchema);
 
 export default LeaveModel;

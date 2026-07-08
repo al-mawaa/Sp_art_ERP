@@ -14,6 +14,9 @@ export interface SeniorTeacherLeaveDocument extends mongoose.Document {
   status: LeaveStatus;
   adminRemark: string;
   daysCount: number;
+  documentUrl?: string;
+  documentName?: string;
+  documentType?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +43,9 @@ const SeniorTeacherLeaveSchema = new mongoose.Schema<SeniorTeacherLeaveDocument>
     },
     adminRemark: { type: String, default: "", trim: true },
     daysCount: { type: Number, default: 1, min: 1 },
+    documentUrl: { type: String, trim: true },
+    documentName: { type: String, trim: true },
+    documentType: { type: String, trim: true },
   },
   { timestamps: true, collection: "senior_teacher_leaves" },
 );
@@ -53,8 +59,9 @@ SeniorTeacherLeaveSchema.index(
   },
 );
 
-const SeniorTeacherLeaveModel =
-  (mongoose.models.SeniorTeacherLeave as mongoose.Model<SeniorTeacherLeaveDocument> | undefined) ??
-  mongoose.model<SeniorTeacherLeaveDocument>("SeniorTeacherLeave", SeniorTeacherLeaveSchema);
+if (mongoose.models.SeniorTeacherLeave) {
+  delete mongoose.models.SeniorTeacherLeave;
+}
+const SeniorTeacherLeaveModel = mongoose.model<SeniorTeacherLeaveDocument>("SeniorTeacherLeave", SeniorTeacherLeaveSchema);
 
 export default SeniorTeacherLeaveModel;

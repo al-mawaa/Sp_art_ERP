@@ -54,6 +54,9 @@ export async function POST(request: NextRequest) {
     const fromDate = (body.fromDate || body.from || "").trim();
     const toDate = (body.toDate || body.to || "").trim();
     const reason = (body.reason || "").trim();
+    const documentUrl = (body.documentUrl || "").trim();
+    const documentName = (body.documentName || "").trim();
+    const documentType = (body.documentType || "").trim();
 
     if (!LEAVE_TYPES.includes(leaveType)) {
       return NextResponse.json({ success: false, error: "Invalid leave type" }, { status: 400 });
@@ -87,6 +90,7 @@ export async function POST(request: NextRequest) {
         status: "Pending",
         adminRemark: "",
         daysCount,
+        ...(documentUrl ? { documentUrl, documentName, documentType } : {}),
       }),
     );
 
@@ -107,6 +111,8 @@ export async function POST(request: NextRequest) {
       toDate: doc.toDate,
       reason: doc.reason,
       status: "Pending",
+      documentUrl: doc.documentUrl,
+      documentName: doc.documentName,
     };
 
     let emailWarning: string | undefined;

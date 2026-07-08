@@ -12,5 +12,6 @@ export async function requireAdminFromRequest(
       response: NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 }),
     };
   }
-  return { ok: true as const };
+  const { serverAdminCredentials } = await import("@/lib/auth/admin-session");
+  return { ok: true as const, adminEmail: serverAdminCredentials().email };
 }
