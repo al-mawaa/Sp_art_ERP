@@ -12,6 +12,7 @@ import {
   serializeStudentQuery,
 } from "@/lib/student/studentQueryAccess";
 import { sendNewStudentQueryEmails } from "@/lib/email/queryEmail";
+import { notificationCreators } from "@/lib/notifications/createNotification";
 
 export const runtime = "nodejs";
 
@@ -64,6 +65,14 @@ export async function POST(request: NextRequest) {
     }
 
     const doc = result.doc;
+
+    // Create notification for new query
+    await notificationCreators.querySubmitted(
+      doc.personName,
+      getCategoryLabel(doc.category),
+      doc._id.toString()
+    );
+
     const emailWarnings = await sendNewStudentQueryEmails({
       studentName: doc.personName,
       studentEmail: doc.personEmail,

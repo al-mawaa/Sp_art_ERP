@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdminFromRequest } from "@/lib/auth/require-admin";
 import { fetchAllAdminQueries, getQueryStats } from "@/lib/admin/unifiedQueries";
+import { notificationCreators } from "@/lib/notifications/createNotification";
 
 export const runtime = "nodejs";
 

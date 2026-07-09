@@ -154,11 +154,8 @@ export const pricingPlans = [
 ];
 
 // ---------- Notifications ----------
-export const notifications = [
-  { id: 1, title: "Fee due reminder",     desc: "5 students have pending fees this week.",   time: "10m ago", icon: "bell"  as const },
-  { id: 2, title: "Birthday today!",      desc: "2 students have birthdays today.",          time: "1h ago",  icon: "cake"  as const },
-  { id: 3, title: "Inventory low",        desc: "Watercolor Set 12 is running low.",         time: "3h ago",  icon: "box"   as const },
-];
+// @deprecated Notifications are now stored in MongoDB database
+export const notifications: any[] = [];
 
 export const notificationLog = [
   { id: 1, target: "All Parents",  channel: "WhatsApp", message: "Holiday on Friday for Diwali.", sent: format(subDays(today,1),"yyyy-MM-dd HH:mm") },

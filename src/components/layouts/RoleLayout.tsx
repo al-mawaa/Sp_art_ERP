@@ -3,14 +3,14 @@
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Bell, BookOpen, ChevronDown, HelpCircle, LogOut, Menu, Palette, User, X, type LucideIcon } from "lucide-react";
+import { BookOpen, ChevronDown, HelpCircle, LogOut, Menu, Palette, User, X, type LucideIcon } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLE_LABELS, roleHome } from "@/contexts/AuthContext.exports";
 import { Role } from "@/data/mockData";
-import { notifications } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { clearAdminSessionToken } from "@/lib/auth/admin-session-client";
 import {
@@ -138,9 +138,6 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
           })}
         </nav>
         <div className="p-3 border-t border-sidebar-border">
-          <div className="mb-2 px-2 text-[10px] uppercase tracking-[0.26em] text-muted-foreground/80">
-            System
-          </div>
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive font-medium"
@@ -168,25 +165,7 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
                 {ROLE_LABELS[role]}
               </span>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="relative p-2 rounded-md hover:bg-muted transition-colors" aria-label="Notifications">
-                    <Bell className="w-[18px] h-[18px]" strokeWidth={2} />
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-background" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {notifications.map(n => (
-                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 py-2.5">
-                      <div className="font-semibold text-sm">{n.title}</div>
-                      <div className="text-xs text-muted-foreground">{n.desc}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{n.time}</div>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <NotificationBell role={role} userId={user?.id} />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

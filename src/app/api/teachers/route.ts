@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Teacher from '@/lib/models/Teacher';
+import { notificationCreators } from '@/lib/notifications/createNotification';
 
 export const runtime = 'nodejs';
 
@@ -126,6 +127,9 @@ export async function POST(request: NextRequest) {
       salary,
       bio,
     });
+
+    // Create notification for new teacher registration
+    await notificationCreators.teacherRegistration(teacher.fullName, teacher._id.toString());
 
     return NextResponse.json({
       message: 'Teacher created successfully',

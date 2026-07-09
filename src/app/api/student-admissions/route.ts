@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/mongodb';
 import StudentAdmission from '@/lib/models/StudentAdmission';
 import { NextResponse } from 'next/server';
+import { notificationCreators } from '@/lib/notifications/createNotification';
 
 export async function GET() {
   await dbConnect();
@@ -33,6 +34,10 @@ export async function POST(req: Request) {
       createdBy: body.createdBy,
     });
     const saved = await admission.save();
+
+    // Create notification for new student admission
+    await notificationCreators.studentAdmission(saved.fullName, saved._id.toString());
+
     return NextResponse.json({ success: true, item: saved });
   } catch (e) {
     console.error('Admissions POST error', e);

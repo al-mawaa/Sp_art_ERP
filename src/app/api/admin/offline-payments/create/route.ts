@@ -9,6 +9,7 @@ import EnrollmentInstallment from '@/lib/models/EnrollmentInstallment';
 import PaymentAuditLog from '@/lib/models/PaymentAuditLog';
 import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 import { sendTransactionalEmail } from '@/lib/email/mailer';
+import { notificationCreators } from '@/lib/notifications/createNotification';
 
 export const runtime = 'nodejs';
 
@@ -427,6 +428,9 @@ export async function POST(request: NextRequest) {
 
   try {
     await offlinePayment.save();
+
+    // Create notification for offline payment
+    await notificationCreators.offlinePayment(studentName, amount, offlinePayment._id.toString());
   } catch (error) {
     console.error('Failed to save offline payment', error);
     return NextResponse.json({ success: false, error: 'Failed to create payment request' }, { status: 500 });

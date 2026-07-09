@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, Trash2, Filter, RefreshCw } from "lucide-react";
+import { Bell, Check, Trash2, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Notification {
   _id: string;
@@ -28,8 +29,9 @@ interface Notification {
   createdAt: string;
 }
 
-export default function NotificationsPage() {
+export default function StudentNotificationsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
@@ -44,8 +46,11 @@ export default function NotificationsPage() {
         page: page.toString(),
         limit: "20",
         filter,
-        role: "admin",
+        role: "student",
       });
+      if (user?.id) {
+        params.append("userId", user.id);
+      }
       if (typeFilter !== "all") {
         params.append("type", typeFilter);
       }
@@ -89,7 +94,12 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch("/api/notifications/read-all?role=admin", {
+      const params = new URLSearchParams({ role: "student" });
+      if (user?.id) {
+        params.append("userId", user.id);
+      }
+
+      await fetch(`/api/notifications/read-all?${params}`, {
         method: "PATCH",
         credentials: "include",
       });
@@ -172,18 +182,38 @@ export default function NotificationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="student_admission">Student Admission</SelectItem>
-              <SelectItem value="teacher_registration">Teacher Registration</SelectItem>
-              <SelectItem value="payment_verification">Payment Verification</SelectItem>
-              <SelectItem value="offline_payment">Offline Payment</SelectItem>
-              <SelectItem value="query_submitted">Query Submitted</SelectItem>
-              <SelectItem value="leave_request">Leave Request</SelectItem>
-              <SelectItem value="referral_request">Referral Request</SelectItem>
-              <SelectItem value="credential_request">Credential Request</SelectItem>
-              <SelectItem value="birthday_reminder">Birthday Reminder</SelectItem>
-              <SelectItem value="fee_due">Fee Due</SelectItem>
-              <SelectItem value="inventory_low">Inventory Low</SelectItem>
-              <SelectItem value="general">General</SelectItem>
+              <SelectItem value="batch_assigned">Batch Assigned</SelectItem>
+              <SelectItem value="batch_changed">Batch Changed</SelectItem>
+              <SelectItem value="class_schedule_updated">Class Schedule Updated</SelectItem>
+              <SelectItem value="new_class_added">New Class Added</SelectItem>
+              <SelectItem value="class_cancelled">Class Cancelled</SelectItem>
+              <SelectItem value="teacher_changed">Teacher Changed</SelectItem>
+              <SelectItem value="study_material_uploaded">Study Material Uploaded</SelectItem>
+              <SelectItem value="query_approved">Query Approved</SelectItem>
+              <SelectItem value="query_rejected">Query Rejected</SelectItem>
+              <SelectItem value="query_replied">Query Replied</SelectItem>
+              <SelectItem value="new_course_launched">New Course Launched</SelectItem>
+              <SelectItem value="enrollment_approved">Enrollment Approved</SelectItem>
+              <SelectItem value="enrollment_rejected">Enrollment Rejected</SelectItem>
+              <SelectItem value="course_updated">Course Updated</SelectItem>
+              <SelectItem value="fee_due_reminder">Fee Due Reminder</SelectItem>
+              <SelectItem value="fee_overdue">Fee Overdue</SelectItem>
+              <SelectItem value="payment_received">Payment Received</SelectItem>
+              <SelectItem value="payment_rejected">Payment Rejected</SelectItem>
+              <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
+              <SelectItem value="certificate_issued">Certificate Issued</SelectItem>
+              <SelectItem value="certificate_ready">Certificate Ready</SelectItem>
+              <SelectItem value="attendance_marked">Attendance Marked</SelectItem>
+              <SelectItem value="low_attendance_warning">Low Attendance Warning</SelectItem>
+              <SelectItem value="exam_scheduled">Exam Scheduled</SelectItem>
+              <SelectItem value="marks_published">Marks Published</SelectItem>
+              <SelectItem value="result_released">Result Released</SelectItem>
+              <SelectItem value="profile_approved">Profile Approved</SelectItem>
+              <SelectItem value="referral_reward_credited">Referral Reward Credited</SelectItem>
+              <SelectItem value="gift_reward_earned">Gift Reward Earned</SelectItem>
+              <SelectItem value="academy_announcement">Academy Announcement</SelectItem>
+              <SelectItem value="holiday_notice">Holiday Notice</SelectItem>
+              <SelectItem value="event_registration_confirmed">Event Registration Confirmed</SelectItem>
             </SelectContent>
           </Select>
         </div>

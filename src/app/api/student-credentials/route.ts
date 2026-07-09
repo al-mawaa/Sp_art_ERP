@@ -5,6 +5,7 @@ import StudentCredentials from '@/lib/models/StudentCredentials';
 import Student from '@/lib/models/Student';
 import { sendAccountCreationEmail } from '@/lib/sendEmail';
 import { requireAdminFromRequest } from '@/lib/auth/require-admin';
+import { notificationCreators } from '@/lib/notifications/createNotification';
 
 export const runtime = 'nodejs';
 
@@ -126,6 +127,9 @@ export async function POST(request: NextRequest) {
       studentIdNumber,
       createdBy,
     });
+
+    // Create notification for credential creation
+    await notificationCreators.credentialRequest(name, 'Student Account', credentials._id.toString());
 
     const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL ?? 'http://localhost:3000/login';
     let emailSent = true;

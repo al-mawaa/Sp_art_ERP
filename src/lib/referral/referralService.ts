@@ -17,6 +17,7 @@ import {
   calculateReferralCheckoutDiscount,
   getReferralEnrolleeDiscountTotal,
 } from "@/lib/referral/referralCalculations";
+import { notificationCreators } from "@/lib/notifications/createNotification";
 
 export { calculateReferralCheckoutDiscount, getReferralEnrolleeDiscountTotal };
 
@@ -388,6 +389,15 @@ export async function completeReferralOnPayment(params: {
     Student.findById(transaction.referrerId),
     Student.findById(referredStudentId),
   ]);
+
+  // Create notification for new referral
+  if (referrer && enrollee) {
+    await notificationCreators.referralRequest(
+      referrer.fullName,
+      enrollee.fullName,
+      transaction._id.toString()
+    );
+  }
 
   if (referrer?.email && referrerAmount > 0) {
     try {

@@ -25,10 +25,11 @@ function resolveClientIp(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdminFromRequest(request);
-  if (!auth.ok) return auth.response;
+  try {
+    const auth = await requireAdminFromRequest(request);
+    if (!auth.ok) return auth.response;
 
-  await dbConnect();
+    await dbConnect();
 
   const url = new URL(request.url);
   const searchParams = url.searchParams;
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
 
   if (installmentPayments.length > 0) {
     const studentIds = installmentPayments.map(p => (p.studentId as { _id?: mongoose.Types.ObjectId })._id || p.studentId);
-    const courseIds = installmentPayments.map(p => (p.courseId as { _id?: mongoose.Types.ObjectId })._id || p.courseId);
+    const courseIds = installmentPayments.map(p => p.courseId ? (p.courseId as { _id?: mongoose.Types.ObjectId })._id || p.courseId : null).filter(Boolean);
 
     const enrollments = await CourseEnrollment.find({
       studentId: { $in: studentIds },
@@ -229,4 +230,11 @@ export async function GET(request: NextRequest) {
     offset,
     payments: formattedPayments,
   });
+} catch (error) {
+  console.error('[offline-payments GET] Error:', error);
+  return NextResponse.json(
+    { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+    { status: 500 }
+  );
+}
 }

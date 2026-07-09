@@ -5,12 +5,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { Role, ROLE_LABELS } from "@/data/mockData";
 
-type User = { name: string; role: Role; email: string };
+type User = { name: string; role: Role; email: string; id?: string };
 
 type AuthCtx = {
   user: User | null;
   hydrated: boolean;
-  login: (role: Role, email: string, name?: string) => void;
+  login: (role: Role, email: string, name?: string, id?: string) => void;
   logout: () => void;
 };
 
@@ -67,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       hydrated,
-      login: (role, email, name) =>
-        setUser({ role, email, name: name ?? ROLE_NAMES[role] }),
+      login: (role, email, name, id) =>
+        setUser({ role, email, name: name ?? ROLE_NAMES[role], id }),
       logout: () => setUser(null),
     }),
     [user, hydrated],

@@ -15,6 +15,7 @@ import {
 } from "@/lib/leave/duplicateLeave.server";
 import { getAdminNotifyEmails, sendNewLeaveRequestEmails } from "@/lib/leave/leaveEmail";
 import type { LeaveType } from "@/lib/models/Leave";
+import { notificationCreators } from "@/lib/notifications/createNotification";
 
 export const runtime = "nodejs";
 
@@ -98,6 +99,9 @@ export async function POST(request: NextRequest) {
     }
 
     const doc = created.doc;
+
+    // Create notification for new leave request
+    await notificationCreators.leaveRequest(doc.teacherName, doc.leaveType, doc._id.toString());
 
     const notifyEmails = [...getAdminNotifyEmails()];
 
