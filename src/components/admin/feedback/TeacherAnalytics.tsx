@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Star, TrendingUp, Trophy, AlertTriangle } from "lucide-react";
+import { Loader2, Star, TrendingUp, Trophy, AlertTriangle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   LineChart,
   Line,
@@ -65,6 +66,27 @@ export function TeacherAnalytics() {
   }
 
   if (!data) return null;
+
+  const handleDeleteAllFeedback = async (teacherId: string, teacherName: string) => {
+    if (!confirm(`Are you sure you want to permanently delete ALL feedback records for ${teacherName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/feedback/teacher/${teacherId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to delete feedback");
+
+      toast.success(json.message || "Feedback deleted successfully");
+      
+      // Reload the page completely so other tabs also reflect the deleted data
+      window.location.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error deleting feedback");
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -194,6 +216,7 @@ export function TeacherAnalytics() {
                 <th className="px-5 py-3 text-center">Positive</th>
                 <th className="px-5 py-3 text-center">Negative</th>
                 <th className="px-5 py-3 text-right">Avg Rating</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -208,11 +231,22 @@ export function TeacherAnalytics() {
                       {t.averageRating} <Star className="w-4 h-4 fill-yellow-500" />
                     </div>
                   </td>
+                  <td className="px-5 py-4 text-right">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-red-500 hover:text-red-600 border-red-100 hover:bg-red-50"
+                      onClick={() => handleDeleteAllFeedback(t.teacherId, t.teacherName)}
+                      title={`Delete all feedback for ${t.teacherName}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {data.teacherStats.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">No performance data yet.</td>
+                  <td colSpan={6} className="px-5 py-8 text-center text-slate-500">No performance data yet.</td>
                 </tr>
               )}
             </tbody>

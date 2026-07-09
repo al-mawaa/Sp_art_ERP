@@ -4,6 +4,10 @@ import dbConnect from "@/lib/mongodb";
 import StudentFeedback from "@/lib/models/StudentFeedback";
 import Teacher from "@/lib/models/Teacher";
 import SeniorTeacher from "@/lib/models/SeniorTeacher";
+import Student from "@/lib/models/Student";
+import Course from "@/lib/models/Course";
+import Batch from "@/lib/models/Batch";
+import mongoose from "mongoose";
 
 export const runtime = "nodejs";
 
@@ -72,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     // Manually populate teacherId from both Teacher and SeniorTeacher models
     type TeacherDoc = { _id: { toString(): string }; fullName: string };
-    const teacherIds = [...new Set(feedbacks.map(f => f.teacherId?.toString()).filter(Boolean))];
+    const teacherIds = [...new Set(feedbacks.map(f => f.teacherId?.toString()).filter((id): id is string => !!id && mongoose.Types.ObjectId.isValid(id)))];
     const [teachers, seniorTeachers] = await Promise.all([
       Teacher.find({ _id: { $in: teacherIds } }, "fullName").lean(),
       SeniorTeacher.find({ _id: { $in: teacherIds } }, "fullName").lean()
