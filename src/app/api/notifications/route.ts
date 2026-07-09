@@ -15,6 +15,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (userId === "admin") {
+      return NextResponse.json({
+        notifications: [],
+        total: 0,
+        unreadCount: 0,
+        page: 1,
+        totalPages: 0,
+      });
+    }
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
