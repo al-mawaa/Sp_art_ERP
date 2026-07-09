@@ -58,7 +58,7 @@ const adminNav: Array<NavItem | NavSection> = [
     items: [
       { to: "/admin/crm", label: "CRM Leads", icon: Sparkles },
       { to: "/admin/notifications", label: "Notifications", icon: Bell },
-      { to: "/admin/feedback", label: "Parent Feedback", icon: MessageSquareHeart },
+      { to: "/admin/feedback", label: "Feedback", icon: MessageSquareHeart },
       { to: "/admin/chat", label: "Chat", icon: MessageSquare },
     ],
   },
