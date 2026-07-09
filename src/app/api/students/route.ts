@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
       motherOccupation,
       address,
       howYouKnowUs,
+      howYouComeToKnow,
       feeStatus = 'Pending',
     } = body;
 
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
       motherOccupation,
       address,
       howYouKnowUs,
-      howYouComeToKnow: howYouKnowUs,
+      howYouComeToKnow,
       feeStatus,
     });
 

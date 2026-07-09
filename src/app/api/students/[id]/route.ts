@@ -34,6 +34,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       motherOccupation,
       address,
       howYouKnowUs,
+      howYouComeToKnow,
       feeStatus = 'Pending',
     } = body;
 
@@ -83,7 +84,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         motherOccupation,
         address,
         howYouKnowUs,
-        howYouComeToKnow: howYouKnowUs ?? student.howYouComeToKnow,
+        howYouComeToKnow,
         feeStatus,
       },
       { returnDocument: 'after', runValidators: true }

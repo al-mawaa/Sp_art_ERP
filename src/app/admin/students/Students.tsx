@@ -88,10 +88,28 @@ type StudentForm = {
   motherOccupation: string;
   address: string;
   howYouKnowUs: string;
+  howYouKnowUsSelect: string;
+  howYouKnowUsOther: string;
 };
 
 const CLASSES = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
 const FEE_STATUS = ['Paid', 'Pending', 'Overdue'] as const;
+
+const HOW_YOU_KNOW_US_OPTIONS = [
+  'Instagram',
+  'Facebook',
+  'Google Search',
+  'YouTube',
+  'WhatsApp',
+  'Friend / Referral',
+  'Parent Reference',
+  'Newspaper',
+  'Banner / Hoarding',
+  'Walk-in',
+  'School',
+  'Event / Exhibition',
+  'Other',
+];
 
 const defaultForm: StudentForm = {
   fullName: '',
@@ -115,6 +133,8 @@ const defaultForm: StudentForm = {
   motherOccupation: '',
   address: '',
   howYouKnowUs: '',
+  howYouKnowUsSelect: '',
+  howYouKnowUsOther: '',
 };
 
 const formatDateInputValue = (value?: string) => {
@@ -124,54 +144,71 @@ const formatDateInputValue = (value?: string) => {
   return date.toISOString().slice(0, 10);
 };
 
-const mapStudentToForm = (student: Student): StudentForm => ({
-  id: student.id,
-  fullName: student.name ?? '',
-  email: student.email ?? '',
-  badgeId: student.badgeId ?? '',
-  feeStatus: student.feeStatus ?? 'Pending',
-  phone: student.phone ?? '',
-  photo: student.photo ?? '',
-  dob: formatDateInputValue(student.dob),
-  age: student.age ?? 0,
-  bloodGroup: student.bloodGroup ?? '',
-  gender: student.gender ?? '',
-  school: student.school ?? '',
-  college: student.college ?? '',
-  occupation: student.occupation ?? '',
-  fatherName: student.fatherName ?? '',
-  fatherMobile: student.fatherMobile ?? '',
-  fatherOccupation: student.fatherOccupation ?? '',
-  motherName: student.motherName ?? '',
-  motherMobile: student.motherMobile ?? '',
-  motherOccupation: student.motherOccupation ?? '',
-  address: student.address ?? '',
-  howYouKnowUs: student.howYouKnowUs ?? student.howYouComeToKnow ?? '',
-});
+const mapStudentToForm = (student: Student): StudentForm => {
+  const savedValue = student.howYouKnowUs ?? student.howYouComeToKnow ?? '';
+  const isPredefinedOption = HOW_YOU_KNOW_US_OPTIONS.includes(savedValue as typeof HOW_YOU_KNOW_US_OPTIONS[number]);
+  
+  return {
+    id: student.id,
+    fullName: student.name ?? '',
+    email: student.email ?? '',
+    badgeId: student.badgeId ?? '',
+    feeStatus: student.feeStatus ?? 'Pending',
+    phone: student.phone ?? '',
+    photo: student.photo ?? '',
+    dob: formatDateInputValue(student.dob),
+    age: student.age ?? 0,
+    bloodGroup: student.bloodGroup ?? '',
+    gender: student.gender ?? '',
+    school: student.school ?? '',
+    college: student.college ?? '',
+    occupation: student.occupation ?? '',
+    fatherName: student.fatherName ?? '',
+    fatherMobile: student.fatherMobile ?? '',
+    fatherOccupation: student.fatherOccupation ?? '',
+    motherName: student.motherName ?? '',
+    motherMobile: student.motherMobile ?? '',
+    motherOccupation: student.motherOccupation ?? '',
+    address: student.address ?? '',
+    howYouKnowUs: savedValue,
+    howYouKnowUsSelect: isPredefinedOption ? savedValue : 'Other',
+    howYouKnowUsOther: isPredefinedOption ? '' : savedValue,
+  };
+};
 
-const buildStudentPayload = (form: StudentForm) => ({
-  fullName: form.fullName,
-  email: form.email || undefined,
-  badgeId: form.badgeId,
-  phone: form.phone || undefined,
-  photo: form.photo || undefined,
-  dob: form.dob || undefined,
-  age: form.age || undefined,
-  bloodGroup: form.bloodGroup || undefined,
-  gender: form.gender || undefined,
-  school: form.school || undefined,
-  college: form.college || undefined,
-  occupation: form.occupation || undefined,
-  fatherName: form.fatherName || undefined,
-  fatherMobile: form.fatherMobile || undefined,
-  fatherOccupation: form.fatherOccupation || undefined,
-  motherName: form.motherName || undefined,
-  motherMobile: form.motherMobile || undefined,
-  motherOccupation: form.motherOccupation || undefined,
-  address: form.address || undefined,
-  howYouKnowUs: form.howYouKnowUs || undefined,
-  feeStatus: form.feeStatus,
-});
+const buildStudentPayload = (form: StudentForm) => {
+  // Save dropdown selection to howYouComeToKnow
+  // Save custom text to howYouKnowUs (if provided, otherwise use dropdown selection)
+  const howYouComeToKnow = form.howYouKnowUsSelect || undefined;
+  const howYouKnowUs = form.howYouKnowUsOther.trim() 
+    ? form.howYouKnowUsOther 
+    : form.howYouKnowUsSelect || undefined;
+  
+  return {
+    fullName: form.fullName,
+    email: form.email || undefined,
+    badgeId: form.badgeId,
+    phone: form.phone || undefined,
+    photo: form.photo || undefined,
+    dob: form.dob || undefined,
+    age: form.age || undefined,
+    bloodGroup: form.bloodGroup || undefined,
+    gender: form.gender || undefined,
+    school: form.school || undefined,
+    college: form.college || undefined,
+    occupation: form.occupation || undefined,
+    fatherName: form.fatherName || undefined,
+    fatherMobile: form.fatherMobile || undefined,
+    fatherOccupation: form.fatherOccupation || undefined,
+    motherName: form.motherName || undefined,
+    motherMobile: form.motherMobile || undefined,
+    motherOccupation: form.motherOccupation || undefined,
+    address: form.address || undefined,
+    howYouComeToKnow,
+    howYouKnowUs,
+    feeStatus: form.feeStatus,
+  };
+};
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -320,6 +357,13 @@ export default function StudentsPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    // Validate "How you came to know us" field - either dropdown or text field must have a value
+    if (!form.howYouKnowUsSelect && !form.howYouKnowUsOther.trim()) {
+      toast.error('Please select how you came to know us or specify in the text field');
+      return;
+    }
+    
     const payload = buildStudentPayload(form);
     const isEdit = Boolean(editingStudent?.id);
     const url = isEdit ? `/api/students/${editingStudent!.id}` : '/api/students';
@@ -649,13 +693,29 @@ export default function StudentsPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="howYouKnowUs">How you came to know us</Label>
-                <Input
-                  id="howYouKnowUs"
-                  value={form.howYouKnowUs}
-                  onChange={(e) => setForm(current => ({ ...current, howYouKnowUs: e.target.value }))}
-                  placeholder="Enter how you came to know us"
-                />
+                <Label htmlFor="howYouKnowUsSelect">How you came to know us</Label>
+                <Select
+                  value={form.howYouKnowUsSelect}
+                  onValueChange={(value) => setForm(current => ({ ...current, howYouKnowUsSelect: value }))}
+                >
+                  <SelectTrigger id="howYouKnowUsSelect">
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOW_YOU_KNOW_US_OPTIONS.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="grid gap-2 mt-2">
+                  <Label htmlFor="howYouKnowUsOther">Or specify custom value</Label>
+                  <Input
+                    id="howYouKnowUsOther"
+                    value={form.howYouKnowUsOther}
+                    onChange={(e) => setForm(current => ({ ...current, howYouKnowUsOther: e.target.value }))}
+                    placeholder="Type custom value here (overrides dropdown selection)"
+                  />
+                </div>
               </div>
             </div>
 
