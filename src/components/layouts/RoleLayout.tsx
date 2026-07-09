@@ -12,6 +12,7 @@ import { ROLE_LABELS, roleHome } from "@/contexts/AuthContext.exports";
 import { Role } from "@/data/mockData";
 import { notifications } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { clearAdminSessionToken } from "@/lib/auth/admin-session-client";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -168,25 +169,7 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
                 {ROLE_LABELS[role]}
               </span>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="relative p-2 rounded-md hover:bg-muted transition-colors" aria-label="Notifications">
-                    <Bell className="w-[18px] h-[18px]" strokeWidth={2} />
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-background" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {notifications.map(n => (
-                    <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 py-2.5">
-                      <div className="font-semibold text-sm">{n.title}</div>
-                      <div className="text-xs text-muted-foreground">{n.desc}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{n.time}</div>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <NotificationBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
