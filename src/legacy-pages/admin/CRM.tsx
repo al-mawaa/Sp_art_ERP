@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Phone, User } from "lucide-react";
+import { Phone } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { toast } from "sonner";
@@ -9,10 +9,9 @@ import { toast } from "sonner";
 type Lead = {
   id: string;
   child: string;
-  parent: string;
   phone: string;
   source: string;
-  counselor: string;
+  howYouComeToKnow: string;
 };
 
 export default function CRM() {
@@ -24,13 +23,12 @@ export default function CRM() {
       if (!response.ok) throw new Error('Failed to fetch students');
       const data = await response.json();
       const students = Array.isArray(data.students) ? data.students : [];
-      const studentLeads: Lead[] = students.map((student: { id?: string; name?: string; parentName?: string; fatherName?: string; motherName?: string; phone?: string; howYouKnowUs?: string }, index: number) => ({
+      const studentLeads: Lead[] = students.map((student: { id?: string; name?: string; phone?: string; howYouKnowUs?: string; howYouComeToKnow?: string }, index: number) => ({
         id: student.id || `STU-${index}`,
         child: student.name || 'Unknown Student',
-        parent: student.parentName || student.fatherName || student.motherName || '—',
         phone: student.phone || '—',
         source: student.howYouKnowUs || 'Unknown',
-        counselor: 'Admin',
+        howYouComeToKnow: student.howYouComeToKnow || '—',
       }));
       setLeads(studentLeads);
     } catch (error) {
@@ -63,16 +61,6 @@ export default function CRM() {
                 ),
               },
               {
-                key: 'parent',
-                header: 'Parent Name',
-                render: (row) => (
-                  <div className="flex items-center gap-1">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    {(row as Lead).parent}
-                  </div>
-                ),
-              },
-              {
                 key: 'phone',
                 header: 'Phone',
                 render: (row) => (
@@ -84,7 +72,7 @@ export default function CRM() {
               },
               {
                 key: 'source',
-                header: 'How They Know Us',
+                header: 'How You Know Us',
                 render: (row) => (
                   <span className="inline-flex rounded-full px-3 py-1 text-xs font-medium bg-muted text-slate-700">
                     {(row as Lead).source}
@@ -92,10 +80,12 @@ export default function CRM() {
                 ),
               },
               {
-                key: 'counselor',
-                header: 'Counselor',
+                key: 'howYouComeToKnow',
+                header: 'How You Come To Know',
                 render: (row) => (
-                  <div className="text-sm text-muted-foreground">{(row as Lead).counselor}</div>
+                  <span className="inline-flex rounded-full px-3 py-1 text-xs font-medium bg-muted text-slate-700">
+                    {(row as Lead).howYouComeToKnow}
+                  </span>
                 ),
               },
             ]}

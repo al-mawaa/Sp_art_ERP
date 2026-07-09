@@ -6,6 +6,7 @@ import DrawingTask from '@/lib/models/DrawingTask';
 import DrawingTest from '@/lib/models/DrawingTest';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
 import TeacherPerformance from '@/lib/models/TeacherPerformance';
+import Batch from '@/lib/models/Batch';
 
 export const runtime = 'nodejs';
 
@@ -16,8 +17,22 @@ export async function GET(request: NextRequest) {
 
     await dbConnect();
 
-    // Get all drawing tasks
-    const tasks = await DrawingTask.find()
+    // Get the logged-in senior teacher's ID
+    const seniorTeacherId = new mongoose.Types.ObjectId(auth.seniorTeacher.id);
+
+    // Fetch all batches assigned to this senior teacher
+    const assignedBatches = await Batch.find({
+      seniorTeacherIds: seniorTeacherId,
+    })
+      .select('_id')
+      .lean();
+
+    const assignedBatchIds = assignedBatches.map((b) => b._id);
+
+    // Get only drawing tasks from assigned batches
+    const tasks = await DrawingTask.find({
+      batchId: { $in: assignedBatchIds },
+    })
       .sort({ taskDate: -1 })
       .populate('batchId', 'batchName courseName')
       .populate('createdBy', 'fullName')
@@ -78,16 +93,14 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Get overall stats
+    // Get overall stats (only from assigned batches)
     const totalTasks = tasks.length;
     const totalEvaluations = evaluations.length;
-    const allEvaluations = await StudentEvaluation.find()
-      .select('performancePercentage')
-      .lean();
 
+    // Calculate average performance only from assigned batches
     const avgPerformance =
-      allEvaluations.length > 0
-        ? allEvaluations.reduce((sum, e) => sum + e.performancePercentage, 0) / allEvaluations.length
+      evaluations.length > 0
+        ? evaluations.reduce((sum, e) => sum + e.performancePercentage, 0) / evaluations.length
         : 0;
 
     const seniorOid = new mongoose.Types.ObjectId(auth.seniorTeacher.id);

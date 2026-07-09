@@ -41,6 +41,7 @@ type Student = {
   address?: string;
   howYouKnowUs?: string;
   howYouComeToKnow?: string;
+  batchId?: string;
 };
 
 type EnrollmentDetails = {
@@ -90,6 +91,7 @@ type StudentForm = {
   howYouKnowUs: string;
   howYouKnowUsSelect: string;
   howYouKnowUsOther: string;
+  batchId: string;
 };
 
 const CLASSES = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
@@ -135,6 +137,7 @@ const defaultForm: StudentForm = {
   howYouKnowUs: '',
   howYouKnowUsSelect: '',
   howYouKnowUsOther: '',
+  batchId: '',
 };
 
 const formatDateInputValue = (value?: string) => {
@@ -173,6 +176,7 @@ const mapStudentToForm = (student: Student): StudentForm => {
     howYouKnowUs: savedValue,
     howYouKnowUsSelect: isPredefinedOption ? savedValue : 'Other',
     howYouKnowUsOther: isPredefinedOption ? '' : savedValue,
+    batchId: student.batchId?.toString() ?? '',
   };
 };
 
@@ -206,8 +210,20 @@ const buildStudentPayload = (form: StudentForm) => {
     address: form.address || undefined,
     howYouComeToKnow,
     howYouKnowUs,
+    batchId: form.batchId || undefined,
     feeStatus: form.feeStatus,
   };
+};
+
+type BatchOption = {
+  id: string;
+  courseName: string;
+  batchName: string;
+  batchTiming?: string;
+  batchCapacity: number;
+  occupiedSeats: number;
+  vacancy: number;
+  isFull: boolean;
 };
 
 export default function StudentsPage() {
@@ -223,6 +239,8 @@ export default function StudentsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [form, setForm] = useState<StudentForm>(defaultForm);
   const [currentPage, setCurrentPage] = useState(1);
+  const [availableBatches, setAvailableBatches] = useState<BatchOption[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
   const itemsPerPage = 6;
 
   const fetchStudents = useCallback(async () => {
@@ -243,6 +261,23 @@ export default function StudentsPage() {
     }
   }, [filterClass, filterFee]);
 
+  const fetchAvailableBatches = useCallback(async (studentId?: string) => {
+    setLoadingBatches(true);
+    try {
+      const params = new URLSearchParams();
+      if (studentId) params.append('studentId', studentId);
+      
+      const response = await fetch(`/api/batches/available?${params.toString()}`);
+      const data = await response.json();
+      setAvailableBatches(data.batches || []);
+    } catch (error) {
+      console.error('Error fetching available batches:', error);
+      toast.error('Failed to load available batches');
+    } finally {
+      setLoadingBatches(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
@@ -261,12 +296,14 @@ export default function StudentsPage() {
     setEditingStudent(null);
     setForm(defaultForm);
     setSheetOpen(true);
+    fetchAvailableBatches();
   };
 
   const openEditStudent = (student: Student) => {
     setEditingStudent(student);
     setForm(mapStudentToForm(student));
     setSheetOpen(true);
+    fetchAvailableBatches(student.id);
   };
 
   const closeSheet = () => {
@@ -362,6 +399,15 @@ export default function StudentsPage() {
     if (!form.howYouKnowUsSelect && !form.howYouKnowUsOther.trim()) {
       toast.error('Please select how you came to know us or specify in the text field');
       return;
+    }
+    
+    // Check if selected batch is full (unless it's the current batch in edit mode)
+    if (form.batchId) {
+      const selectedBatch = availableBatches.find(b => b.id === form.batchId);
+      if (selectedBatch && selectedBatch.isFull && (!editingStudent || editingStudent.batchId !== form.batchId)) {
+        toast.error('This batch is already full. Please select another batch.');
+        return;
+      }
     }
     
     const payload = buildStudentPayload(form);
@@ -716,6 +762,50 @@ export default function StudentsPage() {
                     placeholder="Type custom value here (overrides dropdown selection)"
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="batchId">Batch</Label>
+                <Select
+                  value={form.batchId}
+                  onValueChange={(value) => setForm(current => ({ ...current, batchId: value }))}
+                  disabled={loadingBatches}
+                >
+                  <SelectTrigger id="batchId">
+                    {form.batchId ? (
+                      (() => {
+                        const selectedBatch = availableBatches.find(b => b.id === form.batchId);
+                        return selectedBatch ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium">{selectedBatch.courseName}</span>
+                            <span className="text-muted-foreground">|</span>
+                            <span className="text-muted-foreground">{selectedBatch.batchName}</span>
+                            <span className="text-muted-foreground">|</span>
+                            <span className="text-green-600 font-semibold">{selectedBatch.vacancy} Seats Left</span>
+                          </div>
+                        ) : (
+                          <SelectValue placeholder={loadingBatches ? "Loading batches..." : "Select a batch"} />
+                        );
+                      })()
+                    ) : (
+                      <SelectValue placeholder={loadingBatches ? "Loading batches..." : "Select a batch"} />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableBatches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id} className="py-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-sm">{batch.courseName}</span>
+                          <span className="text-xs text-muted-foreground">{batch.batchName}</span>
+                          <span className="text-xs text-green-600 font-semibold">{batch.vacancy} Seats Left</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {availableBatches.length === 0 && !loadingBatches && (
+                  <p className="text-sm text-muted-foreground">No available batches with seats</p>
+                )}
               </div>
             </div>
 

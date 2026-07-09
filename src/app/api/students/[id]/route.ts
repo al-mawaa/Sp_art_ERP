@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Student from '@/lib/models/Student';
 import StudentCredentials from '@/lib/models/StudentCredentials';
 import Credentials from '@/lib/models/Credentials';
+import Batch from '@/lib/models/Batch';
 
 export const runtime = 'nodejs';
 
@@ -35,6 +36,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       address,
       howYouKnowUs,
       howYouComeToKnow,
+      batchId,
       feeStatus = 'Pending',
     } = body;
 
@@ -60,6 +62,61 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Store the old name to check if it changed
     const oldName = student.fullName;
     const nameChanged = oldName !== fullName;
+    
+    // Handle batch assignment changes
+    const oldBatchId = student.batchId?.toString();
+    const newBatchId = batchId;
+    
+    // If batch is being changed
+    if (oldBatchId !== newBatchId) {
+      // Remove student from old batch if exists
+      if (oldBatchId) {
+        const oldBatch = await Batch.findById(oldBatchId);
+        if (oldBatch) {
+          oldBatch.students = oldBatch.students.filter(
+            s => s.studentId?.toString() !== id
+          );
+          await oldBatch.save();
+        }
+      }
+      
+      // Add student to new batch if provided
+      if (newBatchId) {
+        const newBatch = await Batch.findById(newBatchId);
+        if (!newBatch) {
+          return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+        }
+        
+        // Check if batch has capacity (unless it's the same batch, which we already handled)
+        if (newBatch.students.length >= newBatch.batchCapacity) {
+          return NextResponse.json({ error: 'This batch is already full' }, { status: 400 });
+        }
+        
+        // Check if student is already in the new batch
+        const alreadyInBatch = newBatch.students.some(
+          s => s.studentId?.toString() === id || 
+               s.studentEmail?.toLowerCase() === email?.toLowerCase()
+        );
+        if (alreadyInBatch) {
+          return NextResponse.json({ error: 'Student is already assigned to this batch' }, { status: 400 });
+        }
+        
+        // Add student to new batch
+        newBatch.students.push({
+          _id: student._id,
+          studentId: student._id,
+          studentName: fullName,
+          studentEmail: email || '',
+          phone: phone || '',
+          course: newBatch.courseName,
+          batchDay: newBatch.batchDay,
+          batchTime: newBatch.batchTime,
+          startMonth: newBatch.startMonth,
+          endMonth: newBatch.endMonth,
+        });
+        await newBatch.save();
+      }
+    }
 
     const updatedStudent = await Student.findByIdAndUpdate(
       id,
@@ -85,6 +142,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         address,
         howYouKnowUs,
         howYouComeToKnow,
+        batchId,
         feeStatus,
       },
       { returnDocument: 'after', runValidators: true }
@@ -144,6 +202,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         address: updatedStudent.address,
         howYouComeToKnow: updatedStudent.howYouComeToKnow,
         howYouKnowUs: updatedStudent.howYouKnowUs,
+        batchId: updatedStudent.batchId?.toString(),
         createdAt: updatedStudent.createdAt,
       },
     });

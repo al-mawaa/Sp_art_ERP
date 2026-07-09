@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import { requireSeniorTeacherFromRequest } from '@/lib/auth/require-senior-teacher';
 import DrawingTest from '@/lib/models/DrawingTest';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
+import Batch from '@/lib/models/Batch';
 
 export const runtime = 'nodejs';
 
@@ -24,6 +25,7 @@ export async function GET(
     await dbConnect();
 
     const subId = new mongoose.Types.ObjectId(submissionId);
+    const seniorTeacherId = new mongoose.Types.ObjectId(auth.seniorTeacher.id);
 
     // Get submission (drawing test)
     const submission = await DrawingTest.findById(subId)
@@ -35,6 +37,17 @@ export async function GET(
 
     if (!submission) {
       return NextResponse.json({ success: false, error: 'Submission not found' }, { status: 404 });
+    }
+
+    // Verify that the senior teacher is assigned to this batch
+    const batchId = submission.batchId as mongoose.Types.ObjectId;
+    const batch = await Batch.findById(batchId).select('seniorTeacherIds').lean();
+
+    if (!batch || !batch.seniorTeacherIds.some((id: mongoose.Types.ObjectId) => id.equals(seniorTeacherId))) {
+      return NextResponse.json(
+        { success: false, error: 'You are not authorized to view this submission' },
+        { status: 403 },
+      );
     }
 
     // Get existing evaluation if any

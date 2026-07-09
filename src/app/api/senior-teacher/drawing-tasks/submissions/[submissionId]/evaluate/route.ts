@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import { requireSeniorTeacherFromRequest } from '@/lib/auth/require-senior-teacher';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
 import DrawingTest from '@/lib/models/DrawingTest';
+import Batch from '@/lib/models/Batch';
 import {
   calculateStudentPerformance,
   recalculateTeacherPerformance,
@@ -82,6 +83,16 @@ export async function POST(
 
     if (!submission) {
       return NextResponse.json({ success: false, error: 'Submission not found' }, { status: 404 });
+    }
+
+    // Verify that the senior teacher is assigned to this batch
+    const batch = await Batch.findById(submission.batchId).select('seniorTeacherIds').lean();
+
+    if (!batch || !batch.seniorTeacherIds.some((id: mongoose.Types.ObjectId) => id.equals(seniorOid))) {
+      return NextResponse.json(
+        { success: false, error: 'You are not authorized to evaluate this submission' },
+        { status: 403 },
+      );
     }
 
     // Calculate performance
