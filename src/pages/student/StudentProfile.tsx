@@ -26,14 +26,19 @@ import type { StudentProfileDto } from "@/lib/student-portal";
 export type StudentProfileData = StudentProfileDto;
 
 const HOW_YOU_KNOW_US_OPTIONS = [
-  "Social Media",
-  "Google Search",
-  "Friend / Relative",
-  "School",
-  "Newspaper",
-  "Walk In",
-  "Existing Student",
-  "Other",
+  'Instagram',
+  'Facebook',
+  'Google Search',
+  'YouTube',
+  'WhatsApp',
+  'Friend / Referral',
+  'Parent Reference',
+  'Newspaper',
+  'Banner / Hoarding',
+  'Walk-in',
+  'School',
+  'Event / Exhibition',
+  'Other',
 ] as const;
 
 type FormState = {
@@ -55,9 +60,14 @@ type FormState = {
   motherOccupation: string;
   address: string;
   howYouKnowUs: string;
+  howYouKnowUsSelect: string;
+  howYouKnowUsOther: string;
 };
 
 function profileToForm(p: StudentProfileData): FormState {
+  const savedValue = p.howYouKnowUs || '';
+  const isPredefinedOption = HOW_YOU_KNOW_US_OPTIONS.includes(savedValue as typeof HOW_YOU_KNOW_US_OPTIONS[number]);
+  
   return {
     fullName: p.fullName,
     phone: p.phone,
@@ -76,7 +86,9 @@ function profileToForm(p: StudentProfileData): FormState {
     motherMobile: p.motherMobile || "",
     motherOccupation: p.motherOccupation || "",
     address: p.address || "",
-    howYouKnowUs: p.howYouKnowUs || "",
+    howYouKnowUs: savedValue,
+    howYouKnowUsSelect: isPredefinedOption ? savedValue : 'Other',
+    howYouKnowUsOther: isPredefinedOption ? '' : savedValue,
   };
 }
 
@@ -173,8 +185,21 @@ export function StudentProfilePage() {
 
   const handleSave = async () => {
     if (!form || !profile) return;
+    
+    // Validate "How you came to know us" field - either dropdown or text field must have a value
+    if (!form.howYouKnowUsSelect && !form.howYouKnowUsOther.trim()) {
+      toast.error('Please select how you came to know us or specify in the text field');
+      return;
+    }
+    
     setSaving(true);
     try {
+      // If admin typed anything in "Please specify" field, save that text
+      // Otherwise, save the dropdown selection
+      const finalHowYouKnowUs = form.howYouKnowUsOther.trim() 
+        ? form.howYouKnowUsOther 
+        : form.howYouKnowUsSelect;
+      
       const payload = {
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),
@@ -193,7 +218,8 @@ export function StudentProfilePage() {
         motherMobile: form.motherMobile.trim(),
         motherOccupation: form.motherOccupation.trim(),
         address: form.address.trim(),
-        howYouKnowUs: form.howYouKnowUs,
+        howYouComeToKnow: form.howYouKnowUsSelect || undefined,
+        howYouKnowUs: form.howYouKnowUsOther.trim() ? form.howYouKnowUsOther : form.howYouKnowUsSelect || undefined,
       };
       const res = await fetch("/api/student/profile", {
         method: "PUT",
@@ -578,16 +604,15 @@ export function StudentProfilePage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>How you came to know us</Label>
+                    <Label htmlFor="howYouKnowUsSelect">How you came to know us</Label>
                     <Select
-                      value={form.howYouKnowUs || "unset"}
-                      onValueChange={v => setForm({ ...form, howYouKnowUs: v === "unset" ? "" : v })}
+                      value={form.howYouKnowUsSelect}
+                      onValueChange={v => setForm({ ...form, howYouKnowUsSelect: v })}
                     >
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Select source" />
+                      <SelectTrigger id="howYouKnowUsSelect" className="rounded-xl">
+                        <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="unset">Not specified</SelectItem>
                         {HOW_YOU_KNOW_US_OPTIONS.map(option => (
                           <SelectItem key={option} value={option}>
                             {option}
@@ -595,6 +620,16 @@ export function StudentProfilePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="space-y-1.5 mt-2">
+                      <Label htmlFor="howYouKnowUsOther">Or specify custom value</Label>
+                      <Input
+                        id="howYouKnowUsOther"
+                        value={form.howYouKnowUsOther}
+                        onChange={e => setForm({ ...form, howYouKnowUsOther: e.target.value })}
+                        placeholder="Type custom value here (overrides dropdown selection)"
+                        className="rounded-xl"
+                      />
+                    </div>
                   </div>
                 </>
               ) : (

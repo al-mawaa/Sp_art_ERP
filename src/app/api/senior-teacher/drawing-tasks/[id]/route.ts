@@ -7,6 +7,7 @@ import DrawingTask from '@/lib/models/DrawingTask';
 import DrawingTest from '@/lib/models/DrawingTest';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
 import TeacherPerformance from '@/lib/models/TeacherPerformance';
+import Batch from '@/lib/models/Batch';
 
 export const runtime = 'nodejs';
 
@@ -27,6 +28,7 @@ export async function GET(
     await dbConnect();
 
     const taskId = new mongoose.Types.ObjectId(id);
+    const seniorTeacherId = new mongoose.Types.ObjectId(auth.seniorTeacher.id);
 
     // Get task details
     const task = await DrawingTask.findById(taskId)
@@ -36,6 +38,18 @@ export async function GET(
 
     if (!task) {
       return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+    }
+
+    // Verify that the senior teacher is assigned to this batch
+    const batchId = task.batchId as mongoose.Types.ObjectId;
+
+    const batch = await Batch.findById(batchId).select('seniorTeacherIds').lean();
+
+    if (!batch || !batch.seniorTeacherIds.some((id: mongoose.Types.ObjectId) => id.equals(seniorTeacherId))) {
+      return NextResponse.json(
+        { success: false, error: 'You are not authorized to view this task' },
+        { status: 403 },
+      );
     }
 
     // Get all submissions for this task

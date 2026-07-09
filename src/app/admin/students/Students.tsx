@@ -41,6 +41,7 @@ type Student = {
   address?: string;
   howYouKnowUs?: string;
   howYouComeToKnow?: string;
+  batchId?: string;
 };
 
 type EnrollmentDetails = {
@@ -88,10 +89,29 @@ type StudentForm = {
   motherOccupation: string;
   address: string;
   howYouKnowUs: string;
+  howYouKnowUsSelect: string;
+  howYouKnowUsOther: string;
+  batchId: string;
 };
 
 const CLASSES = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
 const FEE_STATUS = ['Paid', 'Pending', 'Overdue'] as const;
+
+const HOW_YOU_KNOW_US_OPTIONS = [
+  'Instagram',
+  'Facebook',
+  'Google Search',
+  'YouTube',
+  'WhatsApp',
+  'Friend / Referral',
+  'Parent Reference',
+  'Newspaper',
+  'Banner / Hoarding',
+  'Walk-in',
+  'School',
+  'Event / Exhibition',
+  'Other',
+];
 
 const defaultForm: StudentForm = {
   fullName: '',
@@ -115,6 +135,9 @@ const defaultForm: StudentForm = {
   motherOccupation: '',
   address: '',
   howYouKnowUs: '',
+  howYouKnowUsSelect: '',
+  howYouKnowUsOther: '',
+  batchId: '',
 };
 
 const formatDateInputValue = (value?: string) => {
@@ -124,54 +147,84 @@ const formatDateInputValue = (value?: string) => {
   return date.toISOString().slice(0, 10);
 };
 
-const mapStudentToForm = (student: Student): StudentForm => ({
-  id: student.id,
-  fullName: student.name ?? '',
-  email: student.email ?? '',
-  badgeId: student.badgeId ?? '',
-  feeStatus: student.feeStatus ?? 'Pending',
-  phone: student.phone ?? '',
-  photo: student.photo ?? '',
-  dob: formatDateInputValue(student.dob),
-  age: student.age ?? 0,
-  bloodGroup: student.bloodGroup ?? '',
-  gender: student.gender ?? '',
-  school: student.school ?? '',
-  college: student.college ?? '',
-  occupation: student.occupation ?? '',
-  fatherName: student.fatherName ?? '',
-  fatherMobile: student.fatherMobile ?? '',
-  fatherOccupation: student.fatherOccupation ?? '',
-  motherName: student.motherName ?? '',
-  motherMobile: student.motherMobile ?? '',
-  motherOccupation: student.motherOccupation ?? '',
-  address: student.address ?? '',
-  howYouKnowUs: student.howYouKnowUs ?? student.howYouComeToKnow ?? '',
-});
+const mapStudentToForm = (student: Student): StudentForm => {
+  const savedValue = student.howYouKnowUs ?? student.howYouComeToKnow ?? '';
+  const isPredefinedOption = HOW_YOU_KNOW_US_OPTIONS.includes(savedValue as typeof HOW_YOU_KNOW_US_OPTIONS[number]);
+  
+  return {
+    id: student.id,
+    fullName: student.name ?? '',
+    email: student.email ?? '',
+    badgeId: student.badgeId ?? '',
+    feeStatus: student.feeStatus ?? 'Pending',
+    phone: student.phone ?? '',
+    photo: student.photo ?? '',
+    dob: formatDateInputValue(student.dob),
+    age: student.age ?? 0,
+    bloodGroup: student.bloodGroup ?? '',
+    gender: student.gender ?? '',
+    school: student.school ?? '',
+    college: student.college ?? '',
+    occupation: student.occupation ?? '',
+    fatherName: student.fatherName ?? '',
+    fatherMobile: student.fatherMobile ?? '',
+    fatherOccupation: student.fatherOccupation ?? '',
+    motherName: student.motherName ?? '',
+    motherMobile: student.motherMobile ?? '',
+    motherOccupation: student.motherOccupation ?? '',
+    address: student.address ?? '',
+    howYouKnowUs: savedValue,
+    howYouKnowUsSelect: isPredefinedOption ? savedValue : 'Other',
+    howYouKnowUsOther: isPredefinedOption ? '' : savedValue,
+    batchId: student.batchId?.toString() ?? '',
+  };
+};
 
-const buildStudentPayload = (form: StudentForm) => ({
-  fullName: form.fullName,
-  email: form.email || undefined,
-  badgeId: form.badgeId,
-  phone: form.phone || undefined,
-  photo: form.photo || undefined,
-  dob: form.dob || undefined,
-  age: form.age || undefined,
-  bloodGroup: form.bloodGroup || undefined,
-  gender: form.gender || undefined,
-  school: form.school || undefined,
-  college: form.college || undefined,
-  occupation: form.occupation || undefined,
-  fatherName: form.fatherName || undefined,
-  fatherMobile: form.fatherMobile || undefined,
-  fatherOccupation: form.fatherOccupation || undefined,
-  motherName: form.motherName || undefined,
-  motherMobile: form.motherMobile || undefined,
-  motherOccupation: form.motherOccupation || undefined,
-  address: form.address || undefined,
-  howYouKnowUs: form.howYouKnowUs || undefined,
-  feeStatus: form.feeStatus,
-});
+const buildStudentPayload = (form: StudentForm) => {
+  // Save dropdown selection to howYouComeToKnow
+  // Save custom text to howYouKnowUs (if provided, otherwise use dropdown selection)
+  const howYouComeToKnow = form.howYouKnowUsSelect || undefined;
+  const howYouKnowUs = form.howYouKnowUsOther.trim() 
+    ? form.howYouKnowUsOther 
+    : form.howYouKnowUsSelect || undefined;
+  
+  return {
+    fullName: form.fullName,
+    email: form.email || undefined,
+    badgeId: form.badgeId,
+    phone: form.phone || undefined,
+    photo: form.photo || undefined,
+    dob: form.dob || undefined,
+    age: form.age || undefined,
+    bloodGroup: form.bloodGroup || undefined,
+    gender: form.gender || undefined,
+    school: form.school || undefined,
+    college: form.college || undefined,
+    occupation: form.occupation || undefined,
+    fatherName: form.fatherName || undefined,
+    fatherMobile: form.fatherMobile || undefined,
+    fatherOccupation: form.fatherOccupation || undefined,
+    motherName: form.motherName || undefined,
+    motherMobile: form.motherMobile || undefined,
+    motherOccupation: form.motherOccupation || undefined,
+    address: form.address || undefined,
+    howYouComeToKnow,
+    howYouKnowUs,
+    batchId: form.batchId || undefined,
+    feeStatus: form.feeStatus,
+  };
+};
+
+type BatchOption = {
+  id: string;
+  courseName: string;
+  batchName: string;
+  batchTiming?: string;
+  batchCapacity: number;
+  occupiedSeats: number;
+  vacancy: number;
+  isFull: boolean;
+};
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -186,6 +239,8 @@ export default function StudentsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [form, setForm] = useState<StudentForm>(defaultForm);
   const [currentPage, setCurrentPage] = useState(1);
+  const [availableBatches, setAvailableBatches] = useState<BatchOption[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
   const itemsPerPage = 6;
 
   const fetchStudents = useCallback(async () => {
@@ -206,6 +261,23 @@ export default function StudentsPage() {
     }
   }, [filterClass, filterFee]);
 
+  const fetchAvailableBatches = useCallback(async (studentId?: string) => {
+    setLoadingBatches(true);
+    try {
+      const params = new URLSearchParams();
+      if (studentId) params.append('studentId', studentId);
+      
+      const response = await fetch(`/api/batches/available?${params.toString()}`);
+      const data = await response.json();
+      setAvailableBatches(data.batches || []);
+    } catch (error) {
+      console.error('Error fetching available batches:', error);
+      toast.error('Failed to load available batches');
+    } finally {
+      setLoadingBatches(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
@@ -224,12 +296,14 @@ export default function StudentsPage() {
     setEditingStudent(null);
     setForm(defaultForm);
     setSheetOpen(true);
+    fetchAvailableBatches();
   };
 
   const openEditStudent = (student: Student) => {
     setEditingStudent(student);
     setForm(mapStudentToForm(student));
     setSheetOpen(true);
+    fetchAvailableBatches(student.id);
   };
 
   const closeSheet = () => {
@@ -320,6 +394,22 @@ export default function StudentsPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    // Validate "How you came to know us" field - either dropdown or text field must have a value
+    if (!form.howYouKnowUsSelect && !form.howYouKnowUsOther.trim()) {
+      toast.error('Please select how you came to know us or specify in the text field');
+      return;
+    }
+    
+    // Check if selected batch is full (unless it's the current batch in edit mode)
+    if (form.batchId) {
+      const selectedBatch = availableBatches.find(b => b.id === form.batchId);
+      if (selectedBatch && selectedBatch.isFull && (!editingStudent || editingStudent.batchId !== form.batchId)) {
+        toast.error('This batch is already full. Please select another batch.');
+        return;
+      }
+    }
+    
     const payload = buildStudentPayload(form);
     const isEdit = Boolean(editingStudent?.id);
     const url = isEdit ? `/api/students/${editingStudent!.id}` : '/api/students';
@@ -649,13 +739,73 @@ export default function StudentsPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="howYouKnowUs">How you came to know us</Label>
-                <Input
-                  id="howYouKnowUs"
-                  value={form.howYouKnowUs}
-                  onChange={(e) => setForm(current => ({ ...current, howYouKnowUs: e.target.value }))}
-                  placeholder="Enter how you came to know us"
-                />
+                <Label htmlFor="howYouKnowUsSelect">How you came to know us</Label>
+                <Select
+                  value={form.howYouKnowUsSelect}
+                  onValueChange={(value) => setForm(current => ({ ...current, howYouKnowUsSelect: value }))}
+                >
+                  <SelectTrigger id="howYouKnowUsSelect">
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOW_YOU_KNOW_US_OPTIONS.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="grid gap-2 mt-2">
+                  <Label htmlFor="howYouKnowUsOther">Or specify custom value</Label>
+                  <Input
+                    id="howYouKnowUsOther"
+                    value={form.howYouKnowUsOther}
+                    onChange={(e) => setForm(current => ({ ...current, howYouKnowUsOther: e.target.value }))}
+                    placeholder="Type custom value here (overrides dropdown selection)"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="batchId">Batch</Label>
+                <Select
+                  value={form.batchId}
+                  onValueChange={(value) => setForm(current => ({ ...current, batchId: value }))}
+                  disabled={loadingBatches}
+                >
+                  <SelectTrigger id="batchId">
+                    {form.batchId ? (
+                      (() => {
+                        const selectedBatch = availableBatches.find(b => b.id === form.batchId);
+                        return selectedBatch ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium">{selectedBatch.courseName}</span>
+                            <span className="text-muted-foreground">|</span>
+                            <span className="text-muted-foreground">{selectedBatch.batchName}</span>
+                            <span className="text-muted-foreground">|</span>
+                            <span className="text-green-600 font-semibold">{selectedBatch.vacancy} Seats Left</span>
+                          </div>
+                        ) : (
+                          <SelectValue placeholder={loadingBatches ? "Loading batches..." : "Select a batch"} />
+                        );
+                      })()
+                    ) : (
+                      <SelectValue placeholder={loadingBatches ? "Loading batches..." : "Select a batch"} />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableBatches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id} className="py-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-sm">{batch.courseName}</span>
+                          <span className="text-xs text-muted-foreground">{batch.batchName}</span>
+                          <span className="text-xs text-green-600 font-semibold">{batch.vacancy} Seats Left</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {availableBatches.length === 0 && !loadingBatches && (
+                  <p className="text-sm text-muted-foreground">No available batches with seats</p>
+                )}
               </div>
             </div>
 

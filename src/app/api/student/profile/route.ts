@@ -32,6 +32,7 @@ const updateSchema = z.object({
   motherOccupation: z.string().trim().max(200).optional(),
   address: z.string().trim().max(500).optional(),
   howYouKnowUs: z.string().trim().max(100).optional(),
+  howYouComeToKnow: z.string().trim().max(100).optional(),
 });
 
 export async function GET(request: NextRequest) {

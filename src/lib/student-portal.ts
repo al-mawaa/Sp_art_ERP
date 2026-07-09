@@ -184,6 +184,7 @@ export type StudentProfileUpdate = {
   motherOccupation?: string;
   address?: string;
   howYouKnowUs?: string;
+  howYouComeToKnow?: string;
 };
 
 /** Update existing `students` document only — never inserts. */
@@ -225,7 +226,9 @@ export async function updateStudentProfile(
   if (data.address !== undefined) student.address = data.address || undefined;
   if (data.howYouKnowUs !== undefined) {
     student.howYouKnowUs = data.howYouKnowUs || undefined;
-    student.howYouComeToKnow = data.howYouKnowUs || undefined;
+  }
+  if (data.howYouComeToKnow !== undefined) {
+    student.howYouComeToKnow = data.howYouComeToKnow || undefined;
   }
 
   await student.save();

@@ -25,6 +25,7 @@ export interface StudentDocument extends mongoose.Document {
   address?: string;
   howYouComeToKnow?: string;
   howYouKnowUs?: string;
+  batchId?: mongoose.Types.ObjectId;
   courseDurationMonths: number;
   courseEndDate?: Date;
   feeStatus: 'Paid' | 'Pending' | 'Overdue';
@@ -59,6 +60,7 @@ const StudentSchema = new mongoose.Schema<StudentDocument>({
   address: { type: String },
   howYouKnowUs: { type: String },
   howYouComeToKnow: { type: String },
+  batchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch', index: true },
   courseDurationMonths: { type: Number, default: 12 },
   courseEndDate: { type: Date },
   feeStatus: { type: String, enum: ['Paid', 'Pending', 'Overdue'], default: 'Pending' },

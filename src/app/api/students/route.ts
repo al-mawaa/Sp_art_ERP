@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Student from '@/lib/models/Student';
 import StudentCredentials from '@/lib/models/StudentCredentials';
+import Batch from '@/lib/models/Batch';
 
 export const runtime = 'nodejs';
 
@@ -91,6 +92,8 @@ export async function GET(request: NextRequest) {
         motherOccupation: doc.motherOccupation,
         address: doc.address,
         howYouKnowUs: doc.howYouKnowUs ?? doc.howYouComeToKnow,
+        howYouComeToKnow: doc.howYouComeToKnow,
+        batchId: doc.batchId?.toString(),
         createdAt: doc.createdAt,
       })), ...credentialStudents],
     });
@@ -128,6 +131,8 @@ export async function POST(request: NextRequest) {
       motherOccupation,
       address,
       howYouKnowUs,
+      howYouComeToKnow,
+      batchId,
       feeStatus = 'Pending',
     } = body;
 
@@ -142,6 +147,28 @@ export async function POST(request: NextRequest) {
     const existingStudent = await Student.findOne({ badgeId });
     if (existingStudent) {
       return NextResponse.json({ error: 'Badge ID already exists' }, { status: 409 });
+    }
+
+    // Handle batch assignment
+    if (batchId) {
+      const batch = await Batch.findById(batchId);
+      if (!batch) {
+        return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+      }
+      
+      // Check if batch has capacity
+      if (batch.students.length >= batch.batchCapacity) {
+        return NextResponse.json({ error: 'This batch is already full' }, { status: 400 });
+      }
+      
+      // Check if student is already in the batch (by studentId or email)
+      const alreadyInBatch = batch.students.some(
+        s => s.studentId?.toString() === existingStudent?._id.toString() || 
+             s.studentEmail?.toLowerCase() === email?.toLowerCase()
+      );
+      if (alreadyInBatch) {
+        return NextResponse.json({ error: 'Student is already assigned to this batch' }, { status: 400 });
+      }
     }
 
     const student = await Student.create({
@@ -167,9 +194,30 @@ export async function POST(request: NextRequest) {
       motherOccupation,
       address,
       howYouKnowUs,
-      howYouComeToKnow: howYouKnowUs,
+      howYouComeToKnow,
+      batchId,
       feeStatus,
     });
+
+    // Add student to batch if batchId is provided
+    if (batchId) {
+      const batch = await Batch.findById(batchId);
+      if (batch) {
+        batch.students.push({
+          _id: student._id,
+          studentId: student._id,
+          studentName: student.fullName,
+          studentEmail: student.email || '',
+          phone: student.phone || '',
+          course: batch.courseName,
+          batchDay: batch.batchDay,
+          batchTime: batch.batchTime,
+          startMonth: batch.startMonth,
+          endMonth: batch.endMonth,
+        });
+        await batch.save();
+      }
+    }
 
     return NextResponse.json(
       {
