@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       .lean();
 
     type TeacherDoc = { _id: { toString(): string }; fullName: string };
-    const teacherIds = [...new Set(feedbacks.map(f => f.teacherId?.toString()).filter(Boolean))];
+    const teacherIds = [...new Set(feedbacks.map(f => f.teacherId?.toString()).filter((id): id is string => !!id && mongoose.Types.ObjectId.isValid(id)))];
     const [teachers, seniorTeachers] = await Promise.all([
       Teacher.find({ _id: { $in: teacherIds } }, "fullName").lean(),
       import("@/lib/models/SeniorTeacher").then(m => m.default.find({ _id: { $in: teacherIds } }, "fullName").lean())

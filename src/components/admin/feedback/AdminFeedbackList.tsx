@@ -93,6 +93,24 @@ export function AdminFeedbackList({ onStatusChange }: { onStatusChange: () => vo
     }
   };
 
+  const handleStatusChangeAction = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/admin/feedback/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to update status");
+      
+      toast.success("Status updated");
+      loadFeedbacks();
+      onStatusChange();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error updating status");
+    }
+  };
+
   const handleView = (f: FeedbackItem) => {
     setSelectedFeedback(f);
     setIsModalOpen(true);
@@ -198,7 +216,20 @@ export function AdminFeedbackList({ onStatusChange }: { onStatusChange: () => vo
                     {f.overallRating} / 5
                   </td>
                   <td className="px-4 py-3">
-                    <StatusPill status={f.status} />
+                    <Select value={f.status} onValueChange={(val) => handleStatusChangeAction(f.id, val)}>
+                      <SelectTrigger className={`w-[120px] h-8 text-xs font-medium border-0 ${
+                        f.status === "Closed" ? "bg-slate-100 text-slate-600" :
+                        f.status === "Reviewed" ? "bg-blue-50 text-blue-700" :
+                        "bg-amber-50 text-amber-700"
+                      }`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Submitted">Submitted</SelectItem>
+                        <SelectItem value="Reviewed">Reviewed</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
