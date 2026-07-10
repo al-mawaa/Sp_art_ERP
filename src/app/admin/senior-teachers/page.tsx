@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Plus, Search, Pencil, Eye, UploadCloud } from "lucide-react";
+import { Plus, Search, Pencil, Eye, UploadCloud, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,17 +24,47 @@ export interface SeniorTeacherItem {
   age?: number;
   gender?: string;
   bloodGroup?: string;
+  schoolCollege?: string;
+  parentGuardianDetails?: string;
   address: string;
+  className?: string;
+  currentSubjectCourse?: string;
   specialization: string;
   yearsOfExperience: number;
-  role: string;
+  role?: string;
   qualification: string;
   joiningDate: string;
-  salary: number;
+  salary?: number;
   bio?: string;
   profileImage?: string;
   status: "Active" | "Inactive";
   assignedClasses: number;
+  teacherDocuments?: {
+    aadhaarCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    panCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    offerLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    incrementLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -49,16 +79,46 @@ type SeniorTeacherForm = {
   age: number;
   gender: string;
   bloodGroup: string;
+  schoolCollege: string;
+  parentGuardianDetails: string;
   address: string;
+  className: string;
+  currentSubjectCourse: string;
   specialization: string;
   yearsOfExperience: number;
-  role: string;
+  role?: string;
   qualification: string;
   joiningDate: string;
-  salary: number;
+  salary?: number;
   bio: string;
   profileImage: string;
   status: "Active" | "Inactive";
+  teacherDocuments?: {
+    aadhaarCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    panCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    offerLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    incrementLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+  };
 };
 
 const SPECIALIZATIONS = ["Watercolor", "Oil Painting", "Sketching", "Digital Art", "Sculpture"];
@@ -74,16 +134,26 @@ const defaultForm: SeniorTeacherForm = {
   age: 0,
   gender: "",
   bloodGroup: "",
+  schoolCollege: "",
+  parentGuardianDetails: "",
   address: "",
-  specialization: "Watercolor",
+  className: "",
+  currentSubjectCourse: "",
+  specialization: "",
   yearsOfExperience: 1,
-  role: "Senior Faculty",
+  role: "",
   qualification: "",
   joiningDate: "",
-  salary: 0,
+  salary: undefined,
   bio: "",
   profileImage: "",
   status: "Active",
+  teacherDocuments: {
+    aadhaarCard: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+    panCard: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+    offerLetter: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+    incrementLetter: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+  },
 };
 
 const formatDateInputValue = (value?: string) => {
@@ -103,16 +173,26 @@ const mapTeacherToForm = (teacher: SeniorTeacherItem): SeniorTeacherForm => ({
   age: teacher.age ?? 0,
   gender: teacher.gender ?? "",
   bloodGroup: teacher.bloodGroup ?? "",
+  schoolCollege: teacher.schoolCollege ?? "",
+  parentGuardianDetails: teacher.parentGuardianDetails ?? "",
   address: teacher.address ?? "",
-  specialization: teacher.specialization ?? "Watercolor",
+  className: teacher.className ?? "",
+  currentSubjectCourse: teacher.currentSubjectCourse ?? "",
+  specialization: teacher.specialization ?? "",
   yearsOfExperience: teacher.yearsOfExperience ?? 1,
-  role: teacher.role ?? "Senior Faculty",
+  role: teacher.role ?? "",
   qualification: teacher.qualification ?? "",
   joiningDate: formatDateInputValue(teacher.joiningDate),
-  salary: teacher.salary ?? 0,
+  salary: teacher.salary,
   bio: teacher.bio ?? "",
   profileImage: teacher.profileImage ?? "",
   status: teacher.status ?? "Active",
+  teacherDocuments: teacher.teacherDocuments || {
+    aadhaarCard: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+    panCard: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+    offerLetter: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+    incrementLetter: { fileName: "", fileUrl: "", fileType: "", uploadedAt: "" },
+  },
 });
 
 const buildTeacherPayload = (form: SeniorTeacherForm) => ({
@@ -124,16 +204,19 @@ const buildTeacherPayload = (form: SeniorTeacherForm) => ({
   age: form.age || undefined,
   gender: form.gender || undefined,
   bloodGroup: form.bloodGroup || undefined,
+  schoolCollege: form.schoolCollege || undefined,
+  parentGuardianDetails: form.parentGuardianDetails || undefined,
   address: form.address || undefined,
+  className: form.className || undefined,
+  currentSubjectCourse: form.currentSubjectCourse || undefined,
   specialization: form.specialization,
   yearsOfExperience: form.yearsOfExperience,
-  role: form.role,
   qualification: form.qualification || undefined,
   joiningDate: form.joiningDate || undefined,
-  salary: form.salary || undefined,
   bio: form.bio || undefined,
   profileImage: form.profileImage || undefined,
   status: form.status,
+  teacherDocuments: form.teacherDocuments,
 });
 
 export default function SeniorTeachersPage() {
@@ -199,6 +282,20 @@ export default function SeniorTeachersPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload JPG, JPEG, or PNG files only.');
+      return;
+    }
+
+    // Validate file size (5 MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File size exceeds 5 MB. Please upload a smaller file.');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -217,16 +314,65 @@ export default function SeniorTeachersPage() {
 
       const data = await response.json();
       setForm((current) => ({ ...current, profileImage: data.url }));
+      toast.success('Photo uploaded successfully.');
     } catch (error) {
       console.error("Photo upload error:", error);
-      // Fallback to data URL if upload fails
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setForm((current) => ({ ...current, profileImage: reader.result as string }));
-        }
-      };
-      reader.readAsDataURL(file);
+      toast.error('Failed to upload photo. Please try again.');
+    }
+  };
+
+  const handleDocumentUpload = async (event: ChangeEvent<HTMLInputElement>, fieldName: 'teacherDocuments.aadhaarCard.fileUrl' | 'teacherDocuments.panCard.fileUrl' | 'teacherDocuments.offerLetter.fileUrl' | 'teacherDocuments.incrementLetter.fileUrl') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload PDF, JPG, JPEG, or PNG files only.');
+      return;
+    }
+
+    // Validate file size (5 MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File size exceeds 5 MB. Please upload a smaller file.');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'senior-teacher-documents');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Upload failed with status ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const docType = fieldName.split('.')[1];
+      setForm((current) => ({
+        ...current,
+        teacherDocuments: {
+          ...current.teacherDocuments,
+          [docType]: {
+            fileName: file.name,
+            fileUrl: data.url,
+            fileType: file.type,
+            uploadedAt: new Date().toISOString(),
+          },
+        },
+      }));
+      toast.success('Document uploaded successfully.');
+    } catch (error) {
+      console.error('Document upload error:', error);
+      toast.error('Failed to upload document. Please try again.');
     }
   };
 
@@ -365,7 +511,6 @@ export default function SeniorTeachersPage() {
                   },
                 },
                 { key: "specialization", header: "Specialization" },
-                { key: "role", header: "Role" },
                 {
                   key: "yearsOfExperience",
                   header: "Experience",
@@ -432,26 +577,28 @@ export default function SeniorTeachersPage() {
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Senior Teacher Form</SheetTitle>
+            <SheetTitle>{editingTeacher ? "Edit Senior Teacher" : "Add Senior Teacher"}</SheetTitle>
           </SheetHeader>
           <form className="grid gap-6 py-4" onSubmit={handleSubmit}>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label>Photo</Label>
-                <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-                  <div className="mx-auto h-28 w-28 overflow-hidden rounded-[28px] bg-slate-100">
+            <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+              {/* Left Column - Photo and Documents */}
+              <div className="space-y-4">
+                {/* Photo Upload */}
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-900 mb-3">Photo</div>
+                  <div className="mx-auto h-32 w-32 overflow-hidden rounded-3xl bg-slate-100 mb-3">
                     {form.profileImage ? (
                       <img src={form.profileImage} alt="Teacher" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-slate-400">
-                        <UploadCloud className="w-7 h-7" />
+                        <UploadCloud className="w-8 h-8" />
                       </div>
                     )}
                   </div>
-                  <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => document.getElementById("teacher-photo-input")?.click()}>
-                    Upload photo
+                  <Button type="button" variant="outline" className="w-full h-9 text-xs" onClick={() => document.getElementById("teacher-photo-input")?.click()}>
+                    Upload Photo
                   </Button>
                   <input
                     id="teacher-photo-input"
@@ -461,177 +608,340 @@ export default function SeniorTeachersPage() {
                     onChange={handlePhotoUpload}
                   />
                 </div>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    value={form.fullName}
-                    onChange={(e) => setForm((current) => ({ ...current, fullName: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="badgeId">Badge ID</Label>
-                  <Input
-                    id="badgeId"
-                    value={form.badgeId}
-                    onChange={(e) => setForm((current) => ({ ...current, badgeId: e.target.value }))}
-                    disabled={editingTeacher !== null}
-                    required
-                  />
-                </div>
-              </div>
+                {/* Teacher Documents */}
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-900 mb-3">Documents</div>
+                  <div className="space-y-3">
+                    {/* Aadhaar Card */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-xs font-medium text-slate-900">Aadhaar Card</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {form.teacherDocuments?.aadhaarCard?.fileUrl ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={() => document.getElementById('aadhaar-card-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload
+                      </Button>
+                      <input
+                        id="aadhaar-card-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.aadhaarCard.fileUrl')}
+                      />
+                    </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm((current) => ({ ...current, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dob">Date of birth</Label>
-                  <Input
-                    id="dob"
-                    type="date"
-                    value={form.dob}
-                    onChange={(e) => setForm((current) => ({ ...current, dob: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="age">Age</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    value={form.age || ""}
-                    onChange={(e) => setForm((current) => ({ ...current, age: Number(e.target.value) }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="bloodGroup">Blood group</Label>
-                  <Input
-                    id="bloodGroup"
-                    value={form.bloodGroup}
-                    onChange={(e) => setForm((current) => ({ ...current, bloodGroup: e.target.value }))}
-                  />
-                </div>
-              </div>
+                    {/* PAN Card */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-xs font-medium text-slate-900">PAN Card</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {form.teacherDocuments?.panCard?.fileUrl ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={() => document.getElementById('pan-card-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload
+                      </Button>
+                      <input
+                        id="pan-card-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.panCard.fileUrl')}
+                      />
+                    </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select value={form.gender} onValueChange={(value) => setForm((current) => ({ ...current, gender: value }))}>
-                    <SelectTrigger id="gender">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={form.phone}
-                    onChange={(e) => setForm((current) => ({ ...current, phone: e.target.value }))}
-                  />
-                </div>
-              </div>
+                    {/* Offer Letter */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-xs font-medium text-slate-900">Offer Letter</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {form.teacherDocuments?.offerLetter?.fileUrl ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={() => document.getElementById('offer-letter-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload
+                      </Button>
+                      <input
+                        id="offer-letter-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.offerLetter.fileUrl')}
+                      />
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={form.address}
-                  onChange={(e) => setForm((current) => ({ ...current, address: e.target.value }))}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="specialization">Specialization</Label>
-                  <Select
-                    value={form.specialization}
-                    onValueChange={(value) => setForm((current) => ({ ...current, specialization: value }))}
-                  >
-                    <SelectTrigger id="specialization">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SPECIALIZATIONS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="yearsOfExperience">Years of experience</Label>
-                  <Input
-                    id="yearsOfExperience"
-                    type="number"
-                    value={form.yearsOfExperience}
-                    onChange={(e) => setForm((current) => ({ ...current, yearsOfExperience: Number(e.target.value) }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={form.role} onValueChange={(value) => setForm((current) => ({ ...current, role: value }))}>
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {/* Increment Letter */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-xs font-medium text-slate-900">Increment Letter</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {form.teacherDocuments?.incrementLetter?.fileUrl ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={() => document.getElementById('increment-letter-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload
+                      </Button>
+                      <input
+                        id="increment-letter-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.incrementLetter.fileUrl')}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="qualification">Qualification</Label>
-                  <Input
-                    id="qualification"
-                    value={form.qualification}
-                    onChange={(e) => setForm((current) => ({ ...current, qualification: e.target.value }))}
-                  />
+              {/* Right Column - Form Fields */}
+              <div className="space-y-4">
+                {/* Row 1: Full Name, Badge ID */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      value={form.fullName}
+                      onChange={(e) => setForm((current) => ({ ...current, fullName: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="badgeId">Badge ID</Label>
+                    <Input
+                      id="badgeId"
+                      value={form.badgeId}
+                      onChange={(e) => setForm((current) => ({ ...current, badgeId: e.target.value }))}
+                      disabled={editingTeacher !== null}
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="joiningDate">Joining date</Label>
-                  <Input
-                    id="joiningDate"
-                    type="date"
-                    value={form.joiningDate}
-                    onChange={(e) => setForm((current) => ({ ...current, joiningDate: e.target.value }))}
-                  />
-                </div>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Row 2: Email, Phone */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((current) => ({ ...current, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={form.phone}
+                      onChange={(e) => setForm((current) => ({ ...current, phone: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Date of Birth, Age */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="dob">Date of Birth</Label>
+                    <Input
+                      id="dob"
+                      type="date"
+                      value={form.dob}
+                      onChange={(e) => setForm((current) => ({ ...current, dob: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="age">Age</Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      value={form.age || ""}
+                      onChange={(e) => setForm((current) => ({ ...current, age: Number(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4: Blood Group, Gender */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="bloodGroup">Blood Group</Label>
+                    <Input
+                      id="bloodGroup"
+                      value={form.bloodGroup}
+                      onChange={(e) => setForm((current) => ({ ...current, bloodGroup: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select value={form.gender} onValueChange={(value) => setForm((current) => ({ ...current, gender: value }))}>
+                      <SelectTrigger id="gender">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Row 5: School / College, Qualification */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="schoolCollege">School / College</Label>
+                    <Input
+                      id="schoolCollege"
+                      value={form.schoolCollege}
+                      onChange={(e) => setForm((current) => ({ ...current, schoolCollege: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="qualification">Qualification</Label>
+                    <Input
+                      id="qualification"
+                      value={form.qualification}
+                      onChange={(e) => setForm((current) => ({ ...current, qualification: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 6: Parent / Guardian (Full Width) */}
                 <div className="grid gap-2">
-                  <Label htmlFor="salary">Salary</Label>
+                  <Label htmlFor="parentGuardianDetails">Parent / Guardian</Label>
                   <Input
-                    id="salary"
-                    type="number"
-                    value={form.salary}
-                    onChange={(e) => setForm((current) => ({ ...current, salary: Number(e.target.value) }))}
+                    id="parentGuardianDetails"
+                    value={form.parentGuardianDetails}
+                    onChange={(e) => setForm((current) => ({ ...current, parentGuardianDetails: e.target.value }))}
                   />
                 </div>
+
+                {/* Row 7: Address (Full Width) */}
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    rows={2}
+                    value={form.address}
+                    onChange={(e) => setForm((current) => ({ ...current, address: e.target.value }))}
+                  />
+                </div>
+
+                {/* Row 8: Class, Subject / Course, Specialization (Text Field) */}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="className">Class</Label>
+                    <Input
+                      id="className"
+                      value={form.className}
+                      onChange={(e) => setForm((current) => ({ ...current, className: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="currentSubjectCourse">Subject / Course</Label>
+                    <Input
+                      id="currentSubjectCourse"
+                      value={form.currentSubjectCourse}
+                      onChange={(e) => setForm((current) => ({ ...current, currentSubjectCourse: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="specialization">Specialization</Label>
+                    <Input
+                      id="specialization"
+                      value={form.specialization}
+                      onChange={(e) => setForm((current) => ({ ...current, specialization: e.target.value }))}
+                      placeholder="e.g., Oil Painting, Watercolor"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 9: Years of Experience, Joining Date */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                    <Input
+                      id="yearsOfExperience"
+                      type="number"
+                      value={form.yearsOfExperience}
+                      onChange={(e) => setForm((current) => ({ ...current, yearsOfExperience: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="joiningDate">Joining Date</Label>
+                    <Input
+                      id="joiningDate"
+                      type="date"
+                      value={form.joiningDate}
+                      onChange={(e) => setForm((current) => ({ ...current, joiningDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 10: Bio (Full Width) */}
+                <div className="grid gap-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    rows={3}
+                    value={form.bio}
+                    onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
+                  />
+                </div>
+
+                {/* Row 11: Status */}
                 <div className="grid gap-2">
                   <Label htmlFor="status">Status</Label>
                   <Select
@@ -648,18 +958,9 @@ export default function SeniorTeachersPage() {
                   </Select>
                 </div>
               </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={form.bio}
-                  onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
-                />
-              </div>
             </div>
 
-            <div className="flex justify-between items-center gap-4 pt-4">
+            <div className="flex justify-between items-center gap-4 pt-4 border-t border-slate-200">
               <Button type="button" variant="outline" onClick={closeSheet}>
                 Cancel
               </Button>
@@ -672,7 +973,7 @@ export default function SeniorTeachersPage() {
       </Sheet>
 
       <Dialog open={!!viewTeacher} onOpenChange={(open) => !open && setViewTeacher(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Senior Teacher Profile</DialogTitle>
           </DialogHeader>
@@ -692,7 +993,6 @@ export default function SeniorTeachersPage() {
                     <div className="text-sm text-muted-foreground">{viewTeacher.email || "No email provided"}</div>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full bg-muted px-2 py-1">{viewTeacher.specialization}</span>
-                      <span className="rounded-full bg-muted px-2 py-1">{viewTeacher.role}</span>
                       <span className="rounded-full bg-muted px-2 py-1">{viewTeacher.status}</span>
                     </div>
                   </div>
@@ -703,6 +1003,9 @@ export default function SeniorTeachersPage() {
                 <div className="rounded-3xl border border-border bg-background p-5">
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Personal details</div>
                   <div className="grid gap-2 text-sm">
+                    <div>
+                      <span className="font-medium">Badge ID:</span> {viewTeacher.badgeId || "N/A"}
+                    </div>
                     <div>
                       <span className="font-medium">DOB:</span> {formatDateInputValue(viewTeacher.dob) || "N/A"}
                     </div>
@@ -724,19 +1027,16 @@ export default function SeniorTeachersPage() {
                   </div>
                 </div>
                 <div className="rounded-3xl border border-border bg-background p-5">
-                  <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Professional details</div>
+                  <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Education details</div>
                   <div className="grid gap-2 text-sm">
                     <div>
-                      <span className="font-medium">Specialization:</span> {viewTeacher.specialization || "N/A"}
-                    </div>
-                    <div>
-                      <span className="font-medium">Role:</span> {viewTeacher.role || "N/A"}
-                    </div>
-                    <div>
-                      <span className="font-medium">Experience:</span> {viewTeacher.yearsOfExperience || "N/A"} years
+                      <span className="font-medium">School / College:</span> {viewTeacher.schoolCollege || "N/A"}
                     </div>
                     <div>
                       <span className="font-medium">Qualification:</span> {viewTeacher.qualification || "N/A"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Parent / Guardian:</span> {viewTeacher.parentGuardianDetails || "N/A"}
                     </div>
                   </div>
                 </div>
@@ -744,13 +1044,27 @@ export default function SeniorTeachersPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-3xl border border-border bg-background p-5">
+                  <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Professional details</div>
+                  <div className="grid gap-2 text-sm">
+                    <div>
+                      <span className="font-medium">Specialization:</span> {viewTeacher.specialization || "N/A"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Experience:</span> {viewTeacher.yearsOfExperience || "N/A"} years
+                    </div>
+                    <div>
+                      <span className="font-medium">Class:</span> {viewTeacher.className || "N/A"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Subject / Course:</span> {viewTeacher.currentSubjectCourse || "N/A"}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-border bg-background p-5">
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Employment details</div>
                   <div className="grid gap-2 text-sm">
                     <div>
                       <span className="font-medium">Joining date:</span> {formatDateInputValue(viewTeacher.joiningDate) || "N/A"}
-                    </div>
-                    <div>
-                      <span className="font-medium">Salary:</span> {viewTeacher.salary ? `$${viewTeacher.salary}` : "N/A"}
                     </div>
                     <div>
                       <span className="font-medium">Status:</span> {viewTeacher.status || "N/A"}
@@ -760,9 +1074,68 @@ export default function SeniorTeachersPage() {
                     </div>
                   </div>
                 </div>
-                <div className="rounded-3xl border border-border bg-background p-5">
-                  <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Bio</div>
-                  <div className="text-sm">{viewTeacher.bio || "No bio provided"}</div>
+              </div>
+
+              <div className="rounded-3xl border border-border bg-background p-5">
+                <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Bio</div>
+                <div className="text-sm">{viewTeacher.bio || "No bio provided"}</div>
+              </div>
+
+              <div className="rounded-3xl border border-border bg-background p-5">
+                <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Documents</div>
+                <div className="grid gap-3 text-sm">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      <span className="font-medium">Aadhaar Card</span>
+                    </div>
+                    {viewTeacher.teacherDocuments?.aadhaarCard?.fileUrl ? (
+                      <Button size="sm" variant="outline" onClick={() => window.open(viewTeacher.teacherDocuments!.aadhaarCard!.fileUrl, '_blank')}>
+                        View Document
+                      </Button>
+                    ) : (
+                      <span className="text-slate-400">Not uploaded</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      <span className="font-medium">PAN Card</span>
+                    </div>
+                    {viewTeacher.teacherDocuments?.panCard?.fileUrl ? (
+                      <Button size="sm" variant="outline" onClick={() => window.open(viewTeacher.teacherDocuments!.panCard!.fileUrl, '_blank')}>
+                        View Document
+                      </Button>
+                    ) : (
+                      <span className="text-slate-400">Not uploaded</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      <span className="font-medium">Offer Letter</span>
+                    </div>
+                    {viewTeacher.teacherDocuments?.offerLetter?.fileUrl ? (
+                      <Button size="sm" variant="outline" onClick={() => window.open(viewTeacher.teacherDocuments!.offerLetter!.fileUrl, '_blank')}>
+                        View Document
+                      </Button>
+                    ) : (
+                      <span className="text-slate-400">Not uploaded</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-600" />
+                      <span className="font-medium">Increment Letter</span>
+                    </div>
+                    {viewTeacher.teacherDocuments?.incrementLetter?.fileUrl ? (
+                      <Button size="sm" variant="outline" onClick={() => window.open(viewTeacher.teacherDocuments!.incrementLetter!.fileUrl, '_blank')}>
+                        View Document
+                      </Button>
+                    ) : (
+                      <span className="text-slate-400">Not uploaded</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Search, Pencil, Eye, UploadCloud, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, Eye, UploadCloud, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Avatar } from '@/components/shared/Avatar';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { toast } from 'sonner';
 
-const SPECIALIZATIONS = ['Watercolor', 'Oil Painting', 'Sketching', 'Digital Art', 'Sculpture'];
-const ROLES = ['Teacher', 'Lead Instructor', 'Department Head', 'Coordinator'];
 const STATUSES = ['Active', 'Inactive'] as const;
 
 const teacherFormSchema = z.object({
@@ -37,14 +35,37 @@ const teacherFormSchema = z.object({
   className: z.string().min(1, 'Class is required'),
   currentSubjectCourse: z.string().min(1, 'Current subject / course is required'),
   experience: z.coerce.number().min(0, 'Experience is required'),
-  batchDetails: z.string().min(1, 'Batch details are required'),
-  specialization: z.string().min(1, 'Specialization is required'),
-  role: z.string().min(1, 'Role is required'),
+  specialization: z.string().optional(),
   status: z.enum(['Active', 'Inactive']),
   qualification: z.string().optional(),
   joiningDate: z.string().optional(),
-  salary: z.coerce.number().optional(),
   bio: z.string().optional(),
+  teacherDocuments: z.object({
+    aadhaarCard: z.object({
+      fileName: z.string().optional(),
+      fileUrl: z.string().optional(),
+      fileType: z.string().optional(),
+      uploadedAt: z.string().optional(),
+    }).optional(),
+    panCard: z.object({
+      fileName: z.string().optional(),
+      fileUrl: z.string().optional(),
+      fileType: z.string().optional(),
+      uploadedAt: z.string().optional(),
+    }).optional(),
+    offerLetter: z.object({
+      fileName: z.string().optional(),
+      fileUrl: z.string().optional(),
+      fileType: z.string().optional(),
+      uploadedAt: z.string().optional(),
+    }).optional(),
+    incrementLetter: z.object({
+      fileName: z.string().optional(),
+      fileUrl: z.string().optional(),
+      fileType: z.string().optional(),
+      uploadedAt: z.string().optional(),
+    }).optional(),
+  }).optional(),
 });
 
 type TeacherFormValues = z.infer<typeof teacherFormSchema>;
@@ -66,14 +87,37 @@ type Teacher = {
   className?: string;
   currentSubjectCourse?: string;
   experience?: number;
-  batchDetails?: string;
-  specialization: string;
-  role?: string;
+  specialization?: string;
   status: 'Active' | 'Inactive';
   qualification?: string;
   joiningDate?: string;
-  salary?: number;
   bio?: string;
+  teacherDocuments?: {
+    aadhaarCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    panCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    offerLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+    incrementLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: string;
+    };
+  };
   createdAt: string;
   updatedAt: string;
 };
@@ -94,14 +138,17 @@ const defaultValues: TeacherFormValues = {
   className: '',
   currentSubjectCourse: '',
   experience: 0,
-  batchDetails: '',
-  specialization: 'Watercolor',
-  role: 'Teacher',
+  specialization: '',
   status: 'Active',
   qualification: '',
   joiningDate: '',
-  salary: 0,
   bio: '',
+  teacherDocuments: {
+    aadhaarCard: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+    panCard: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+    offerLetter: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+    incrementLetter: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+  },
 };
 
 const formatDateInputValue = (value?: string) => {
@@ -126,14 +173,17 @@ const mapTeacherToForm = (teacher: Teacher): TeacherFormValues => ({
   className: teacher.className ?? '',
   currentSubjectCourse: teacher.currentSubjectCourse ?? '',
   experience: teacher.experience ?? 0,
-  batchDetails: teacher.batchDetails ?? '',
-  specialization: teacher.specialization ?? 'Watercolor',
-  role: teacher.role ?? 'Teacher',
+  specialization: teacher.specialization ?? '',
   status: teacher.status ?? 'Active',
   qualification: teacher.qualification ?? '',
   joiningDate: formatDateInputValue(teacher.joiningDate),
-  salary: teacher.salary ?? 0,
   bio: teacher.bio ?? '',
+  teacherDocuments: teacher.teacherDocuments || {
+    aadhaarCard: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+    panCard: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+    offerLetter: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+    incrementLetter: { fileName: '', fileUrl: '', fileType: '', uploadedAt: '' },
+  },
 });
 
 export default function TeachersPage() {
@@ -141,7 +191,6 @@ export default function TeachersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'All' | 'Active' | 'Inactive'>('All');
-  const [filterRole, setFilterRole] = useState<'All' | 'Teacher' | 'Senior Teacher'>('All');
   const [formOpen, setFormOpen] = useState(false);
   const [viewTeacher, setViewTeacher] = useState<Teacher | null>(null);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -163,6 +212,10 @@ export default function TeachersPage() {
 
   const watchedDob = watch('dob');
   const photoValue = watch('photo');
+  const aadhaarCardValue = watch('teacherDocuments.aadhaarCard.fileUrl');
+  const panCardValue = watch('teacherDocuments.panCard.fileUrl');
+  const offerLetterValue = watch('teacherDocuments.offerLetter.fileUrl');
+  const incrementLetterValue = watch('teacherDocuments.incrementLetter.fileUrl');
   const itemsPerPage = 6;
 
   const fetchTeachers = useCallback(async () => {
@@ -246,6 +299,52 @@ export default function TeachersPage() {
     }
   };
 
+  const handleDocumentUpload = async (event: ChangeEvent<HTMLInputElement>, fieldName: 'teacherDocuments.aadhaarCard.fileUrl' | 'teacherDocuments.panCard.fileUrl' | 'teacherDocuments.offerLetter.fileUrl' | 'teacherDocuments.incrementLetter.fileUrl') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload PDF, JPG, JPEG, or PNG files only.');
+      return;
+    }
+
+    // Validate file size (5 MB = 5 * 1024 * 1024 bytes)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File size exceeds 5 MB. Please upload a smaller file.');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'teacher-documents');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Upload failed with status ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setValue(fieldName as Path<TeacherFormValues>, data.url);
+      setValue(fieldName.replace('.fileUrl', '.fileName') as Path<TeacherFormValues>, file.name);
+      setValue(fieldName.replace('.fileUrl', '.fileType') as Path<TeacherFormValues>, file.type);
+      setValue(fieldName.replace('.fileUrl', '.uploadedAt') as Path<TeacherFormValues>, new Date().toISOString());
+      toast.success('Document uploaded successfully.');
+    } catch (error) {
+      console.error('Document upload error:', error);
+      toast.error('Failed to upload document. Please try again.');
+    }
+  };
+
   const onSubmit = async (values: TeacherFormValues) => {
     const isEdit = Boolean(editingTeacher?.id);
     const url = isEdit ? `/api/teachers/${editingTeacher?.id}` : '/api/teachers';
@@ -283,15 +382,10 @@ export default function TeachersPage() {
         teacher.specialization.toLowerCase().includes(query);
 
       const matchesStatus = filterStatus === 'All' || teacher.status === filterStatus;
-      const matchesRole =
-        filterRole === 'All' ||
-        (filterRole === 'Senior Teacher'
-          ? teacher.role === 'Lead Instructor' || teacher.role === 'Department Head'
-          : teacher.role === 'Teacher');
 
-      return matchesQuery && matchesStatus && matchesRole;
+      return matchesQuery && matchesStatus;
     });
-  }, [teachers, searchQuery, filterStatus, filterRole]);
+  }, [teachers, searchQuery, filterStatus]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTeachers.length / itemsPerPage));
   const paginatedTeachers = filteredTeachers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -304,7 +398,7 @@ export default function TeachersPage() {
       />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr_1fr] items-center">
+        <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr] items-center">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -335,22 +429,6 @@ export default function TeachersPage() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={filterRole}
-            onValueChange={(value) => {
-              setFilterRole(value as 'All' | 'Teacher' | 'Senior Teacher');
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="rounded-2xl w-full">
-              <SelectValue placeholder="All roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All roles</SelectItem>
-              <SelectItem value="Teacher">Teacher</SelectItem>
-              <SelectItem value="Senior Teacher">Senior Teacher</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
@@ -473,6 +551,140 @@ export default function TeachersPage() {
                   </Button>
                   <input id="teacher-photo-input" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </div>
+
+                <div className="rounded-[28px] border border-slate-200 bg-white p-6">
+                  <div className="mb-4 text-sm font-semibold text-slate-900">Teacher Documents</div>
+                  
+                  <div className="space-y-4">
+                    {/* Aadhaar Card */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-900">Aadhaar Card</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {aadhaarCardValue ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-9 text-xs"
+                        onClick={() => document.getElementById('aadhaar-card-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload Aadhaar Card
+                      </Button>
+                      <input
+                        id="aadhaar-card-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.aadhaarCard.fileUrl')}
+                      />
+                    </div>
+
+                    {/* PAN Card */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-900">PAN Card</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {panCardValue ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-9 text-xs"
+                        onClick={() => document.getElementById('pan-card-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload PAN Card
+                      </Button>
+                      <input
+                        id="pan-card-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.panCard.fileUrl')}
+                      />
+                    </div>
+
+                    {/* Offer Letter */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-900">Offer Letter</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {offerLetterValue ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-9 text-xs"
+                        onClick={() => document.getElementById('offer-letter-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload Offer Letter
+                      </Button>
+                      <input
+                        id="offer-letter-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.offerLetter.fileUrl')}
+                      />
+                    </div>
+
+                    {/* Increment Letter */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-900">Increment Letter</span>
+                      </div>
+                      <div className="mb-2 text-xs text-slate-600">
+                        {incrementLetterValue ? (
+                          <span className="text-emerald-600 font-medium">File uploaded</span>
+                        ) : (
+                          <span className="text-slate-400">No file selected</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-9 text-xs"
+                        onClick={() => document.getElementById('increment-letter-input')?.click()}
+                      >
+                        <UploadCloud className="w-3 h-3 mr-2" />
+                        Upload Increment Letter
+                      </Button>
+                      <input
+                        id="increment-letter-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleDocumentUpload(e, 'teacherDocuments.incrementLetter.fileUrl')}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-5">
@@ -547,10 +759,10 @@ export default function TeachersPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-2 md:col-span-2">
                     <Label htmlFor="parentGuardianDetails">Parent / Guardian</Label>
-                    <Textarea id="parentGuardianDetails" rows={4} {...register('parentGuardianDetails')} />
+                    <Input id="parentGuardianDetails" {...register('parentGuardianDetails')} />
                     {errors.parentGuardianDetails && <p className="text-sm text-destructive">{errors.parentGuardianDetails.message}</p>}
                   </div>
                 </div>
@@ -576,24 +788,7 @@ export default function TeachersPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="specialization">Specialization</Label>
-                    <Controller
-                      control={control}
-                      name="specialization"
-                      render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger id="specialization">
-                            <SelectValue placeholder="Specialization" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SPECIALIZATIONS.map((specialty) => (
-                              <SelectItem key={specialty} value={specialty}>
-                                {specialty}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <Input id="specialization" {...register('specialization')} />
                     {errors.specialization && <p className="text-sm text-destructive">{errors.specialization.message}</p>}
                   </div>
                 </div>
@@ -605,46 +800,12 @@ export default function TeachersPage() {
                     {errors.experience && <p className="text-sm text-destructive">{errors.experience.message}</p>}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="batchDetails">Batch Details</Label>
-                    <Input id="batchDetails" {...register('batchDetails')} />
-                    {errors.batchDetails && <p className="text-sm text-destructive">{errors.batchDetails.message}</p>}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Controller
-                      control={control}
-                      name="role"
-                      render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger id="role">
-                            <SelectValue placeholder="Role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ROLES.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {role}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="grid gap-2">
                     <Label htmlFor="qualification">Qualification</Label>
                     <Input id="qualification" {...register('qualification')} />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="joiningDate">Joining Date</Label>
                     <Input id="joiningDate" type="date" {...register('joiningDate')} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="salary">Salary</Label>
-                    <Input id="salary" type="number" min={0} {...register('salary', { valueAsNumber: true })} />
                   </div>
                 </div>
 
@@ -705,7 +866,7 @@ export default function TeachersPage() {
                 <div>
                   <div className="text-xl font-semibold text-slate-950">{viewTeacher.fullName}</div>
                   <div className="text-sm text-muted-foreground">
-                    {viewTeacher.role ?? 'Teacher'} • {viewTeacher.specialization}
+                    {viewTeacher.specialization}
                   </div>
                   <div className="mt-3 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-900">
                     {viewTeacher.status}
@@ -738,7 +899,6 @@ export default function TeachersPage() {
                   <div className="mt-3 space-y-2 text-sm text-slate-700">
                     <div>School / College: {viewTeacher.schoolCollege || 'N/A'}</div>
                     <div>Class: {viewTeacher.className || 'N/A'}</div>
-                    <div>Batch: {viewTeacher.batchDetails || 'N/A'}</div>
                   </div>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -748,6 +908,76 @@ export default function TeachersPage() {
                     <div>Specialization: {viewTeacher.specialization}</div>
                     <div>Experience: {viewTeacher.experience ?? 0} yrs</div>
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-sm font-semibold text-slate-900">Documents</div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {viewTeacher.teacherDocuments?.aadhaarCard?.fileUrl ? (
+                    <a
+                      href={viewTeacher.teacherDocuments.aadhaarCard.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Aadhaar Card</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-400">
+                      <FileText className="w-4 h-4" />
+                      <span>Aadhaar Card - Not uploaded</span>
+                    </div>
+                  )}
+                  {viewTeacher.teacherDocuments?.panCard?.fileUrl ? (
+                    <a
+                      href={viewTeacher.teacherDocuments.panCard.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>PAN Card</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-400">
+                      <FileText className="w-4 h-4" />
+                      <span>PAN Card - Not uploaded</span>
+                    </div>
+                  )}
+                  {viewTeacher.teacherDocuments?.offerLetter?.fileUrl ? (
+                    <a
+                      href={viewTeacher.teacherDocuments.offerLetter.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Offer Letter</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-400">
+                      <FileText className="w-4 h-4" />
+                      <span>Offer Letter - Not uploaded</span>
+                    </div>
+                  )}
+                  {viewTeacher.teacherDocuments?.incrementLetter?.fileUrl ? (
+                    <a
+                      href={viewTeacher.teacherDocuments.incrementLetter.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Increment Letter</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-400">
+                      <FileText className="w-4 h-4" />
+                      <span>Increment Letter - Not uploaded</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

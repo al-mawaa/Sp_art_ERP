@@ -48,6 +48,7 @@ export async function GET() {
         joiningDate: t.joiningDate,
         salary: t.salary,
         bio: t.bio,
+        teacherDocuments: t.teacherDocuments,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
       })),
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
       joiningDate,
       salary,
       bio,
+      teacherDocuments,
     } = body;
 
     if (!fullName || !email || !specialization) {
@@ -125,6 +127,7 @@ export async function POST(request: NextRequest) {
       joiningDate,
       salary,
       bio,
+      teacherDocuments,
     });
 
     return NextResponse.json({
@@ -156,6 +159,7 @@ export async function POST(request: NextRequest) {
         joiningDate: teacher.joiningDate,
         salary: teacher.salary,
         bio: teacher.bio,
+        teacherDocuments: teacher.teacherDocuments,
         createdAt: teacher.createdAt,
         updatedAt: teacher.updatedAt,
       },
