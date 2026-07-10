@@ -26,6 +26,32 @@ export interface TeacherDocument extends mongoose.Document {
   salary?: number;
   branchName?: string;
   bio?: string;
+  teacherDocuments?: {
+    aadhaarCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+    panCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+    offerLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+    incrementLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+  };
   classes: string[];
   status: 'Active' | 'Inactive';
   isSenior: boolean;
@@ -64,6 +90,32 @@ const TeacherSchema = new mongoose.Schema<TeacherDocument>(
     salary: { type: Number },
     branchName: { type: String },
     bio: { type: String },
+    teacherDocuments: {
+      aadhaarCard: {
+        fileName: { type: String },
+        fileUrl: { type: String },
+        fileType: { type: String },
+        uploadedAt: { type: Date },
+      },
+      panCard: {
+        fileName: { type: String },
+        fileUrl: { type: String },
+        fileType: { type: String },
+        uploadedAt: { type: Date },
+      },
+      offerLetter: {
+        fileName: { type: String },
+        fileUrl: { type: String },
+        fileType: { type: String },
+        uploadedAt: { type: Date },
+      },
+      incrementLetter: {
+        fileName: { type: String },
+        fileUrl: { type: String },
+        fileType: { type: String },
+        uploadedAt: { type: Date },
+      },
+    },
     classes: { type: [String], default: [] },
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
     isSenior: { type: Boolean, default: false },

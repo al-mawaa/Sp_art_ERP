@@ -40,6 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         status: teacher.status,
         classes: teacher.classes,
         isSenior: teacher.isSenior,
+        teacherDocuments: teacher.teacherDocuments,
         createdAt: teacher.createdAt,
         updatedAt: teacher.updatedAt,
       },
@@ -80,15 +81,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       role,
       status,
       classes,
+      teacherDocuments,
     } = body;
 
-    // Get current teacher to check if name changed
+    // Get current teacher to check if name changed and merge documents
     const currentTeacher = await Teacher.findById(id);
     if (!currentTeacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
     }
     const oldName = currentTeacher.fullName;
     const nameChanged = oldName !== fullName;
+
+    // Merge teacherDocuments - preserve existing documents unless new ones are provided
+    const mergedDocuments = {
+      ...(currentTeacher.teacherDocuments || {}),
+      ...(teacherDocuments || {}),
+    };
 
     const teacher = await Teacher.findByIdAndUpdate(
       id,
@@ -112,6 +120,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         role,
         status,
         classes,
+        teacherDocuments: mergedDocuments,
       },
       { new: true }
     );
@@ -158,6 +167,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         status: teacher.status,
         classes: teacher.classes,
         isSenior: teacher.isSenior,
+        teacherDocuments: teacher.teacherDocuments,
         createdAt: teacher.createdAt,
         updatedAt: teacher.updatedAt,
       },

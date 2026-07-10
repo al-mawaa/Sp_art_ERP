@@ -9,19 +9,49 @@ export interface SeniorTeacherDocument extends mongoose.Document {
   age?: number;
   gender?: string;
   bloodGroup?: string;
+  schoolCollege?: string;
+  parentGuardianDetails?: string;
+  address: string;
+  className?: string;
+  currentSubjectCourse?: string;
   specialization: string;
   yearsOfExperience: number;
-  role: string;
+  role?: string;
   qualification: string;
-  address: string;
   joiningDate: Date;
-  salary: number;
+  salary?: number;
   bio?: string;
   profileImage?: string;
   courseName?: string;
   branchName?: string;
   status: 'Active' | 'Inactive';
   assignedClasses: number;
+  teacherDocuments?: {
+    aadhaarCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+    panCard?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+    offerLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+    incrementLetter?: {
+      fileName?: string;
+      fileUrl?: string;
+      fileType?: string;
+      uploadedAt?: Date;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,23 +65,49 @@ const SeniorTeacherSchema = new mongoose.Schema<SeniorTeacherDocument>({
   age: { type: Number },
   gender: { type: String, enum: ['Male', 'Female', 'Other'] },
   bloodGroup: { type: String },
+  schoolCollege: { type: String },
+  parentGuardianDetails: { type: String },
+  address: { type: String, required: true },
+  className: { type: String },
+  currentSubjectCourse: { type: String },
   specialization: { type: String, required: true },
   yearsOfExperience: { type: Number, required: true, default: 0 },
-  role: {
-    type: String,
-    enum: ['Senior Faculty', 'Head Instructor', 'Master Trainer', 'Workshop Mentor', 'Senior Teacher', 'Lead Instructor', 'Department Head'],
-    required: true,
-  },
+  role: { type: String },
   qualification: { type: String, required: true },
-  address: { type: String, required: true },
   joiningDate: { type: Date, required: true },
-  salary: { type: Number, required: true, default: 0 },
+  salary: { type: Number },
   bio: { type: String },
   profileImage: { type: String },
   courseName: { type: String },
   branchName: { type: String },
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   assignedClasses: { type: Number, default: 0 },
+  teacherDocuments: {
+    aadhaarCard: {
+      fileName: { type: String },
+      fileUrl: { type: String },
+      fileType: { type: String },
+      uploadedAt: { type: Date },
+    },
+    panCard: {
+      fileName: { type: String },
+      fileUrl: { type: String },
+      fileType: { type: String },
+      uploadedAt: { type: Date },
+    },
+    offerLetter: {
+      fileName: { type: String },
+      fileUrl: { type: String },
+      fileType: { type: String },
+      uploadedAt: { type: Date },
+    },
+    incrementLetter: {
+      fileName: { type: String },
+      fileUrl: { type: String },
+      fileType: { type: String },
+      uploadedAt: { type: Date },
+    },
+  },
 }, {
   timestamps: true,
   collection: 'seniorteachers',

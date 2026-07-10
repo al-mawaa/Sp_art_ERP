@@ -24,15 +24,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         age: teacher.age,
         gender: teacher.gender,
         bloodGroup: teacher.bloodGroup,
+        schoolCollege: teacher.schoolCollege,
+        parentGuardianDetails: teacher.parentGuardianDetails,
+        address: teacher.address,
+        className: teacher.className,
+        currentSubjectCourse: teacher.currentSubjectCourse,
         specialization: teacher.specialization,
         yearsOfExperience: teacher.yearsOfExperience,
         role: teacher.role,
         qualification: teacher.qualification,
-        address: teacher.address,
         joiningDate: teacher.joiningDate,
         salary: teacher.salary,
         bio: teacher.bio,
         profileImage: teacher.profileImage,
+        teacherDocuments: teacher.teacherDocuments,
         status: teacher.status,
         assignedClasses: teacher.assignedClasses,
         createdAt: teacher.createdAt,
@@ -59,15 +64,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (typeof body.age === 'number') updateData.age = body.age;
     if (typeof body.gender === 'string') updateData.gender = body.gender;
     if (typeof body.bloodGroup === 'string') updateData.bloodGroup = body.bloodGroup;
+    if (typeof body.schoolCollege === 'string') updateData.schoolCollege = body.schoolCollege;
+    if (typeof body.parentGuardianDetails === 'string') updateData.parentGuardianDetails = body.parentGuardianDetails;
+    if (typeof body.address === 'string') updateData.address = body.address;
+    if (typeof body.className === 'string') updateData.className = body.className;
+    if (typeof body.currentSubjectCourse === 'string') updateData.currentSubjectCourse = body.currentSubjectCourse;
     if (typeof body.specialization === 'string') updateData.specialization = body.specialization;
     if (typeof body.yearsOfExperience === 'number') updateData.yearsOfExperience = body.yearsOfExperience;
-    if (typeof body.role === 'string') updateData.role = body.role;
     if (typeof body.qualification === 'string') updateData.qualification = body.qualification;
-    if (typeof body.address === 'string') updateData.address = body.address;
     if (typeof body.joiningDate === 'string') updateData.joiningDate = new Date(body.joiningDate);
-    if (typeof body.salary === 'number') updateData.salary = body.salary;
     if (typeof body.bio === 'string') updateData.bio = body.bio;
     if (typeof body.profileImage === 'string') updateData.profileImage = body.profileImage;
+    if (typeof body.teacherDocuments === 'object' && body.teacherDocuments !== null) updateData.teacherDocuments = body.teacherDocuments;
     if (typeof body.status === 'string') updateData.status = body.status;
     if (typeof body.assignedClasses === 'number') updateData.assignedClasses = body.assignedClasses;
     if (typeof body.badgeId === 'string' && body.badgeId.trim()) updateData.badgeId = body.badgeId.trim();
@@ -117,15 +125,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         age: teacher.age,
         gender: teacher.gender,
         bloodGroup: teacher.bloodGroup,
+        schoolCollege: teacher.schoolCollege,
+        parentGuardianDetails: teacher.parentGuardianDetails,
+        address: teacher.address,
+        className: teacher.className,
+        currentSubjectCourse: teacher.currentSubjectCourse,
         specialization: teacher.specialization,
         yearsOfExperience: teacher.yearsOfExperience,
         role: teacher.role,
         qualification: teacher.qualification,
-        address: teacher.address,
         joiningDate: teacher.joiningDate,
         salary: teacher.salary,
         bio: teacher.bio,
         profileImage: teacher.profileImage,
+        teacherDocuments: teacher.teacherDocuments,
         status: teacher.status,
         assignedClasses: teacher.assignedClasses,
         createdAt: teacher.createdAt,
