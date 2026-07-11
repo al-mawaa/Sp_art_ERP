@@ -13,8 +13,6 @@ import { todayDateString } from "@/lib/dates/attendanceDate";
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
 async function assertTeacherBatch(teacherId: string, batchId: string) {
   if (!mongoose.Types.ObjectId.isValid(batchId)) {
     return { ok: false as const, status: 400, error: "Invalid batch id" };
@@ -27,7 +25,7 @@ async function assertTeacherBatch(teacherId: string, batchId: string) {
 }
 
 /** GET batch roster merged with attendance for a date */
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;
@@ -124,7 +122,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 /** POST bulk mark / update attendance for a date */
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(request: NextRequest, context: any) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;

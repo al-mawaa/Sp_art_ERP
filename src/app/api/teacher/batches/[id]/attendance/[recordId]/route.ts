@@ -11,9 +11,7 @@ import { recomputeBatchAttendanceSummary } from "@/lib/attendance/recomputeBatch
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ id: string; recordId: string }> };
-
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(request: NextRequest, context: any) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;

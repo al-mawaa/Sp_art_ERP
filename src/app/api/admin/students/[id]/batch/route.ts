@@ -7,9 +7,7 @@ import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireAdminFromRequest(request);
     if (!auth.ok) return auth.response;

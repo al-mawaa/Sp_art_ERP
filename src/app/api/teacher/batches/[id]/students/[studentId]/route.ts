@@ -11,10 +11,8 @@ import type { BatchDocument } from "@/lib/models/Batch";
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ id: string; studentId: string }> };
-
 /** Remove student from batch roster only — does not delete from students collection. */
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;

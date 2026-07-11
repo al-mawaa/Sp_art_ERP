@@ -181,3 +181,68 @@ export async function sendCredentialUpdateEmail(opts: SendCredentialUpdateEmailO
     html,
   });
 }
+
+export interface SendCertificateEmailOptions {
+  to: string;
+  studentName: string;
+  courseName: string;
+  certificateNumber: string;
+  downloadUrl: string;
+  academyName?: string;
+}
+
+export async function sendCertificateEmail(opts: SendCertificateEmailOptions) {
+  const school = opts.academyName || 'SP Art Hub';
+  const subject = 'Congratulations! Your Course Completion Certificate is Ready';
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <body style="margin:0;background:#f7f2ee;color:#1f2937;font-family: system-ui, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(15, 23, 42, 0.06);">
+                <tr>
+                  <td style="background:#059669;color:#ffffff;text-align:center;padding:20px 24px;">
+                    <h1 style="margin:0;font-size:20px;font-weight:700;">${school}</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 12px;font-size:16px;line-height:1.6;">Hello ${opts.studentName},</p>
+                    <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Congratulations! You have successfully completed the <strong>${opts.courseName}</strong> course.</p>
+                    <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Your Course Completion Certificate has been generated and approved.</p>
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin:12px 0;">
+                      <p style="margin:0 0 8px;font-size:14px;"><strong>Certificate Number:</strong> ${opts.certificateNumber}</p>
+                      <p style="margin:0;font-size:14px;"><strong>Course:</strong> ${opts.courseName}</p>
+                    </div>
+                    <p style="margin:24px 0 0;"><a href="${opts.downloadUrl}" style="display:inline-block;background:#059669;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600;">Download Certificate</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+  const text = `Hello ${opts.studentName},
+
+Congratulations! You have successfully completed the ${opts.courseName} course.
+Your Course Completion Certificate has been generated and approved.
+
+Certificate Number: ${opts.certificateNumber}
+
+Download your certificate here: ${opts.downloadUrl}
+
+Regards,
+${school}`;
+
+  return transporter.sendMail({
+    from: EMAIL_FROM,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}

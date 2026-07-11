@@ -12,10 +12,8 @@ import { todayDateString } from "@/lib/dates/attendanceDate";
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
 /** GET today's (or ?date=) own attendance for this batch */
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;
@@ -82,7 +80,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 /** Mark own attendance once per day per batch (today only) */
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(request: NextRequest, context: any) {
   try {
     const auth = await requireTeacherFromRequest(request);
     if (!auth.ok) return auth.response;

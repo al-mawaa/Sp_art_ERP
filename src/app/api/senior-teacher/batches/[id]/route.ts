@@ -11,9 +11,7 @@ import { applySeniorOwnership, resolveBatchAssignees } from "@/lib/batch/resolve
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireBatchRead(request);
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;
@@ -38,7 +36,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(request: NextRequest, context: any) {
   try {
     const write = await requireBatchWrite(request);
     if (!write.ok) return write.response;
@@ -101,7 +99,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
     const write = await requireBatchWrite(request);
     if (!write.ok) return write.response;

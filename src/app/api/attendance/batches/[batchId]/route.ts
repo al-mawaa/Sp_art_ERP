@@ -11,8 +11,6 @@ import type { AttendanceDocument } from "@/lib/models/Attendance";
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ batchId: string }> };
-
 async function canReadBatch(
   access: { kind: string; seniorTeacherId?: string; teacherId?: string },
   batchId: string,
@@ -28,7 +26,7 @@ async function canReadBatch(
 }
 
 /** Batch attendance history + per-student stats (senior, admin, assigned teacher). */
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireBatchRead(request);
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;
