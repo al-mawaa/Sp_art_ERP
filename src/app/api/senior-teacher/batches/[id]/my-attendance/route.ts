@@ -12,9 +12,7 @@ import { todayDateString } from "@/lib/dates/attendanceDate";
 
 export const runtime = "nodejs";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireSeniorTeacherFromRequest(request);
     if (!auth.ok) return auth.response;
@@ -79,7 +77,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(request: NextRequest, context: any) {
   try {
     const auth = await requireSeniorTeacherFromRequest(request);
     if (!auth.ok) return auth.response;

@@ -9,11 +9,9 @@ import { updateCredentialById } from '@/lib/admin/updateCredentialById';
 
 export const runtime = 'nodejs';
 
-type RouteContext = { params: Promise<{ id: string }> };
-
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  context: any
 ) {
   const adminCheck = await requireAdminFromRequest(request);
   if (!adminCheck.ok) return adminCheck.response;
@@ -47,7 +45,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  context: any
 ) {
   const adminCheck = await requireAdminFromRequest(request);
   if (!adminCheck.ok) return adminCheck.response;
@@ -59,7 +57,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  context: any
 ) {
   const adminCheck = await requireAdminFromRequest(request);
   if (!adminCheck.ok) return adminCheck.response;

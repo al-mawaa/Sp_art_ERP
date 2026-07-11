@@ -23,9 +23,7 @@ const updateSchema = z.object({
   status: z.enum(["Active", "Inactive"]).optional(),
 });
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   try {
     const auth = await requireSeniorTeacherFromRequest(request);
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;
@@ -48,7 +46,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(request: NextRequest, context: any) {
   try {
     const auth = await requireSeniorTeacherFromRequest(request);
     if (!auth.ok) return (auth as { ok: false; response: import("next/server").NextResponse }).response;

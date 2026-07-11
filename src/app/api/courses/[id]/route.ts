@@ -3,9 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Course from '@/lib/models/Course';
 
 export const runtime = 'nodejs';
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: any) {
   const { id } = await context.params;
   try {
     await dbConnect();
@@ -42,7 +40,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(request: NextRequest, context: any) {
   const { id } = await context.params;
   try {
     await dbConnect();
@@ -154,7 +152,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: any) {
   const { id } = await context.params;
   try {
     await dbConnect();

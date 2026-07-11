@@ -1,5 +1,5 @@
-import { StudentFees } from "@/pages/student/StudentPages";
+import { PremiumStudentFees } from "@/components/student/fees/PremiumStudentFees";
 
 export default function FeesPage() {
-  return <StudentFees />;
+  return <PremiumStudentFees />;
 }
