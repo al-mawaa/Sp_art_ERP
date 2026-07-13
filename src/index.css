@@ -143,6 +143,12 @@
   .gradient-sunny   { background: var(--gradient-sunny); }
   .gradient-mint    { background: var(--gradient-mint); }
   .gradient-party   { background: var(--gradient-party); }
+  .glass-card {
+    @apply rounded-2xl bg-white/70 dark:bg-black/40 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-xl;
+  }
+  .premium-gradient {
+    @apply bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white;
+  }
 }
 
 @layer utilities {
