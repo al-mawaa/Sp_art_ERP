@@ -2,21 +2,20 @@ import React from "react";
 import { Clock, Play, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function TodaysClassesWidget({ profile }: any) {
-  // Mock data for classes
-  const classes = [
+export function TodaysClassesWidget({ profile, classes }: any) {
+  // Use fetched classes or fallback to profile data if empty
+  const activeClasses = classes && classes.length > 0 ? classes.map((c: any, index: number) => ({
+    id: c._id || index,
+    subject: c.courseName || c.batchName,
+    time: c.batchTime || c.batchTiming || "TBD",
+    teacher: c.teachers || profile?.teacherName || "Assigned Teacher",
+    status: "Upcoming", // Real status would require a live check
+  })) : [
     {
       id: 1,
-      subject: profile?.courseName || "Acrylic Painting",
-      time: "4:00 PM - 5:00 PM",
-      teacher: profile?.teacherName || "Sneha Kulkarni",
-      status: "Live", // Live, Upcoming, Completed
-    },
-    {
-      id: 2,
-      subject: "Sketching Basics",
-      time: "5:30 PM - 6:30 PM",
-      teacher: "Rahul Desai",
+      subject: profile?.courseName || "No active classes",
+      time: profile?.batchTiming || "TBD",
+      teacher: profile?.teacherName || "TBD",
       status: "Upcoming",
     }
   ];
@@ -26,12 +25,12 @@ export function TodaysClassesWidget({ profile }: any) {
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-slate-800 text-lg">Today's Classes</h3>
         <span className="bg-blue-50 text-blue-600 text-xs font-bold px-2.5 py-1 rounded-full">
-          {classes.length} Classes
+          {activeClasses.length} Classes
         </span>
       </div>
 
       <div className="space-y-4">
-        {classes.map((cls) => (
+        {activeClasses.map((cls: any) => (
           <div key={cls.id} className={`p-4 rounded-xl border ${cls.status === 'Live' ? 'border-red-200 bg-red-50/50' : 'border-slate-100 bg-slate-50/50'}`}>
             <div className="flex justify-between items-start mb-3">
               <div>

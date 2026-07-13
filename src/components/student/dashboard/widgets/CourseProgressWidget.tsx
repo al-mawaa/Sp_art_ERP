@@ -1,9 +1,10 @@
 import React from "react";
 import { BookOpen, CheckCircle } from "lucide-react";
 
-export function CourseProgressWidget({ profile }: any) {
-  const course = profile?.courseName || "Art Foundation Level 1";
-  const progress = 65; // Mock progress
+export function CourseProgressWidget({ profile, enrolledCourses }: any) {
+  const currentCourse = enrolledCourses && enrolledCourses.length > 0 ? enrolledCourses[0] : null;
+  const course = currentCourse?.courseTitle || profile?.courseName || "Art Foundation Level 1";
+  const progress = currentCourse?.completionPercentage || 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
