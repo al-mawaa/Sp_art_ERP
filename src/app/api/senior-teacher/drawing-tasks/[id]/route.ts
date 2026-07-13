@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { requireSeniorTeacherFromRequest } from '@/lib/auth/require-senior-teacher';
 import Teacher from '@/lib/models/Teacher';
+import Student from '@/lib/models/Student';
 import DrawingTask from '@/lib/models/DrawingTask';
 import DrawingTest from '@/lib/models/DrawingTest';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
@@ -27,18 +28,32 @@ export async function GET(
 
     await dbConnect();
 
+    // Ensure models are registered for populate operations
+    if (!mongoose.models.Teacher) {
+      await import('@/lib/models/Teacher');
+    }
+    if (!mongoose.models.Student) {
+      await import('@/lib/models/Student');
+    }
+    if (!mongoose.models.Batch) {
+      await import('@/lib/models/Batch');
+    }
+
     const taskId = new mongoose.Types.ObjectId(id);
     const seniorTeacherId = new mongoose.Types.ObjectId(auth.seniorTeacher.id);
 
-    // Get task details
+    // Get task details - try without populate first to check if task exists
+    const taskWithoutPopulate = await DrawingTask.findById(taskId).lean();
+    if (!taskWithoutPopulate) {
+      console.error('[senior-teacher/drawing-tasks/[id]] Task not found:', id);
+      return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+    }
+
+    // Now populate
     const task = await DrawingTask.findById(taskId)
       .populate('batchId', 'batchName courseName')
       .populate('createdBy', 'fullName email')
       .lean();
-
-    if (!task) {
-      return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
-    }
 
     // Verify that the senior teacher is assigned to this batch
     const batchId = task.batchId as mongoose.Types.ObjectId;

@@ -202,64 +202,34 @@ export default function EvaluationPage() {
         </div>
       </Card>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Teacher Reference Drawing</h3>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setZoomedImage(submission.teacherImage)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg transition"
-              >
-                <Maximize2 className="w-4 h-4" />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Student Submitted Drawing</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setZoomedImage(submission.studentImage)}
+              className="p-1.5 hover:bg-slate-100 rounded-lg transition"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <a href={submission.studentImage} download>
+              <button type="button" className="p-1.5 hover:bg-slate-100 rounded-lg transition">
+                <Download className="w-4 h-4" />
               </button>
-              <a href={submission.teacherImage} download>
-                <button type="button" className="p-1.5 hover:bg-slate-100 rounded-lg transition">
-                  <Download className="w-4 h-4" />
-                </button>
-              </a>
-            </div>
+            </a>
           </div>
-          <div className="rounded-xl border border-border overflow-hidden bg-white">
-            <img
-              src={submission.teacherImage}
-              alt="Teacher Drawing"
-              className="w-full aspect-square object-contain"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">By {submission.teacherName}</p>
         </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Student Submitted Drawing</h3>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setZoomedImage(submission.studentImage)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg transition"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-              <a href={submission.studentImage} download>
-                <button type="button" className="p-1.5 hover:bg-slate-100 rounded-lg transition">
-                  <Download className="w-4 h-4" />
-                </button>
-              </a>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border overflow-hidden bg-white">
-            <img
-              src={submission.studentImage}
-              alt="Student Drawing"
-              className="w-full aspect-square object-contain"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Submitted by {submission.studentName} on {new Date(submission.submissionDate).toLocaleDateString()}
-          </p>
+        <div className="rounded-xl border border-border overflow-hidden bg-white max-w-2xl mx-auto">
+          <img
+            src={submission.studentImage}
+            alt="Student Drawing"
+            className="w-full aspect-square object-contain"
+          />
         </div>
+        <p className="text-xs text-muted-foreground text-center">
+          Submitted by {submission.studentName} on {new Date(submission.submissionDate).toLocaleDateString()}
+        </p>
       </div>
 
       {zoomedImage && (

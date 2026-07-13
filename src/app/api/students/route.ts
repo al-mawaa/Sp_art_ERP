@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
 import Student from '@/lib/models/Student';
 import StudentCredentials from '@/lib/models/StudentCredentials';
 import Batch from '@/lib/models/Batch';
+import CourseEnrollment from '@/lib/models/CourseEnrollment';
+import Course from '@/lib/models/Course';
 
 export const runtime = 'nodejs';
 
@@ -66,8 +69,30 @@ export async function GET(request: NextRequest) {
         createdAt: doc.createdAt,
       }));
 
-    return NextResponse.json({
-      students: [...students.map(doc => ({
+    // Fetch active course enrollments for all students in bulk
+    const allStudentIds = [...students.map(s => s._id), ...credentialStudents.map(s => new mongoose.Types.ObjectId(s.id))];
+    const activeEnrollments = await CourseEnrollment.find({
+      studentId: { $in: allStudentIds },
+      status: 'active'
+    }).populate('courseId');
+
+    // Create a map of studentId to their active course names
+    const studentCourseMap = new Map<string, string[]>();
+    activeEnrollments.forEach(enrollment => {
+      const studentId = enrollment.studentId.toString();
+      const courseName = (enrollment.courseId as any)?.courseTitle || 'Unknown Course';
+      
+      if (!studentCourseMap.has(studentId)) {
+        studentCourseMap.set(studentId, []);
+      }
+      studentCourseMap.get(studentId)?.push(courseName);
+    });
+
+    const enrichedStudents = students.map(doc => {
+      const studentId = doc._id.toString();
+      const courses = studentCourseMap.get(studentId) || [];
+      
+      return {
         id: doc._id.toString(),
         name: doc.fullName,
         email: doc.email,
@@ -94,8 +119,24 @@ export async function GET(request: NextRequest) {
         howYouKnowUs: doc.howYouKnowUs ?? doc.howYouComeToKnow,
         howYouComeToKnow: doc.howYouComeToKnow,
         batchId: doc.batchId?.toString(),
+        currentCourse: courses.length > 0 ? courses[0] : undefined,
+        currentCourses: courses.length > 1 ? courses : undefined,
         createdAt: doc.createdAt,
-      })), ...credentialStudents],
+      };
+    });
+
+    const enrichedCredentialStudents = credentialStudents.map(doc => {
+      const courses = studentCourseMap.get(doc.id) || [];
+      
+      return {
+        ...doc,
+        currentCourse: courses.length > 0 ? courses[0] : undefined,
+        currentCourses: courses.length > 1 ? courses : undefined,
+      };
+    });
+
+    return NextResponse.json({
+      students: [...enrichedStudents, ...enrichedCredentialStudents],
     });
   } catch (error) {
     console.error('Error fetching students:', error);

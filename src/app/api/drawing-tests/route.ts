@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const body = await request.json();
-    const { batchId, studentId, testTitle, teacherDrawingImage, studentDrawingImage, timeTaken, taskId } = body || {};
+    const { batchId, studentId, testTitle, studentDrawingImage, timeTaken, taskId } = body || {};
 
-    if (!batchId || !studentId || !testTitle || !teacherDrawingImage || !studentDrawingImage || !taskId) {
+    if (!batchId || !studentId || !testTitle || !studentDrawingImage || !taskId) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
     if (!mongoose.Types.ObjectId.isValid(batchId) || !mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(taskId)) {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       studentName,
       testTitle,
       timeTaken: Number(timeTaken) || 0,
-      teacherDrawingImage,
+      teacherDrawingImage: '',
       studentDrawingImage,
       submittedAt: new Date(),
     });

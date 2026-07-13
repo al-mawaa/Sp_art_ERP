@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { requireSeniorTeacherFromRequest } from '@/lib/auth/require-senior-teacher';
-import DrawingTask from '@/lib/models/DrawingTask';
 import DrawingTest from '@/lib/models/DrawingTest';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
 import TeacherPerformance from '@/lib/models/TeacherPerformance';
 import Batch from '@/lib/models/Batch';
+import Teacher from '@/lib/models/Teacher';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +16,11 @@ export async function GET(request: NextRequest) {
     if (!auth.ok) return auth.response;
 
     await dbConnect();
+
+    // Ensure Teacher model is registered
+    if (!mongoose.models.Teacher) {
+      await import('@/lib/models/Teacher');
+    }
 
     // Get the logged-in senior teacher's ID
     const seniorTeacherId = new mongoose.Types.ObjectId(auth.seniorTeacher.id);
@@ -27,81 +32,81 @@ export async function GET(request: NextRequest) {
       .select('_id')
       .lean();
 
+    console.log('[senior-teacher/drawing-tasks] Senior teacher ID:', seniorTeacherId.toString());
+    console.log('[senior-teacher/drawing-tasks] Assigned batches:', assignedBatches.length);
+
     const assignedBatchIds = assignedBatches.map((b) => b._id);
 
-    // Get only drawing tasks from assigned batches
-    const tasks = await DrawingTask.find({
+    // Use drawing_tests collection as source of truth - filter by assigned batches
+    const drawingTests = await DrawingTest.find({
       batchId: { $in: assignedBatchIds },
     })
-      .sort({ taskDate: -1 })
-      .populate('batchId', 'batchName courseName')
-      .populate('createdBy', 'fullName')
+      .select('taskId teacherId teacherName batchId batchName courseName studentId studentName testTitle status submittedAt')
       .lean();
 
-    const taskIds = tasks.map(t => t._id);
+    console.log('[senior-teacher/drawing-tasks] Found drawing tests:', drawingTests.length);
 
-    // Get all submissions for these tasks
-    const submissions = await DrawingTest.find({
-      taskId: { $in: taskIds },
-    })
-      .select('taskId studentId status')
-      .lean();
+    // Group drawing tests by taskId to show each task once
+    const testsByTaskId = new Map<string, typeof drawingTests>();
+    drawingTests.forEach(test => {
+      const taskId = test.taskId ? test.taskId.toString() : 'no-task';
+      if (!testsByTaskId.has(taskId)) {
+        testsByTaskId.set(taskId, []);
+      }
+      testsByTaskId.get(taskId)!.push(test);
+    });
 
-    // Get all evaluations for these tasks
+    // Get evaluations for all these drawing tests
+    const testIds = drawingTests.map(t => t._id);
     const evaluations = await StudentEvaluation.find({
-      taskId: { $in: taskIds },
+      submissionId: { $in: testIds },
     })
-      .select('taskId studentId')
+      .select('submissionId performancePercentage')
       .lean();
 
-    const submissionsByTask = new Map<string, (typeof submissions)[number][]>();
-    const evaluatedByTask = new Map<string, Set<string>>();
+    const evaluationMap = new Map(evaluations.map(e => [e.submissionId.toString(), e.performancePercentage]));
 
-    submissions.forEach(sub => {
-      const taskId = sub.taskId.toString();
-      if (!submissionsByTask.has(taskId)) submissionsByTask.set(taskId, []);
-      submissionsByTask.get(taskId)!.push(sub);
-    });
+    // Build task list from grouped drawing tests
+    const tasks = Array.from(testsByTaskId.entries()).map(([taskId, tests]) => {
+      const firstTest = tests[0];
+      const totalStudents = tests.length;
+      const evaluatedStudents = tests.filter(t => {
+        const testId = t._id.toString();
+        return evaluationMap.has(testId);
+      }).length;
+      const pendingStudents = totalStudents - evaluatedStudents;
 
-    evaluations.forEach(ev => {
-      const taskId = ev.taskId.toString();
-      if (!evaluatedByTask.has(taskId)) evaluatedByTask.set(taskId, new Set());
-      evaluatedByTask.get(taskId)!.add(ev.studentId.toString());
-    });
-
-    const enrichedTasks = (tasks as unknown as Array<Record<string, unknown>>).map(task => {
-      const taskId = task._id?.toString() ?? '';
-      const subs = submissionsByTask.get(taskId) || [];
-      const evaluated = evaluatedByTask.get(taskId) || new Set();
-      const createdByObj = task.createdBy && typeof task.createdBy === 'object' ? (task.createdBy as unknown as Record<string, unknown>) : null;
-      const batchObj = task.batchId && typeof task.batchId === 'object' ? (task.batchId as unknown as Record<string, unknown>) : null;
+      // Determine task status based on student statuses
+      const hasEvaluated = evaluatedStudents > 0;
+      const allEvaluated = evaluatedStudents === totalStudents;
+      const taskStatus = !hasEvaluated ? 'Pending' : allEvaluated ? 'Completed' : 'In Review';
 
       return {
         id: taskId,
-        taskName: task.taskName ?? '',
-        taskDate: task.taskDate,
-        teacherName: (createdByObj?.fullName as string) ?? 'Unknown',
+        taskName: firstTest.testTitle || 'Untitled Task',
+        taskDate: firstTest.submittedAt || new Date(),
+        teacherName: firstTest.teacherName || 'Unknown',
         batch: {
-          id: batchObj?._id?.toString?.() ?? '',
-          name: (batchObj?.batchName as string) ?? '',
-          course: (batchObj?.courseName as string) ?? '',
+          id: firstTest.batchId ? firstTest.batchId.toString() : '',
+          name: firstTest.batchName || '',
+          course: firstTest.courseName || '',
         },
-        totalStudents: subs.length,
-        evaluatedStudents: evaluated.size,
-        pendingStudents: subs.length - evaluated.size,
-        status: evaluated.size === 0 ? 'Pending' : evaluated.size < subs.length ? 'In Review' : 'Completed',
+        totalStudents,
+        evaluatedStudents,
+        pendingStudents,
+        status: taskStatus,
       };
     });
 
-    // Get overall stats (only from assigned batches)
+    // Sort tasks by date (newest first)
+    tasks.sort((a, b) => new Date(b.taskDate).getTime() - new Date(a.taskDate).getTime());
+
+    // Calculate overall stats from filtered drawing tests
     const totalTasks = tasks.length;
     const totalEvaluations = evaluations.length;
-
-    // Calculate average performance only from assigned batches
-    const avgPerformance =
-      evaluations.length > 0
-        ? evaluations.reduce((sum, e) => sum + e.performancePercentage, 0) / evaluations.length
-        : 0;
+    const avgPerformance = evaluations.length > 0
+      ? evaluations.reduce((sum, e) => sum + e.performancePercentage, 0) / evaluations.length
+      : 0;
 
     const seniorOid = new mongoose.Types.ObjectId(auth.seniorTeacher.id);
     const performance = await TeacherPerformance.findOne({ teacherId: seniorOid }).lean();
@@ -116,7 +121,7 @@ export async function GET(request: NextRequest) {
           incentiveEligible: performance?.incentiveEligible ?? false,
           incentivePercentage: performance?.incentivePercentage ?? 0,
         },
-        tasks: enrichedTasks,
+        tasks,
       },
     });
   } catch (e) {

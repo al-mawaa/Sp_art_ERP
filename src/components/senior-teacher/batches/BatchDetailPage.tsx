@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { StatCard } from "@/components/shared/StatCard";
 import type { SerializedBatch } from "@/lib/batch/types";
 import { openBatchPrintExport } from "@/lib/batch/printBatchExport";
 import { batchFetch } from "@/lib/batch/batchFetch";
@@ -67,7 +71,7 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
   const timing = batch.batchTiming || `${batch.batchDay} · ${batch.batchTime}`;
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full px-4">
       <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <Button variant="ghost" size="icon" className="rounded-xl shrink-0" asChild>
@@ -76,9 +80,22 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
             </Link>
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-[22px]">
-              {batch.batchName}
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-[22px]">
+                {batch.batchName}
+              </h1>
+              <Badge
+                className={`text-xs font-medium ${
+                  (batch.batchStatus || "Active") === "Active"
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-100"
+                    : (batch.batchStatus || "") === "Completed"
+                      ? "bg-blue-50 text-blue-800 border border-blue-100"
+                      : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                {batch.batchStatus || "Active"}
+              </Badge>
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">{batch.courseName} · {timing}</p>
           </div>
         </div>
@@ -107,117 +124,165 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
       </div>
 
       <div className="grid w-full gap-4 lg:grid-cols-2">
-        <div className="min-h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-          <h2 className="font-display font-semibold flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-primary" />
-            Batch information
-          </h2>
-          <dl className="text-sm space-y-2">
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Course</dt>
-              <dd className="font-medium text-right">{batch.courseName}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Schedule</dt>
-              <dd className="font-medium text-right">{timing}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" /> Run period
-              </dt>
-              <dd className="font-medium text-right">
-                {batch.startMonth} → {batch.endMonth}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" /> Branch
-              </dt>
-              <dd className="font-medium text-right">{batch.branch}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Capacity</dt>
-              <dd className="font-medium text-right">{batch.batchCapacity}</dd>
-            </div>
-          </dl>
-          {batch.description ? (
-            <p className="text-sm text-slate-600 border-t border-slate-100 pt-3">{batch.description}</p>
-          ) : null}
-        </div>
-
-        <div className="min-h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-          <h2 className="font-display font-semibold flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
-            Teacher attendance
-          </h2>
-          <BatchTeacherAttendancePanel batchId={batch.id} />
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-display font-semibold flex items-center gap-2 mb-4">
-          <Users className="w-4 h-4 text-primary" />
-          Teachers ({(batch.teachers || []).length})
-        </h2>
-        <ul className="divide-y divide-slate-100">
-          {(batch.teachers || []).length === 0 ? (
-            <li className="py-3 text-sm text-muted-foreground">No teachers assigned.</li>
-          ) : (
-            (batch.teachers || []).map(t => (
-              <li key={t.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm">
-                <span className="font-medium">{t.fullName}</span>
-                <span className="text-muted-foreground">{t.email}</span>
-              </li>
-            ))
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard
+              label="Course"
+              value={batch.courseName}
+              icon={BookOpen}
+              tone="primary"
+            />
+            <StatCard
+              label="Schedule"
+              value={timing}
+              icon={Calendar}
+              tone="secondary"
+            />
+            {(batch.startMonth || batch.endMonth) && (
+              <StatCard
+                label="Run period"
+                value={`${batch.startMonth || "Not set"} → ${batch.endMonth || "Not set"}`}
+                icon={Calendar}
+                tone="info"
+              />
+            )}
+            <StatCard
+              label="Branch"
+              value={batch.branch || "Not set"}
+              icon={MapPin}
+              tone="accent"
+            />
+            <StatCard
+              label="Capacity"
+              value={batch.batchCapacity}
+              icon={Users}
+              tone="success"
+            />
+            <StatCard
+              label="Students"
+              value={batch.totalStudents}
+              icon={Users}
+              tone="primary"
+            />
+          </div>
+          {batch.description && (
+            <Card className="rounded-2xl border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="font-display text-base flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-600">{batch.description}</p>
+              </CardContent>
+            </Card>
           )}
-        </ul>
+        </div>
+
+        <Card className="min-h-full rounded-2xl border-slate-200 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Teacher attendance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BatchTeacherAttendancePanel batchId={batch.id} />
+          </CardContent>
+        </Card>
       </div>
+
+      <Card className="rounded-2xl border-slate-200 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Teachers ({(batch.teachers || []).length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(batch.teachers || []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No teachers assigned.</p>
+          ) : (
+            <div className="space-y-3">
+              {(batch.teachers || []).map(t => (
+                <div key={t.id} className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                      {t.fullName?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "T"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{t.fullName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {(batch.seniorTeachers || []).length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="font-display font-semibold flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-primary" />
-            Senior Teachers ({(batch.seniorTeachers || []).length})
-          </h2>
-          <ul className="divide-y divide-slate-100">
-            {(batch.seniorTeachers || []).map(t => (
-              <li key={t.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm">
-                <span className="font-medium">{t.fullName}</span>
-                <span className="text-muted-foreground">{t.email}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Senior Teachers ({(batch.seniorTeachers || []).length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {(batch.seniorTeachers || []).map(t => (
+                <div key={t.id} className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-amber-100 text-amber-800 text-sm font-medium">
+                      {t.fullName?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "S"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{t.fullName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm overflow-x-auto">
-        <h2 className="font-display font-semibold flex items-center gap-2 mb-4">
-          <Users className="w-4 h-4 text-primary" />
-          Students ({batch.totalStudents})
-        </h2>
-        <table className="w-full text-sm min-w-[640px]">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-muted-foreground">
-              <th className="pb-2 pr-2">#</th>
-              <th className="pb-2 pr-2">Name</th>
-              <th className="pb-2 pr-2">Email</th>
-              <th className="pb-2 pr-2">Phone</th>
-              <th className="pb-2">Course</th>
-            </tr>
-          </thead>
-          <tbody>
-            {batch.students.map((s, i) => (
-              <tr key={s.id} className="border-b border-slate-50">
-                <td className="py-2 pr-2">{i + 1}</td>
-                <td className="py-2 pr-2 font-medium">{s.studentName}</td>
-                <td className="py-2 pr-2 text-muted-foreground">{s.studentEmail || "—"}</td>
-                <td className="py-2 pr-2">{s.phone || "—"}</td>
-                <td className="py-2">{s.course || "—"}</td>
+      <Card className="rounded-2xl border-slate-200 shadow-sm overflow-x-auto">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Students ({batch.totalStudents})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-muted-foreground">
+                <th className="pb-2 pr-2">#</th>
+                <th className="pb-2 pr-2">Name</th>
+                <th className="pb-2 pr-2">Email</th>
+                <th className="pb-2 pr-2">Phone</th>
+                <th className="pb-2">Course</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {batch.students.map((s, i) => (
+                <tr key={s.id} className="border-b border-slate-50">
+                  <td className="py-2 pr-2">{i + 1}</td>
+                  <td className="py-2 pr-2 font-medium">{s.studentName}</td>
+                  <td className="py-2 pr-2 text-muted-foreground">{s.studentEmail || "—"}</td>
+                  <td className="py-2 pr-2">{s.phone || "—"}</td>
+                  <td className="py-2">{s.course || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

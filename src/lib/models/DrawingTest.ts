@@ -35,7 +35,7 @@ const DrawingTestSchema = new mongoose.Schema<DrawingTestDocument>(
     taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'DrawingTask', index: true, required: false },
     testTitle: { type: String, required: true },
     timeTaken: { type: Number, default: 0 },
-    teacherDrawingImage: { type: String, required: true },
+    teacherDrawingImage: { type: String, required: false, default: "" },
     studentDrawingImage: { type: String, required: true },
     status: { type: String, enum: ['Pending Senior Review', 'Reviewed', 'Approved', 'Rejected'], default: 'Pending Senior Review' },
     submittedAt: { type: Date },
