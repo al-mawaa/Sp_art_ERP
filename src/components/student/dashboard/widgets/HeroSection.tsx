@@ -1,11 +1,14 @@
 import React from "react";
 import { Award, BookOpen, Clock, Target } from "lucide-react";
 
-export function HeroSection({ profile }: { profile: any }) {
+export function HeroSection({ profile, classes, rewards }: { profile: any, classes?: any[], rewards?: any }) {
   const studentName = profile?.fullName || "Student";
   const course = profile?.courseName || "Art Foundation";
   const batch = profile?.batchName || "Weekend Batch";
   
+  const activeCoursesCount = classes ? classes.length : 0;
+  const rewardPoints = rewards?.stats?.totalPoints || rewards?.points || 0;
+
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 p-8 sm:p-10 text-white shadow-xl">
       {/* Decorative background elements */}
@@ -50,7 +53,7 @@ export function HeroSection({ profile }: { profile: any }) {
             <div className="w-10 h-10 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center mb-2 text-blue-300">
               <Target size={20} />
             </div>
-            <p className="text-2xl font-bold">12</p>
+            <p className="text-2xl font-bold">{activeCoursesCount}</p>
             <p className="text-xs text-indigo-200 uppercase tracking-wider">Active Courses</p>
           </div>
           <div className="w-px bg-white/10"></div>
@@ -58,7 +61,7 @@ export function HeroSection({ profile }: { profile: any }) {
             <div className="w-10 h-10 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center mb-2 text-purple-300">
               <Award size={20} />
             </div>
-            <p className="text-2xl font-bold">850</p>
+            <p className="text-2xl font-bold">{rewardPoints}</p>
             <p className="text-xs text-indigo-200 uppercase tracking-wider">Reward Points</p>
           </div>
         </div>

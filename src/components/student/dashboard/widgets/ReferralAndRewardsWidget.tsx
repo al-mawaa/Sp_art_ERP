@@ -11,8 +11,11 @@ import {
 
 export function ReferralAndRewardsWidget({ rewards, referrals, profile }: any) {
   const referralCode = profile?.referralCode || "SPART-8X9Y";
-  const points = rewards?.points || 850;
+  const points = rewards?.stats?.totalPoints || rewards?.points || 0;
   
+  const totalReferrals = referrals?.stats?.successfulReferrals || referrals?.total || 0;
+  const totalEarned = referrals?.stats?.totalEarnings || 0;
+
   // Example mock progress for next gift
   const nextGift = "Art Supply Kit";
   const pointsNeeded = 1000;
@@ -72,11 +75,11 @@ export function ReferralAndRewardsWidget({ rewards, referrals, profile }: any) {
         <div className="flex gap-4 mb-6">
           <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
             <p className="text-xs font-semibold text-slate-500 uppercase">Referrals</p>
-            <p className="text-xl font-bold text-slate-800">3</p>
+            <p className="text-xl font-bold text-slate-800">{totalReferrals}</p>
           </div>
           <div className="flex-1 bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
             <p className="text-xs font-semibold text-emerald-600 uppercase">Earned</p>
-            <p className="text-xl font-bold text-emerald-700">₹1,500</p>
+            <p className="text-xl font-bold text-emerald-700">₹{totalEarned}</p>
           </div>
         </div>
 

@@ -1,13 +1,23 @@
 import React from "react";
 import { Wallet, CalendarDays, Gift, Users } from "lucide-react";
 
-export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals }: any) {
+export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals, enrolledCourses }: any) {
+  const attendancePercentage = attendance?.summary?.percentage || 0;
+  
+  // Calculate total pending fees from all enrolled courses
+  let pendingFees = 0;
+  if (enrolledCourses && enrolledCourses.length > 0) {
+    enrolledCourses.forEach((course: any) => {
+      pendingFees += (course.remainingAmount || 0);
+    });
+  }
+
   const cards = [
     {
       title: "Attendance",
-      value: "85%", // Would be calculated from attendance data
-      trend: "+5% this month",
-      trendUp: true,
+      value: `${attendancePercentage}%`,
+      trend: attendance?.summary?.present ? `${attendance.summary.present} days present` : "No records",
+      trendUp: attendancePercentage >= 75,
       icon: CalendarDays,
       color: "from-emerald-400 to-emerald-600",
       bg: "bg-emerald-50",
@@ -16,9 +26,9 @@ export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals }: 
     },
     {
       title: "Pending Fees",
-      value: "₹2,500", // Would be calculated
-      trend: "Due in 5 days",
-      trendUp: false,
+      value: `₹${pendingFees.toLocaleString()}`,
+      trend: pendingFees > 0 ? "Action required" : "All cleared",
+      trendUp: pendingFees === 0,
       icon: Wallet,
       color: "from-rose-400 to-rose-600",
       bg: "bg-rose-50",
@@ -27,8 +37,8 @@ export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals }: 
     },
     {
       title: "Reward Points",
-      value: rewards?.points || 850,
-      trend: "150 to next level",
+      value: rewards?.stats?.totalPoints || rewards?.points || 0,
+      trend: "Available points",
       trendUp: true,
       icon: Gift,
       color: "from-purple-400 to-purple-600",
@@ -38,8 +48,8 @@ export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals }: 
     },
     {
       title: "Total Referrals",
-      value: referrals?.total || 3,
-      trend: "₹1,500 earned",
+      value: referrals?.stats?.successfulReferrals || referrals?.total || 0,
+      trend: `₹${referrals?.stats?.totalEarnings || 0} earned`,
       trendUp: true,
       icon: Users,
       color: "from-blue-400 to-blue-600",
