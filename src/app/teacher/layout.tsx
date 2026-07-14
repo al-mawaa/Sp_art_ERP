@@ -14,6 +14,7 @@ import {
   User,
   Boxes,
   Wallet,
+  Package,
 } from "lucide-react";
 import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
 import { RequireRole } from "@/components/layouts/RoleLayout";
@@ -28,6 +29,7 @@ const teacherNav: NavItem[] = [
   { to: "/teacher/progress", label: "Student Progress", icon: TrendingUp },
   { to: "/teacher/slot-requests", label: "Slot Requests", icon: ClipboardList },
   { to: "/teacher/leave", label: "Leave", icon: CalendarOff },
+  { to: "/teacher/inventory", label: "Inventory", icon: Package },
   { to: "/teacher/salary", label: "Salary", icon: Wallet },
   { to: "/teacher/chat", label: "Chat", icon: MessageSquare },
 ];
