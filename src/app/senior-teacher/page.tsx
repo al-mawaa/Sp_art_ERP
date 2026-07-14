@@ -16,6 +16,7 @@ import Query from "@/lib/models/Query";
 import TeacherLeaveBalance from "@/lib/models/TeacherLeaveBalance";
 import TeacherPerformance from "@/lib/models/TeacherPerformance";
 import SeniorTeacherLeave from "@/lib/models/SeniorTeacherLeave";
+import TeacherAttendance from "@/lib/models/TeacherAttendance";
 import { SENIOR_TEACHER_SESSION_COOKIE } from "@/lib/auth/portal-session";
 import { SeniorTeacherDashboardClient } from "@/components/senior-teacher/SeniorTeacherDashboardClient";
 
@@ -50,7 +51,8 @@ export default async function SeniorTeacherDashboardPage() {
     queries,
     performances,
     leaveBalances,
-    seniorTeacherLeaves
+    seniorTeacherLeaves,
+    myAttendances
   ] = await Promise.all([
     Teacher.find({ createdBy: seniorTeacherId }).lean(),
     Batch.find({ createdBy: seniorTeacherId }).lean(),
@@ -65,6 +67,7 @@ export default async function SeniorTeacherDashboardPage() {
     TeacherPerformance.find().lean(),
     TeacherLeaveBalance.find().lean(),
     SeniorTeacherLeave.find({ seniorTeacherId }).lean(),
+    TeacherAttendance.find({ teacherId: seniorTeacherId }).lean(),
   ]);
 
   const teacherIds = teachers.map(t => t._id.toString());
@@ -89,7 +92,8 @@ export default async function SeniorTeacherDashboardPage() {
     queries: pendingQueries,
     performances: filteredPerformances,
     leaveBalances: filteredLeaveBalances,
-    seniorTeacherLeaves
+    seniorTeacherLeaves,
+    myAttendances
   }));
 
   return <SeniorTeacherDashboardClient data={data} />;

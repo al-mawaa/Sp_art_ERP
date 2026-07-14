@@ -27,13 +27,15 @@ interface DashboardProps {
     performances: any[];
     leaveBalances: any[];
     seniorTeacherLeaves: any[];
+    myAttendances: any[];
   };
 }
 
 export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
   const { 
     seniorTeacher, teachers, batches, students, attendanceList, leaves, drawingTasks, 
-    evaluations, notifications, certificates, queries, performances, seniorTeacherLeaves 
+    evaluations, notifications, certificates, queries, performances, seniorTeacherLeaves,
+    myAttendances
   } = data;
   
   // Computed data
@@ -74,8 +76,24 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
     l.fromDate <= todayStr && 
     l.toDate >= todayStr
   );
-  const attendanceStatus = isOnLeave ? "On Leave" : "Present";
-  const attendanceStatusColor = isOnLeave ? "text-warning" : "text-success";
+  
+  const todayAttendance = myAttendances?.find((a: any) => a.attendanceDate === todayStr);
+
+  let attendanceStatus = "Pending";
+  let attendanceStatusColor = "text-muted-foreground";
+
+  if (isOnLeave) {
+    attendanceStatus = "On Leave";
+    attendanceStatusColor = "text-warning";
+  } else if (todayAttendance) {
+    attendanceStatus = todayAttendance.status;
+    attendanceStatusColor = 
+      todayAttendance.status === "Present" ? "text-success" : 
+      todayAttendance.status === "Absent" ? "text-destructive" : "text-warning";
+  } else {
+    attendanceStatus = "Not Marked";
+    attendanceStatusColor = "text-muted-foreground";
+  }
 
   const pendingSlotsCount = queries.length;
 
