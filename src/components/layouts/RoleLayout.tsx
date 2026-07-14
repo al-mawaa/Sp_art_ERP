@@ -18,7 +18,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
+export type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean; disabled?: boolean };
 export type NavSection = { title: string; items: NavItem[] };
 
 const ROLE_THEME: Record<Role, { hsl: string; gradient: string }> = {
@@ -42,6 +42,23 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
 
   const renderNavItem = (item: NavItem, key?: string) => {
     const isActive = pathname === item.to || (item.end === false && pathname.startsWith(item.to));
+
+    if (item.disabled) {
+      return (
+        <div
+          key={key ?? item.to}
+          className={cn(
+            "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition duration-200 ease-in-out relative overflow-hidden cursor-not-allowed opacity-50",
+          )}
+        >
+          <item.icon
+            className="w-4 h-4 shrink-0"
+            strokeWidth={2}
+          />
+          <span className="truncate">{item.label}</span>
+        </div>
+      );
+    }
 
     return (
       <Link
