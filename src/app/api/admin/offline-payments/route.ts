@@ -25,10 +25,11 @@ function resolveClientIp(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdminFromRequest(request);
-  if (!auth.ok) return auth.response;
+  try {
+    const auth = await requireAdminFromRequest(request);
+    if (!auth.ok) return auth.response;
 
-  await dbConnect();
+    await dbConnect();
 
   const url = new URL(request.url);
   const searchParams = url.searchParams;
@@ -219,14 +220,18 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({
-    success: true,
-    total,
-    pending_count,
-    verified_count,
-    rejected_count,
-    limit,
-    offset,
-    payments: formattedPayments,
-  });
+    return NextResponse.json({
+      success: true,
+      total,
+      pending_count,
+      verified_count,
+      rejected_count,
+      limit,
+      offset,
+      payments: formattedPayments,
+    });
+  } catch (error: any) {
+    console.error("API Route Error (offline-payments):", error);
+    return NextResponse.json({ success: false, error: error.message || "Internal Server Error" }, { status: 500 });
+  }
 }
