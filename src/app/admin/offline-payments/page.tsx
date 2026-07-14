@@ -146,6 +146,7 @@ export default function AdminOfflinePaymentsPage() {
 
       const res = await fetch(`/api/admin/offline-payments?${params.toString()}`, { credentials: "include" });
       const _txt3 = await res.text();
+      console.log("[DEBUG] res.status:", res.status, "res.ok:", res.ok, "body length:", _txt3.length, "body:", _txt3);
       const data = (_txt3 ? JSON.parse(_txt3) : {}) as {
         success?: boolean;
         payments?: Partial<OfflinePaymentRow>[];
