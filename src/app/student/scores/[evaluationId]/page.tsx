@@ -152,83 +152,66 @@ export default function StudentScoreDetailPage({ params }: { params: Promise<{ e
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{submission?.testTitle || 'Drawing test'}</h1>
-            <p className="text-sm text-gray-600 mt-1">Evaluated: {evaluatedDate}</p>
+      {/* Header Section with Summary and Remarks */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Summary Card */}
+        <div className="md:col-span-2 lg:col-span-2 rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{submission?.testTitle || 'Drawing test'}</h1>
+              <p className="text-sm text-gray-600 mt-1">Evaluated: {evaluatedDate}</p>
+            </div>
+            <div className="text-left sm:text-right">
+              <div className="text-4xl font-bold text-gray-900">{evaluation.obtainedMarks}/{evaluation.maxMarks}</div>
+              <div className="text-lg text-gray-600 font-medium mt-1">{formatPercentage(Number(evaluation.performancePercentage))}</div>
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-4xl font-bold text-gray-900">{evaluation.obtainedMarks}/{evaluation.maxMarks}</div>
-            <div className="text-lg text-gray-600 font-medium mt-1">{formatPercentage(Number(evaluation.performancePercentage))}</div>
-          </div>
+        </div>
+
+        {/* Remarks Card */}
+        <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Remarks</h3>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            {evaluation.remarks || 'No remarks provided'}
+          </p>
         </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Images */}
-        <div className="col-span-2 space-y-6">
-          {/* Image Comparison Section */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="relative rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-900">Your Submission</h2>
-              </div>
-              <button
-                onClick={() => openImageViewer(submission?.studentDrawingImage ?? null, 'Student Submission')}
-                className="absolute top-6 right-6 z-10 rounded-full bg-white/90 p-2 shadow-md transition hover:scale-110"
-                title="Zoom Student Submission"
-              >
-                <ZoomIn size={18} className="text-gray-700" />
-              </button>
-              <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-slate-100">
-                {submission?.studentDrawingImage ? (
-                  <img
-                    src={submission.studentDrawingImage}
-                    alt="Student submission"
-                    className="w-full h-[350px] object-contain rounded-lg bg-slate-100"
-                  />
-                ) : (
-                  <div className="flex h-[350px] items-center justify-center text-gray-500">
-                    No image available
-                  </div>
-                )}
-              </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Left Column - Content */}
+        <div className="md:col-span-2 lg:col-span-2 space-y-6">
+          {/* Your Submission Section */}
+          <div className="relative rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-900">Your Submission</h2>
             </div>
-
-            <div className="relative rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-900">Teacher Reference</h2>
-              </div>
-              <button
-                onClick={() => openImageViewer(submission?.teacherDrawingImage ?? null, 'Teacher Reference')}
-                className="absolute top-6 right-6 z-10 rounded-full bg-white/90 p-2 shadow-md transition hover:scale-110"
-                title="Zoom Teacher Reference"
-              >
-                <ZoomIn size={18} className="text-gray-700" />
-              </button>
-              <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-slate-100">
-                {submission?.teacherDrawingImage ? (
-                  <img
-                    src={submission.teacherDrawingImage}
-                    alt="Teacher reference"
-                    className="w-full h-[350px] object-contain rounded-lg bg-slate-100"
-                  />
-                ) : (
-                  <div className="flex h-[350px] items-center justify-center text-gray-500">
-                    No image available
-                  </div>
-                )}
-              </div>
+            <button
+              onClick={() => openImageViewer(submission?.studentDrawingImage ?? null, 'Student Submission')}
+              className="absolute top-6 right-6 z-10 rounded-full bg-white/90 p-2 shadow-md transition hover:scale-110"
+              title="Zoom Student Submission"
+            >
+              <ZoomIn size={18} className="text-gray-700" />
+            </button>
+            <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-slate-100">
+              {submission?.studentDrawingImage ? (
+                <img
+                  src={submission.studentDrawingImage}
+                  alt="Student submission"
+                  className="w-full h-[400px] object-contain rounded-lg bg-slate-100"
+                />
+              ) : (
+                <div className="flex h-[400px] items-center justify-center text-gray-500">
+                  No image available
+                </div>
+              )}
             </div>
           </div>
 
           {/* Detailed Breakdown Section */}
           <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900 mb-6">Detailed breakdown</h2>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 { label: 'Drawing Quality', value: evaluation.drawingMarks },
                 { label: 'Coloring', value: evaluation.coloringMarks },
@@ -237,9 +220,9 @@ export default function StudentScoreDetailPage({ params }: { params: Promise<{ e
                 { label: 'Creativity', value: evaluation.creativityMarks },
                 { label: 'Accuracy', value: evaluation.accuracyMarks },
               ].map((item, idx) => (
-                <div key={idx} className="p-4 rounded-lg border border-gray-200 bg-gray-50">
-                  <div className="text-xs font-medium text-gray-700 mb-3">{item.label}</div>
-                  <div className="font-bold text-gray-900 mb-3">{item.value}/5</div>
+                <div key={idx} className="p-4 rounded-lg border border-gray-200 bg-gray-50 flex flex-col">
+                  <div className="text-xs font-medium text-gray-700 mb-2">{item.label}</div>
+                  <div className="font-bold text-gray-900 mb-2">{item.value}/5</div>
                   <Progress value={(item.value / 5) * 100} className="h-2 mb-2" />
                   <div className="text-xs text-gray-600">{Math.round((item.value / 5) * 100)}%</div>
                 </div>
@@ -250,19 +233,11 @@ export default function StudentScoreDetailPage({ params }: { params: Promise<{ e
 
         {/* Right Column - Sidebar */}
         <aside className="space-y-6">
-          {/* Remarks Card */}
-          <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Remarks</h3>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {evaluation.remarks || 'No remarks provided'}
-            </p>
-          </div>
-
           {/* Back Button Card */}
           <div className="rounded-2xl border border-gray-200 p-6 bg-white shadow-sm">
             <Button 
               onClick={() => window.history.back()} 
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium transition-colors"
             >
               Back
             </Button>

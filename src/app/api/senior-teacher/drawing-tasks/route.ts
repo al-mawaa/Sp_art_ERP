@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { requireSeniorTeacherFromRequest } from '@/lib/auth/require-senior-teacher';
 import DrawingTest from '@/lib/models/DrawingTest';
+import DrawingTask from '@/lib/models/DrawingTask';
 import StudentEvaluation from '@/lib/models/StudentEvaluation';
 import TeacherPerformance from '@/lib/models/TeacherPerformance';
 import Batch from '@/lib/models/Batch';
@@ -48,13 +49,26 @@ export async function GET(request: NextRequest) {
 
     // Group drawing tests by taskId to show each task once
     const testsByTaskId = new Map<string, typeof drawingTests>();
+    const taskIds = new Set<string>();
     drawingTests.forEach(test => {
       const taskId = test.taskId ? test.taskId.toString() : 'no-task';
       if (!testsByTaskId.has(taskId)) {
         testsByTaskId.set(taskId, []);
       }
       testsByTaskId.get(taskId)!.push(test);
+      if (test.taskId) {
+        taskIds.add(test.taskId.toString());
+      }
     });
+
+    // Fetch DrawingTask records from drawing_tasks collection to get actual taskName
+    const drawingTasks = await DrawingTask.find({
+      _id: { $in: Array.from(taskIds).map(id => new mongoose.Types.ObjectId(id)) },
+    })
+      .select('_id taskName')
+      .lean();
+
+    const drawingTaskMap = new Map(drawingTasks.map(dt => [dt._id.toString(), dt.taskName]));
 
     // Get evaluations for all these drawing tests
     const testIds = drawingTests.map(t => t._id);
@@ -83,7 +97,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: taskId,
-        taskName: firstTest.testTitle || 'Untitled Task',
+        taskName: drawingTaskMap.get(taskId) || 'Untitled Task',
         taskDate: firstTest.submittedAt || new Date(),
         teacherName: firstTest.teacherName || 'Unknown',
         batch: {
