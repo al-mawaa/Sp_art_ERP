@@ -34,30 +34,32 @@ export async function GET(request: NextRequest) {
       .sort({ enrollmentDate: -1 });
     const populatedEnrollments = enrollments as unknown as PopulatedCourseEnrollment[];
 
-    const enrolledCourses = populatedEnrollments.map((enrollment) => {
-      const course = enrollment.courseId;
-      return {
-        enrollmentId: enrollment._id.toString(),
-        courseId: course._id.toString(),
-        courseTitle: course.courseTitle,
-        courseCode: course.courseCode,
-        image: course.image,
-        instructor: course.instructor,
-        duration: course.duration,
-        startDate: course.startDate?.toISOString() ?? '',
-        endDate: course.endDate?.toISOString() ?? '',
-        totalFees: course.totalFees,
-        discountFees: course.discountFees,
-        discountPercentage: course.discountPercentage,
-        status: course.status,
-        enrollmentStatus: enrollment.status,
-        enrollmentDate: enrollment.enrollmentDate,
-        completionPercentage: enrollment.completionPercentage,
-        notes: course.notes,
-        rulesAndRegulations: course.rulesAndRegulations,
-        materialsRequired: course.materialsRequired,
-      };
-    });
+    const enrolledCourses = populatedEnrollments
+      .filter((enrollment) => enrollment.courseId != null)
+      .map((enrollment) => {
+        const course = enrollment.courseId;
+        return {
+          enrollmentId: enrollment._id.toString(),
+          courseId: course._id.toString(),
+          courseTitle: course.courseTitle,
+          courseCode: course.courseCode,
+          image: course.image,
+          instructor: course.instructor,
+          duration: course.duration,
+          startDate: course.startDate?.toISOString() ?? '',
+          endDate: course.endDate?.toISOString() ?? '',
+          totalFees: course.totalFees,
+          discountFees: course.discountFees,
+          discountPercentage: course.discountPercentage,
+          status: course.status,
+          enrollmentStatus: enrollment.status,
+          enrollmentDate: enrollment.enrollmentDate,
+          completionPercentage: enrollment.completionPercentage,
+          notes: course.notes,
+          rulesAndRegulations: course.rulesAndRegulations,
+          materialsRequired: course.materialsRequired,
+        };
+      });
 
     return NextResponse.json(
       { enrolledCourses },
