@@ -5,12 +5,8 @@ import { format } from "date-fns";
 import { HeroSection } from "./dashboard/HeroSection";
 import { ExecutiveKPIs } from "./dashboard/ExecutiveKPIs";
 import { RevenueAnalytics } from "./dashboard/RevenueAnalytics";
-import { StudentTeacherAnalytics } from "./dashboard/StudentTeacherAnalytics";
 import { LiveMonitors } from "./dashboard/LiveMonitors";
 import { OperationsOverview } from "./dashboard/OperationsOverview";
-import { ApprovalsAndActivities } from "./dashboard/ApprovalsAndActivities";
-import { QuickActions } from "./dashboard/QuickActions";
-import { SmartInsights } from "./dashboard/SmartInsights";
 
 interface DashboardProps {
   data: {
@@ -87,21 +83,11 @@ export function AdminDashboardClient({ data }: DashboardProps) {
       
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
         <div className="xl:col-span-3 space-y-6 lg:space-y-8">
-          <SmartInsights data={data} kpiData={kpiData} todaysClasses={todaysClasses} />
-          
           <RevenueAnalytics data={data} todayStr={todayStr} />
           
           <LiveMonitors data={data} todaysClasses={todaysClasses} todayStr={todayStr} />
           
-          <StudentTeacherAnalytics data={data} />
-          
           <OperationsOverview data={data} />
-        </div>
-        
-        <div className="space-y-6 lg:space-y-8">
-          <QuickActions />
-          
-          <ApprovalsAndActivities data={data} kpiData={kpiData} />
         </div>
       </div>
     </div>

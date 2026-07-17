@@ -79,7 +79,6 @@ export type QueryCategoryFields = z.infer<typeof queryCategoryFieldsSchema>;
 
 export type CreateQueryFormFields = QueryCategoryFields & {
   category: QueryCategory;
-  remarks: string;
 };
 
 function trimmed(value: unknown): string {
@@ -92,7 +91,6 @@ export function buildCreateQuerySchema(nameKey: string, emailKey: string) {
       [nameKey]: z.string().trim().min(2, "Name must be at least 2 characters"),
       [emailKey]: z.string().trim().email("Enter a valid email"),
       category: z.enum(QUERY_CATEGORIES, { required_error: "Category is required" }),
-      remarks: z.string().trim().min(10, "Remarks must be at least 10 characters"),
     })
     .merge(queryCategoryFieldsSchema)
     .superRefine((raw, ctx) => {

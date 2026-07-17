@@ -166,9 +166,6 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Clock className="w-5 h-5 text-primary" /> Today's Schedule
               </h2>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/teacher/classes">View All <ChevronRight className="w-4 h-4 ml-1"/></Link>
-              </Button>
             </div>
             
             <div className="space-y-4">

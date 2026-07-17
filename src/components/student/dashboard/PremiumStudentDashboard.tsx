@@ -6,7 +6,6 @@ import { QuickAnalyticsGrid } from "./widgets/QuickAnalyticsGrid";
 import { TodaysClassesWidget } from "./widgets/TodaysClassesWidget";
 import { AttendanceInsights } from "./widgets/AttendanceInsights";
 import { CourseProgressWidget } from "./widgets/CourseProgressWidget";
-import { ReferralAndRewardsWidget } from "./widgets/ReferralAndRewardsWidget";
 import { NotificationCenterWidget } from "./widgets/NotificationCenterWidget";
 import { AchievementsAndActivity } from "./widgets/AchievementsAndActivity";
 import { QuickActionsAndInsights } from "./widgets/QuickActionsAndInsights";
@@ -22,14 +21,12 @@ export function PremiumStudentDashboard() {
         const [
           profileRes,
           attendanceRes,
-          rewardsRes,
           referralsRes,
           classesRes,
           enrolledCoursesRes
         ] = await Promise.all([
           fetch("/api/student/profile").then(res => res.ok ? res.json() : null),
           fetch("/api/student/attendance/report?month=" + new Date().toISOString().slice(0, 7)).then(res => res.ok ? res.json() : null),
-          fetch("/api/student/rewards").then(res => res.ok ? res.json() : null),
           fetch("/api/student/referrals").then(res => res.ok ? res.json() : null),
           fetch("/api/student/classes").then(res => res.ok ? res.json() : null),
           fetch("/api/student/enrolled-courses").then(res => res.ok ? res.json() : null),
@@ -38,7 +35,6 @@ export function PremiumStudentDashboard() {
         setData({
           profile: profileRes?.data?.profile || null,
           attendance: attendanceRes || null,
-          rewards: rewardsRes?.data || null,
           referrals: referralsRes?.data || null,
           classes: classesRes?.data?.classes || null,
           enrolledCourses: enrolledCoursesRes?.enrolledCourses || null,
@@ -68,13 +64,12 @@ export function PremiumStudentDashboard() {
       <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         
         {/* Top Section */}
-        <HeroSection profile={data?.profile} classes={data?.classes} rewards={data?.rewards} />
+        <HeroSection profile={data?.profile} classes={data?.classes} />
 
         {/* Analytics Grid */}
         <QuickAnalyticsGrid 
           profile={data?.profile} 
           attendance={data?.attendance} 
-          rewards={data?.rewards} 
           referrals={data?.referrals}
           enrolledCourses={data?.enrolledCourses}
         />
@@ -86,7 +81,6 @@ export function PremiumStudentDashboard() {
           <div className="lg:col-span-2 space-y-6">
             <AttendanceInsights attendance={data?.attendance} />
             <CourseProgressWidget profile={data?.profile} enrolledCourses={data?.enrolledCourses} />
-            <ReferralAndRewardsWidget rewards={data?.rewards} referrals={data?.referrals} profile={data?.profile} />
             <AchievementsAndActivity />
           </div>
 

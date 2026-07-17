@@ -1,16 +1,8 @@
 import React from "react";
-import { Wallet, CalendarDays, Gift, Users } from "lucide-react";
+import { CalendarDays, Users } from "lucide-react";
 
-export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals, enrolledCourses }: any) {
+export function QuickAnalyticsGrid({ profile, attendance, referrals, enrolledCourses }: any) {
   const attendancePercentage = attendance?.summary?.percentage || 0;
-  
-  // Calculate total pending fees from all enrolled courses
-  let pendingFees = 0;
-  if (enrolledCourses && enrolledCourses.length > 0) {
-    enrolledCourses.forEach((course: any) => {
-      pendingFees += (course.remainingAmount || 0);
-    });
-  }
 
   const cards = [
     {
@@ -23,28 +15,6 @@ export function QuickAnalyticsGrid({ profile, attendance, rewards, referrals, en
       bg: "bg-emerald-50",
       textColor: "text-emerald-700",
       iconColor: "text-emerald-600",
-    },
-    {
-      title: "Pending Fees",
-      value: `₹${pendingFees.toLocaleString()}`,
-      trend: pendingFees > 0 ? "Action required" : "All cleared",
-      trendUp: pendingFees === 0,
-      icon: Wallet,
-      color: "from-rose-400 to-rose-600",
-      bg: "bg-rose-50",
-      textColor: "text-rose-700",
-      iconColor: "text-rose-600",
-    },
-    {
-      title: "Reward Points",
-      value: rewards?.stats?.totalPoints || rewards?.points || 0,
-      trend: "Available points",
-      trendUp: true,
-      icon: Gift,
-      color: "from-purple-400 to-purple-600",
-      bg: "bg-purple-50",
-      textColor: "text-purple-700",
-      iconColor: "text-purple-600",
     },
     {
       title: "Total Referrals",
