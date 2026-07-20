@@ -68,7 +68,6 @@ export function QueryRequestModal({
       [nameField]: defaultName,
       [emailField]: defaultEmail,
       category: "",
-      remarks: "",
     },
   });
 
@@ -80,7 +79,6 @@ export function QueryRequestModal({
         [nameField]: defaultName,
         [emailField]: defaultEmail,
         category: "",
-        remarks: "",
         requestedChanges: "",
         currentBatchName: "",
         requestedBatchName: "",
@@ -182,19 +180,6 @@ export function QueryRequestModal({
             setValue={setValue}
           />
 
-          <div className="space-y-1.5">
-            <Label htmlFor="query-remarks">Remarks</Label>
-            <Textarea
-              id="query-remarks"
-              rows={4}
-              className="rounded-xl resize-none"
-              placeholder="Describe your request in detail…"
-              {...register("remarks")}
-            />
-            {errors.remarks && (
-              <p className="text-xs text-destructive">{errors.remarks.message as string}</p>
-            )}
-          </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
             <Button

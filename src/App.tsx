@@ -76,11 +76,9 @@ const seniorNav: NavItem[] = [
 ];
 const teacherNav: NavItem[] = [
   { to: "/teacher", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/teacher/classes", label: "My Classes", icon: CalendarDays },
   { to: "/teacher/attendance", label: "Attendance", icon: ClipboardCheck },
   { to: "/teacher/drawing-tests", label: "Drawing Tests", icon: Palette },
   { to: "/teacher/progress", label: "Student Progress", icon: TrendingUp },
-  { to: "/teacher/slot-requests", label: "Slot Requests", icon: ClipboardList },
   { to: "/teacher/leave", label: "Leave", icon: CalendarOff },
   { to: "/teacher/chat", label: "Chat", icon: MessageSquare },
 ];
@@ -88,7 +86,6 @@ const studentNav: NavItem[] = [
   { to: "/student", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/student/classes", label: "My Classes", icon: CalendarDays },
   { to: "/student/scores", label: "My Scores", icon: Star },
-  { to: "/student/request-slot", label: "Request Slot", icon: ClipboardList },
   { to: "/student/attendance", label: "Attendance", icon: ClipboardCheck },
   { to: "/student/fees", label: "Fees", icon: Wallet },
   { to: "/student/certificates", label: "Certificates", icon: Award },
@@ -142,11 +139,9 @@ const App = () => (
 
             <Route element={<RequireRole role="teacher"><RoleLayout navItems={teacherNav} role="teacher" /></RequireRole>}>
               <Route path="/teacher" element={<TeacherDashboard />} />
-              <Route path="/teacher/classes" element={<TeacherMyClasses />} />
               <Route path="/teacher/attendance" element={<TeacherAttendance />} />
               <Route path="/teacher/drawing-tests" element={<TeacherDrawingTests />} />
               <Route path="/teacher/progress" element={<ProgressReports scope="teacher" />} />
-              <Route path="/teacher/slot-requests" element={<TeacherSlotRequests />} />
               <Route path="/teacher/leave" element={<TeacherLeave />} />
               <Route path="/teacher/chat" element={<TeacherChat />} />
             </Route>
@@ -155,7 +150,6 @@ const App = () => (
               <Route path="/student" element={<StudentDashboard />} />
               <Route path="/student/classes" element={<MyClassesStudent />} />
               <Route path="/student/scores" element={<StudentScoresRoute />} />
-              <Route path="/student/request-slot" element={<RequestSlot />} />
               <Route path="/student/attendance" element={<StudentAttendance />} />
               <Route path="/student/fees" element={<StudentFees />} />
               <Route path="/student/certificates" element={<StudentCertificates />} />

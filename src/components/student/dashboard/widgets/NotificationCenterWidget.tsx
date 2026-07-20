@@ -14,15 +14,6 @@ export function NotificationCenterWidget() {
     },
     {
       id: 2,
-      type: "warning",
-      title: "Fee Payment Reminder",
-      time: "1 day ago",
-      icon: AlertTriangle,
-      color: "text-amber-500",
-      bg: "bg-amber-50"
-    },
-    {
-      id: 3,
       type: "success",
       title: "Referral Reward Earned",
       time: "3 days ago",

@@ -79,65 +79,6 @@ export function LiveMonitors({ data, todaysClasses, todayStr }: LiveMonitorsProp
         </div>
       </div>
 
-      {/* ATTENDANCE OVERVIEW */}
-      <div className="glass-card p-6">
-        <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-          <CheckCircle className="w-5 h-5 text-indigo-500" /> Attendance Overview
-        </h2>
-
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Student Attendance</h3>
-            <div className="grid grid-cols-2 gap-3 mb-2">
-              <div className="bg-success/10 text-success p-3 rounded-lg text-center">
-                <div className="text-xl font-bold">{studentPresent}</div>
-                <div className="text-xs font-semibold">Present</div>
-              </div>
-              <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-center">
-                <div className="text-xl font-bold">{studentAbsent}</div>
-                <div className="text-xs font-semibold">Absent</div>
-              </div>
-            </div>
-            {/* Simple progress bar representation */}
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden flex mt-2">
-              <div 
-                style={{ width: `${Math.max((studentPresent / (studentPresent + studentAbsent || 1)) * 100, 0)}%` }} 
-                className="h-full bg-success transition-all duration-500"
-              />
-              <div 
-                style={{ width: `${Math.max((studentAbsent / (studentPresent + studentAbsent || 1)) * 100, 0)}%` }} 
-                className="h-full bg-destructive transition-all duration-500"
-              />
-            </div>
-          </div>
-
-          <div className="h-px bg-border/50" />
-
-          <div>
-            <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Staff Attendance</h3>
-            <div className="grid grid-cols-2 gap-3 mb-2">
-              <div className="bg-success/10 text-success p-3 rounded-lg text-center">
-                <div className="text-xl font-bold">{teacherPresent}</div>
-                <div className="text-xs font-semibold">Present</div>
-              </div>
-              <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-center">
-                <div className="text-xl font-bold">{teacherAbsent}</div>
-                <div className="text-xs font-semibold">Absent</div>
-              </div>
-            </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden flex mt-2">
-              <div 
-                style={{ width: `${Math.max((teacherPresent / (teacherPresent + teacherAbsent || 1)) * 100, 0)}%` }} 
-                className="h-full bg-success transition-all duration-500"
-              />
-              <div 
-                style={{ width: `${Math.max((teacherAbsent / (teacherPresent + teacherAbsent || 1)) * 100, 0)}%` }} 
-                className="h-full bg-destructive transition-all duration-500"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
 
     </div>
   );

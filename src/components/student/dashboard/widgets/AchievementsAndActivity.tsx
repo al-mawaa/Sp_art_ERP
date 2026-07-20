@@ -1,17 +1,15 @@
 import React from "react";
-import { Award, Trophy, Star, Shield, Activity, CreditCard, PlayCircle } from "lucide-react";
+import { Award, Trophy, Star, Shield, Activity, PlayCircle } from "lucide-react";
 
 export function AchievementsAndActivity() {
   const achievements = [
     { name: "Perfect Attendance", icon: Star, color: "text-amber-500", bg: "bg-amber-100" },
     { name: "Referral Champion", icon: Trophy, color: "text-purple-500", bg: "bg-purple-100" },
     { name: "Top Performer", icon: Award, color: "text-blue-500", bg: "bg-blue-100" },
-    { name: "Gold Member", icon: Shield, color: "text-emerald-500", bg: "bg-emerald-100" },
   ];
 
   const activities = [
     { title: "Course Enrolled", desc: "Art Foundation Level 1", time: "2 weeks ago", icon: PlayCircle, color: "text-blue-500", bg: "bg-blue-100" },
-    { title: "Fee Paid", desc: "₹2,500 via Razorpay", time: "2 weeks ago", icon: CreditCard, color: "text-emerald-500", bg: "bg-emerald-100" },
     { title: "Reward Redeemed", desc: "Sketchbook Set", time: "1 month ago", icon: Award, color: "text-purple-500", bg: "bg-purple-100" }
   ];
 

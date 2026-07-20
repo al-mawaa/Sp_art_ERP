@@ -10,7 +10,7 @@ export interface QueryDocument extends mongoose.Document {
   personName: string;
   personEmail: string;
   category: QueryCategory;
-  remarks: string;
+  remarks?: string;
   status: QueryStatus;
   adminRemark?: string;
   reviewedAt?: Date;
@@ -74,7 +74,7 @@ const QuerySchema = new mongoose.Schema<QueryDocument>(
       default: "profile_correction",
       index: true,
     },
-    remarks: { type: String, required: true, trim: true },
+    remarks: { type: String, required: false, trim: true },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],

@@ -1,13 +1,10 @@
 import React from "react";
-import { Award, BookOpen, Clock, Target } from "lucide-react";
+import { BookOpen, Clock } from "lucide-react";
 
-export function HeroSection({ profile, classes, rewards }: { profile: any, classes?: any[], rewards?: any }) {
+export function HeroSection({ profile, classes }: { profile: any, classes?: any[] }) {
   const studentName = profile?.fullName || "Student";
   const course = profile?.courseName || "Art Foundation";
   const batch = profile?.batchName || "Weekend Batch";
-  
-  const activeCoursesCount = classes ? classes.length : 0;
-  const rewardPoints = rewards?.stats?.totalPoints || rewards?.points || 0;
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 p-8 sm:p-10 text-white shadow-xl">
@@ -15,7 +12,7 @@ export function HeroSection({ profile, classes, rewards }: { profile: any, class
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-blue-500/20 blur-3xl"></div>
       
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+      <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
         <div className="flex items-center gap-6">
           <div className="relative">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-400 p-1 shadow-2xl">
@@ -26,9 +23,6 @@ export function HeroSection({ profile, classes, rewards }: { profile: any, class
                   <span className="text-4xl font-bold text-white">{studentName.charAt(0)}</span>
                 )}
               </div>
-            </div>
-            <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-indigo-900">
-              Gold Member
             </div>
           </div>
           
@@ -43,26 +37,6 @@ export function HeroSection({ profile, classes, rewards }: { profile: any, class
                 <Clock size={14} /> {batch}
               </span>
             </div>
-          </div>
-        </div>
-
-        <div className="hidden lg:block w-px h-24 bg-white/10"></div>
-
-        <div className="flex flex-row gap-6 bg-white/5 p-5 rounded-2xl backdrop-blur-md border border-white/10">
-          <div className="text-center">
-            <div className="w-10 h-10 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center mb-2 text-blue-300">
-              <Target size={20} />
-            </div>
-            <p className="text-2xl font-bold">{activeCoursesCount}</p>
-            <p className="text-xs text-indigo-200 uppercase tracking-wider">Active Courses</p>
-          </div>
-          <div className="w-px bg-white/10"></div>
-          <div className="text-center">
-            <div className="w-10 h-10 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center mb-2 text-purple-300">
-              <Award size={20} />
-            </div>
-            <p className="text-2xl font-bold">{rewardPoints}</p>
-            <p className="text-xs text-indigo-200 uppercase tracking-wider">Reward Points</p>
           </div>
         </div>
       </div>

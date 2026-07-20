@@ -1,6 +1,6 @@
 import React from "react";
 import { format } from "date-fns";
-import { Sparkles, IndianRupee, Users, CheckCircle, ArrowRight } from "lucide-react";
+import { Sparkles, IndianRupee, Users, CheckCircle } from "lucide-react";
 import { Avatar } from "@/components/shared/Avatar";
 
 interface HeroSectionProps {
@@ -67,11 +67,8 @@ export function HeroSection({ kpiData }: HeroSectionProps) {
         </div>
       </div>
       
-      <div className="mt-8 pt-6 border-t border-white/20 flex flex-col md:flex-row items-center justify-between text-sm">
+      <div className="mt-8 pt-6 border-t border-white/20 text-sm">
         <span className="italic text-white/80">"Data is the new oil. Business intelligence is the refinery."</span>
-        <button className="flex items-center gap-2 mt-4 md:mt-0 font-bold bg-white text-primary px-4 py-2 rounded-full hover:bg-white/90 transition-colors">
-          View Detailed Reports <ArrowRight className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
