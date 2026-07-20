@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
 
     const data = await buildStaffAttendanceGroupedList({
       role,
-      batchId: (searchParams.get("batchId") || "").trim() || undefined,
       userId: (searchParams.get("userId") || searchParams.get("teacherId") || "").trim() || undefined,
       search: (searchParams.get("search") || "").trim() || undefined,
       page: Number(searchParams.get("page") || "1"),

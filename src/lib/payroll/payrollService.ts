@@ -143,23 +143,91 @@ async function getBatchSessionCounts(
     staffType === "teacher"
       ? { teacherIds: staffId, batchStatus: { $in: ["Active", "Completed"] as const } }
       : { seniorTeacherIds: staffId, batchStatus: { $in: ["Active", "Completed"] as const } };
-  const batches = await Batch.find(filter).select("batchName batchDay").lean();
+  const batches = await Batch.find(filter).select("batchName batchDay batchType").lean();
 
   let weekdaySessions = 0;
   let weekendSessions = 0;
+  let numWeekdayBatches = 0;
+  let numWeekendBatches = 0;
+
   for (const batch of batches) {
     const days = parseBatchDays(batch.batchDay ?? "");
     const monthlySessions = countOccurrencesInMonth(days, start, end);
     if (monthlySessions === 0) continue;
-    if (days.some(d => d === 0 || d === 6)) weekendSessions += monthlySessions;
-    if (days.some(d => d >= 1 && d <= 5)) weekdaySessions += monthlySessions;
+
+    if (batch.batchType === "Weekend") {
+      weekendSessions += monthlySessions;
+      numWeekendBatches++;
+    } else {
+      weekdaySessions += monthlySessions;
+      numWeekdayBatches++;
+    }
   }
 
   return {
     weekdayBatches: weekdaySessions,
     weekendBatches: weekendSessions,
     totalBatches: weekdaySessions + weekendSessions,
+    numWeekdayBatches,
+    numWeekendBatches,
+    batches,
   };
+}
+
+async function calculateMissedBatches(
+  staffType: PayrollStaffType,
+  staffId: mongoose.Types.ObjectId,
+  month: string,
+  batches: Array<{ batchType: string; batchDay: string }>,
+) {
+  const role = staffType === "teacher" ? "teacher" : "senior-teacher";
+  const { startDate, endDate, start, end } = monthBounds(month);
+
+  const attendances = await TeacherAttendance.find({
+    role,
+    teacherId: staffId,
+    attendanceDate: { $gte: startDate, $lte: endDate },
+    status: { $in: ["Absent", "Half Day"] }
+  }).select("attendanceDate status").lean();
+
+  const leaves = staffType === "teacher"
+    ? await Leave.find({ teacherId: staffId, fromDate: { $lte: endDate }, toDate: { $gte: startDate }, status: "Rejected" }).lean()
+    : await SeniorTeacherLeave.find({ seniorTeacherId: staffId, fromDate: { $lte: endDate }, toDate: { $gte: startDate }, status: "Rejected" }).lean();
+
+  const missedDates = new Map<string, number>();
+  
+  for (const att of attendances) {
+    missedDates.set(att.attendanceDate, att.status === "Half Day" ? 0.5 : 1);
+  }
+
+  for (const leave of leaves) {
+    const cur = new Date(Math.max(new Date(leave.fromDate).getTime(), start.getTime()));
+    const leaveEnd = new Date(Math.min(new Date(leave.toDate).getTime(), end.getTime()));
+    while (cur <= leaveEnd) {
+      const dateStr = cur.toISOString().split("T")[0];
+      if (!missedDates.has(dateStr)) missedDates.set(dateStr, 1);
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  let missedWeekdaySessions = 0;
+  let missedWeekendSessions = 0;
+
+  for (const [dateStr, multiplier] of missedDates.entries()) {
+    const d = new Date(dateStr).getDay();
+    for (const batch of batches) {
+      const days = parseBatchDays(batch.batchDay ?? "");
+      if (days.includes(d)) {
+        if (batch.batchType === "Weekend") {
+          missedWeekendSessions += multiplier;
+        } else {
+          missedWeekdaySessions += multiplier;
+        }
+      }
+    }
+  }
+
+  return { missedWeekdaySessions, missedWeekendSessions };
 }
 
 async function getAttendanceSummary(
@@ -423,12 +491,20 @@ async function computePayrollEntryFields(
     getLeaveSummary(profile.staffType, staffId, month),
   ]);
 
+  const { missedWeekdaySessions, missedWeekendSessions } = await calculateMissedBatches(
+    profile.staffType,
+    staffId,
+    month,
+    batchCounts.batches,
+  );
+
   const monthlySalary = Math.max(0, Number(profile.monthlySalary ?? 0));
   const salaryPerBatch = batchCounts.totalBatches > 0 ? monthlySalary / batchCounts.totalBatches : 0;
-  const absentDeduction = salaryPerBatch * attendance.absent;
-  const halfDayDeduction = salaryPerBatch * 0.5 * attendance.halfDay;
-  const rejectedLeaveDeduction = salaryPerBatch * leave.rejected;
-  const deductionAmount = Number((absentDeduction + halfDayDeduction + rejectedLeaveDeduction).toFixed(2));
+  
+  const weekdayDeduction = salaryPerBatch * missedWeekdaySessions;
+  const weekendDeduction = (salaryPerBatch * 2) * missedWeekendSessions;
+  
+  const deductionAmount = Number((weekdayDeduction + weekendDeduction).toFixed(2));
   const netSalary = Math.max(0, Number((monthlySalary - deductionAmount).toFixed(2)));
   const remarks =
     leave.pending > 0 ? `Hold calculation: ${leave.pending} pending leave day(s).` : "";

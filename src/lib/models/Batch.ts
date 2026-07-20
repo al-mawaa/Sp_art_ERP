@@ -21,6 +21,7 @@ export interface BatchAttendanceSummary {
 }
 
 export type BatchStatus = "Active" | "Inactive" | "Completed";
+export type BatchType = "Weekday" | "Weekend";
 
 export interface BatchDocument extends mongoose.Document {
   batchName: string;
@@ -28,6 +29,7 @@ export interface BatchDocument extends mongoose.Document {
   courseName: string;
   /** Combined schedule label */
   batchTiming?: string;
+  batchType: BatchType;
   batchDay: string;
   batchTime: string;
   startDate?: string;
@@ -83,6 +85,7 @@ const BatchSchema = new mongoose.Schema<BatchDocument>(
     batchCode: { type: String, trim: true, index: true },
     courseName: { type: String, required: true, trim: true },
     batchTiming: { type: String, trim: true },
+    batchType: { type: String, enum: ["Weekday", "Weekend"], default: "Weekday" },
     batchDay: { type: String, required: true, trim: true },
     batchTime: { type: String, required: true, trim: true },
     startDate: { type: String, trim: true, default: "" },
