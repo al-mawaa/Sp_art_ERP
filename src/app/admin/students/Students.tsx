@@ -5,6 +5,7 @@ import { Plus, Search, Pencil, Eye, UploadCloud } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar } from '@/components/shared/Avatar';
@@ -241,6 +242,8 @@ export default function StudentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [availableBatches, setAvailableBatches] = useState<BatchOption[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const itemsPerPage = 6;
 
   const fetchStudents = useCallback(async () => {
@@ -361,6 +364,7 @@ export default function StudentsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -389,6 +393,8 @@ export default function StudentsPage() {
         }
       };
       reader.readAsDataURL(file);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -410,6 +416,7 @@ export default function StudentsPage() {
       }
     }
     
+    setSubmitting(true);
     const payload = buildStudentPayload(form);
     const isEdit = Boolean(editingStudent?.id);
     const url = isEdit ? `/api/students/${editingStudent!.id}` : '/api/students';
@@ -433,6 +440,8 @@ export default function StudentsPage() {
     } catch (error) {
       console.error('Error saving student:', error);
       toast.error((error as Error).message || 'Unable to save student');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -546,24 +555,6 @@ export default function StudentsPage() {
                     </span>
                   ),
                 },
-                { key: 'class', header: 'Class' },
-                {
-                  key: 'feeStatus',
-                  header: 'Fee Status',
-                  render: (row) => (
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        row.feeStatus === 'Paid'
-                          ? 'bg-green-100 text-green-800'
-                          : row.feeStatus === 'Pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {row.feeStatus}
-                    </span>
-                  ),
-                },
                 {
                   key: 'actions',
                   header: 'Actions',
@@ -626,9 +617,9 @@ export default function StudentsPage() {
                       <UploadCloud className="w-6 h-6 text-muted-foreground" />
                     )}
                   </div>
-                  <Button type="button" variant="outline" onClick={() => document.getElementById('student-photo-input')?.click()}>
+                  <LoadingButton type="button" variant="outline" onClick={() => document.getElementById('student-photo-input')?.click()} isLoading={uploading} loadingText="Uploading...">
                     Upload
-                  </Button>
+                  </LoadingButton>
                   <input
                     id="student-photo-input"
                     type="file"
@@ -810,10 +801,10 @@ export default function StudentsPage() {
             </div>
 
             <div className="flex justify-between items-center gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={closeSheet}>Cancel</Button>
-              <Button type="submit" className="w-full sm:w-auto rounded-xl gradient-primary text-white border-0 shadow-pop">
+              <Button type="button" variant="outline" onClick={closeSheet} disabled={submitting}>Cancel</Button>
+              <LoadingButton type="submit" className="w-full sm:w-auto rounded-xl gradient-primary text-white border-0 shadow-pop" isLoading={submitting} loadingText={editingStudent ? 'Updating...' : 'Adding...'}>
                 {editingStudent ? 'Update Student' : 'Add Student'}
-              </Button>
+              </LoadingButton>
             </div>
           </form>
         </SheetContent>

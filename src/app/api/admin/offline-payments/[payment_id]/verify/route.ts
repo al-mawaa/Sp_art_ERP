@@ -306,8 +306,8 @@ export async function POST(
     session.endSession();
   }
 
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'support@littlebrushes.com';
-  const supportPhone = process.env.SUPPORT_PHONE || '+91 99999 99999';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'spinstituteofart@gmail.com';
+  const supportPhone = process.env.SUPPORT_PHONE || '+91 9819703242';
   const accessUrl = buildAccessUrl(course);
   const certificateUrl = buildCertificateUrl(payment.studentId as mongoose.Types.ObjectId);
 

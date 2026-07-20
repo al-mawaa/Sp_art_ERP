@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CreditCard, CalendarClock, Gift, CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -231,7 +232,7 @@ export function EnrollmentPaymentModal({
         key: razorpayKeyId,
         amount: data.order.amount,
         currency: data.order.currency || "INR",
-        name: "Little Brushes Art Academy",
+        name: "SP Art Hub",
         description: courseTitle,
         image: "/logo.png",
         order_id: data.order.id,
@@ -381,18 +382,20 @@ export function EnrollmentPaymentModal({
                     setReferralInput(e.target.value.toUpperCase());
                     setAppliedReferral(null);
                   }}
-                  placeholder="e.g. SPARTRF-0001"
+                  placeholder="Enter Referral Code"
                   className="uppercase bg-white"
                 />
-                <Button
+                <LoadingButton
                   type="button"
                   variant="outline"
                   onClick={handleApplyReferral}
-                  disabled={referralLoading || !referralInput.trim()}
+                  isLoading={referralLoading}
+                  loadingText="Applying..."
+                  disabled={!referralInput.trim()}
                   className="shrink-0"
                 >
-                  {referralLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-                </Button>
+                  Apply
+                </LoadingButton>
               </div>
               {appliedReferral && (
                 <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -452,20 +455,14 @@ export function EnrollmentPaymentModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button
+          <LoadingButton
             onClick={handlePay}
-            disabled={loading}
+            isLoading={loading}
+            loadingText="Processing Payment..."
             className="bg-gradient-to-r from-blue-600 to-indigo-600"
           >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              `Pay ${formatInr(finalPayAmount)}`
-            )}
-          </Button>
+            Pay {formatInr(finalPayAmount)}
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

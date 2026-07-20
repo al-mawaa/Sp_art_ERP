@@ -35,7 +35,7 @@ import {
 import { toast } from "sonner";
 import { downloadAllSalarySlipsPdf, downloadSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
 
-const INSTITUTE_NAME = "Little Brushes Art Academy";
+const INSTITUTE_NAME = "SP Art Hub";
 
 type SalaryProfileRow = {
   id: string;

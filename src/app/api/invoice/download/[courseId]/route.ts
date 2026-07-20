@@ -58,7 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const pdfBuffer = await generateEnrollmentInvoicePdf({
       invoiceId,
-      academyName: 'Little Brushes Art Academy',
+      academyName: 'SP Art Hub',
       studentName: String(student.fullName || 'Student Name'),
       studentEmail: student.email || '',
       courseTitle: String(course.courseTitle || 'Course Title'),
@@ -75,12 +75,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       taxAmount: Number(enrollment.taxAmount ?? 0),
       installmentCharge: Number(enrollment.installmentCharge ?? 0),
       paymentType: enrollment.paymentType ?? 'full',
-      supportEmail: process.env.EMAIL_FROM || process.env.SMTP_FROM || 'support@littlebrushes.com',
-      supportPhone: process.env.SUPPORT_PHONE || '+91 90000 00000',
+      supportEmail: process.env.EMAIL_FROM || process.env.SMTP_FROM || 'spinstituteofart@gmail.com',
+      supportPhone: process.env.SUPPORT_PHONE || '+91 9819703242',
       gstNumber: process.env.GST_NUMBER,
     });
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

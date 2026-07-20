@@ -246,8 +246,8 @@ export async function processSuccessfulPayment(input: ProcessPaymentInput) {
   const duration = Number(course.duration ?? 2);
   const breakdown = calculatePaymentBreakdown(baseFee, duration, paymentType);
   const invoiceId = `INV-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-  const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM || "support@littlebrushes.com";
-  const supportPhone = process.env.SUPPORT_PHONE || "+91 90000 00000";
+  const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM || "spinstituteofart@gmail.com";
+  const supportPhone = process.env.SUPPORT_PHONE || "+91 9819703242";
 
   let enrollment: CourseEnrollmentDocument;
 

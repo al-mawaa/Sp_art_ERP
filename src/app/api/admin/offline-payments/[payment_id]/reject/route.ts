@@ -140,9 +140,9 @@ export async function POST(
   });
 
   const studentEmail = String(student.email || '');
-  const academyName = process.env.ACADEMY_NAME || 'Little Brushes Academy';
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'support@littlebrushes.com';
-  const supportPhone = process.env.SUPPORT_PHONE || '+91 99999 99999';
+  const academyName = process.env.ACADEMY_NAME || 'SP Art Hub';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'spinstituteofart@gmail.com';
+  const supportPhone = process.env.SUPPORT_PHONE || '+91 9819703242';
 
   if (studentEmail) {
     try {

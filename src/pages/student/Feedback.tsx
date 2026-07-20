@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Star, Send, MessageSquareHeart } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -65,6 +66,7 @@ export function StudentFeedback() {
   const [improve, setImprove] = useState("");
   const [recommend, setRecommend] = useState<"Yes" | "Maybe" | "No">("Yes");
   const [additional, setAdditional] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!me) {
     return (
@@ -79,11 +81,13 @@ export function StudentFeedback() {
 
   const allRated = Object.values(ratings).every(v => v > 0);
 
-  const submit = () => {
+  const submit = async () => {
     if (!parentName.trim()) return toast.error("Please enter parent / guardian name");
     if (!teacherName) return toast.error("Please select a teacher");
     if (!allRated) return toast.error("Please rate every category (1–5)");
-    actions.submitFeedback({
+    setSubmitting(true);
+    try {
+      actions.submitFeedback({
       studentId: me.id,
       studentName: me.name,
       parentName: parentName.trim(),
@@ -103,11 +107,16 @@ export function StudentFeedback() {
     setRatings({ teaching: 0, communication: 0, artisticGrowth: 0, classroom: 0, variety: 0, value: 0 });
     setInstructorImpression(""); setMotivatedExplain(""); setCommunicationSuggestions("");
     setAppreciate(""); setImprove(""); setAdditional("");
+    } catch (error) {
+      toast.error("Failed to submit feedback");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Parent Feedback" subtitle="Help us make Little Brushes even better 🎨" />
+      <PageHeader title="Parent Feedback" subtitle="Help us make SP Art Hub even better 🎨" />
 
       <div className="card-pop overflow-hidden">
         <div className="gradient-primary text-white p-6">
@@ -217,9 +226,9 @@ export function StudentFeedback() {
           </section>
 
           <div className="flex justify-end">
-            <Button onClick={submit} className="rounded-xl gradient-primary text-white border-0">
+            <LoadingButton onClick={submit} isLoading={submitting} loadingText="Submitting..." className="rounded-xl gradient-primary text-white border-0">
               <Send className="w-4 h-4 mr-1.5" />Submit feedback
-            </Button>
+            </LoadingButton>
           </div>
           <p className="text-xs text-center text-muted-foreground">Thank you for your time and support! 💜</p>
         </div>

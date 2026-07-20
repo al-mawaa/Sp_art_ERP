@@ -18,11 +18,25 @@ export const runtime = 'nodejs';
 const roles = ['student', 'teacher', 'senior_teacher'] as const;
 
 const generateBadgeId = (role: 'teacher' | 'senior_teacher' | 'student') => {
-  const prefix = role === 'teacher' ? 'TCH' : role === 'senior_teacher' ? 'SRT' : 'STU';
+  const prefix = role === 'teacher' ? 'TCH' : role === 'senior_teacher' ? 'SRT' : 'SPART';
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 };
 
 async function getUniqueBadgeId(role: 'teacher' | 'senior_teacher' | 'student') {
+  if (role === 'student') {
+    // Generate sequential SPART-XXX format for students
+    const students = await Student.find().select('badgeId').sort({ createdAt: 1 }).lean();
+    let maxSequence = 0;
+    for (const student of students) {
+      const match = student.badgeId?.match(/^SPART(\d+)$/i);
+      if (match) {
+        maxSequence = Math.max(maxSequence, Number.parseInt(match[1], 10));
+      }
+    }
+    const nextSequence = maxSequence + 1;
+    return `SPART-${String(nextSequence).padStart(3, '0')}`;
+  }
+  
   let badgeId = generateBadgeId(role);
   if (role === 'teacher') {
     while (await Teacher.findOne({ badgeId })) {
@@ -30,10 +44,6 @@ async function getUniqueBadgeId(role: 'teacher' | 'senior_teacher' | 'student') 
     }
   } else if (role === 'senior_teacher') {
     while (await SeniorTeacher.findOne({ badgeId })) {
-      badgeId = generateBadgeId(role);
-    }
-  } else {
-    while (await Student.findOne({ badgeId })) {
       badgeId = generateBadgeId(role);
     }
   }

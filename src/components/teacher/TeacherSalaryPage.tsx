@@ -127,7 +127,7 @@ export function TeacherSalaryPage() {
                             className="rounded-lg"
                             onClick={() =>
                               downloadSalarySlipPdf({
-                                instituteName: "Little Brushes Art Academy",
+                                instituteName: "SP Art Hub",
                                 ...row,
                               })
                             }

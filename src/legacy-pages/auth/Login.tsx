@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Crown, Shield, GraduationCap, Users, BookOpen, ArrowRight, Sparkles } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,15 +25,23 @@ export default function Login() {
   const [role, setRole] = useState<Role>("admin");
   const [email, setEmail] = useState("anjali@littlebrushes.in");
   const [password, setPassword] = useState("demo1234");
+  const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password) return toast.error("Please fill in both fields");
-    login(role, email);
-    toast.success(`Welcome, ${ROLES.find(r => r.id === role)?.title}!`);
-    router.push(`/${role}`);
+    setSubmitting(true);
+    try {
+      login(role, email);
+      toast.success(`Welcome, ${ROLES.find(r => r.id === role)?.title}!`);
+      router.push(`/${role}`);
+    } catch (error) {
+      toast.error("Login failed");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function pickRole(r: Role) {
@@ -120,13 +128,18 @@ export default function Login() {
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl h-11" />
               <p className="text-[11px] text-muted-foreground">Demo: any password unlocks the dashboard.</p>
             </div>
-            <Button type="submit" className="w-full h-11 rounded-xl gradient-primary text-white font-bold border-0 hover:opacity-95 shadow-pop">
+            <LoadingButton
+              type="submit"
+              isLoading={submitting}
+              loadingText="Signing in…"
+              className="w-full h-11 rounded-xl gradient-primary text-white font-bold border-0 hover:opacity-95 shadow-pop"
+            >
               Enter dashboard <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+            </LoadingButton>
           </form>
 
           <p className="text-xs text-center text-muted-foreground">
-            © {new Date().getFullYear()} Little Brushes Art Academy
+            © {new Date().getFullYear()} SP Art Hub
           </p>
         </div>
       </div>

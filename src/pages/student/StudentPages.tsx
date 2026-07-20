@@ -72,7 +72,7 @@ export function StudentDashboard() {
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Attendance" value={`${pct}%`} icon={CalendarDays} tone="success" />
-        <StatCard label="Pending Fees" value={`₹${(me.totalFee - me.paidFee).toLocaleString()}`} icon={Wallet} tone="destructive" />
+        <StatCard label="Pending Fees" value={`₹${(me.totalFee - me.paidFee).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={Wallet} tone="destructive" />
         <StatCard label="Certificates" value={3} icon={Award} tone="accent" />
         <StatCard label="Next Class" value="4:00 PM" icon={Clock} tone="info" />
       </div>
@@ -542,20 +542,20 @@ export function StudentFees() {
     <div className="space-y-6">
       <PageHeader title="My Fees" subtitle="Payments and dues" />
       <div className="grid sm:grid-cols-3 gap-4">
-        <StatCard label="Total Fee" value={`₹${me.totalFee.toLocaleString()}`} icon={Wallet} tone="info" />
-        <StatCard label="Paid" value={`₹${me.paidFee.toLocaleString()}`} icon={CreditCard} tone="success" />
-        <StatCard label="Balance" value={`₹${balance.toLocaleString()}`} icon={Wallet} tone="destructive" />
+        <StatCard label="Total Fee" value={`₹${me.totalFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={Wallet} tone="info" />
+        <StatCard label="Paid" value={`₹${me.paidFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={CreditCard} tone="success" />
+        <StatCard label="Balance" value={`₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={Wallet} tone="destructive" />
       </div>
       <div className="card-soft p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div><div className="font-display font-bold">Pay your balance</div><div className="text-sm text-muted-foreground">Quick & secure online payment</div></div>
-        <Button className="rounded-xl text-white font-bold shadow-pop border-0" style={{ background: "#072654" }} onClick={() => setPayOpen(true)}>Pay ₹{balance.toLocaleString()} via Razorpay</Button>
+        <Button className="rounded-xl text-white font-bold shadow-pop border-0" style={{ background: "#072654" }} onClick={() => setPayOpen(true)}>Pay ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} via Razorpay</Button>
       </div>
       <div>
         <h3 className="font-display font-bold text-lg mb-3">Payment history</h3>
         <div className="card-soft overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Amount</th><th className="px-3 py-2 text-left">Mode</th><th className="px-3 py-2 text-left">Status</th></tr></thead>
-            <tbody>{myPays.length === 0 ? <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">No payments yet</td></tr> : myPays.map(p => <tr key={p.id} className="border-t border-border/60"><td className="px-3 py-2">{p.date}</td><td className="px-3 py-2">₹{p.amount.toLocaleString()}</td><td className="px-3 py-2">{p.mode}</td><td className="px-3 py-2"><StatusPill status={p.status} /></td></tr>)}</tbody>
+            <tbody>{myPays.length === 0 ? <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">No payments yet</td></tr> : myPays.map(p => <tr key={p.id} className="border-t border-border/60"><td className="px-3 py-2">{p.date}</td><td className="px-3 py-2">₹{p.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td className="px-3 py-2">{p.mode}</td><td className="px-3 py-2"><StatusPill status={p.status} /></td></tr>)}</tbody>
           </table>
         </div>
       </div>
@@ -572,7 +572,7 @@ export function StudentFees() {
             actions.recordPayment({ studentName: me.name, amount: balance, mode: "Online" });
             setPayOpen(false);
             toast.success("Payment successful! 🎉");
-          }}>Pay ₹{balance.toLocaleString()}</Button>
+          }}>Pay ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Button>
         </DialogContent>
       </Dialog>
     </div>

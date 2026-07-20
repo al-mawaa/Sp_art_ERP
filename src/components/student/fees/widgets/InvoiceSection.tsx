@@ -26,7 +26,7 @@ export function InvoiceSection({ data, me, history = [] }: { data: any, me: any,
             <p className="text-xs text-slate-500 mt-0.5">Issued: {new Date(latestPayment.paymentDate).toLocaleDateString()}</p>
           </div>
           <div className="text-right">
-            <h4 className="font-bold text-blue-600">₹{latestPayment.amount?.toLocaleString() || 0}</h4>
+            <h4 className="font-bold text-blue-600">₹{latestPayment.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</h4>
             <p className="text-xs text-emerald-600 font-semibold mt-0.5">Paid</p>
           </div>
         </div>

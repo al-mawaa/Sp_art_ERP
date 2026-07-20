@@ -47,7 +47,6 @@ const adminNav: Array<NavItem | NavSection> = [
   {
     title: "Finance & Operations",
     items: [
-      { to: "/admin/billing", label: "Billing", icon: CreditCard },
       { to: "/admin/offline-payments", label: "Offline Payments", icon: Wallet },
       { to: "/admin/payroll", label: "HR & Payroll", icon: Wallet },
       { to: "/admin/inventory", label: "Inventory", icon: Boxes },

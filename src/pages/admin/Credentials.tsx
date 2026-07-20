@@ -5,6 +5,7 @@ import { Plus, Search, Shield, Eye, EyeOff } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ export default function CredentialsPage() {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<CredentialRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   const credentialsForm = useForm<CredentialForm>({
@@ -81,6 +83,7 @@ export default function CredentialsPage() {
   }, []);
 
   const onSubmit = async (data: CredentialForm) => {
+    setSubmitting(true);
     try {
       const response = await fetch('/api/student-credentials', {
         method: 'POST',
@@ -124,6 +127,8 @@ export default function CredentialsPage() {
     } catch (error) {
       console.error('Error creating credential:', error);
       toast.error('Failed to create credential');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -232,10 +237,12 @@ export default function CredentialsPage() {
               )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit">Save Credential</Button>
+              <LoadingButton type="submit" isLoading={submitting} loadingText="Saving...">
+                Save Credential
+              </LoadingButton>
             </div>
           </form>
         </DialogContent>

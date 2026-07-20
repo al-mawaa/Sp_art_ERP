@@ -9,6 +9,19 @@ import Course from '@/lib/models/Course';
 
 export const runtime = 'nodejs';
 
+async function generateStudentBadgeId() {
+  const students = await Student.find().select('badgeId').sort({ createdAt: 1 }).lean();
+  let maxSequence = 0;
+  for (const student of students) {
+    const match = student.badgeId?.match(/^SPART(\d+)$/i);
+    if (match) {
+      maxSequence = Math.max(maxSequence, Number.parseInt(match[1], 10));
+    }
+  }
+  const nextSequence = maxSequence + 1;
+  return `SPART-${String(nextSequence).padStart(3, '0')}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
@@ -152,7 +165,7 @@ export async function POST(request: NextRequest) {
     const {
       fullName,
       email,
-      badgeId,
+      badgeId: providedBadgeId,
       className = 'Not Assigned',
       phone,
       photo,
@@ -177,9 +190,15 @@ export async function POST(request: NextRequest) {
       feeStatus = 'Pending',
     } = body;
 
-    if (!fullName || !badgeId) {
+    // Auto-generate badge ID if not provided
+    let badgeId = providedBadgeId;
+    if (!badgeId) {
+      badgeId = await generateStudentBadgeId();
+    }
+
+    if (!fullName) {
       return NextResponse.json(
-        { error: 'Full name and badge ID are required' },
+        { error: 'Full name is required' },
         { status: 400 }
       );
     }
