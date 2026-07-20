@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Wallet } from "lucide-react";
+import { Download, Wallet, Eye } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { toast } from "sonner";
-import { downloadSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
+import { downloadSalarySlipPdf, previewSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
 
 type SalaryHistoryRow = {
   id: string;
@@ -121,19 +121,34 @@ export function TeacherSalaryPage() {
                         <td className="py-2 pr-2 font-semibold">{money(row.netSalary)}</td>
                         <td className="py-2 pr-2"><StatusPill status={row.payrollStatus} /></td>
                         <td className="py-2 pr-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="rounded-lg"
-                            onClick={() =>
-                              downloadSalarySlipPdf({
-                                instituteName: "Little Brushes Art Academy",
-                                ...row,
-                              })
-                            }
-                          >
-                            <Download className="w-3.5 h-3.5 mr-1" /> Download
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-lg"
+                              onClick={() =>
+                                previewSalarySlipPdf({
+                                  instituteName: "Little Brushes Art Academy",
+                                  ...row,
+                                })
+                              }
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" /> Preview
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-lg"
+                              onClick={() =>
+                                downloadSalarySlipPdf({
+                                  instituteName: "Little Brushes Art Academy",
+                                  ...row,
+                                })
+                              }
+                            >
+                              <Download className="w-3.5 h-3.5 mr-1" /> Download
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

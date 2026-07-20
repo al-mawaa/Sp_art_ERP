@@ -39,52 +39,74 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
   // Computed data
   const todaysClasses = useMemo(() => {
     const todayName = format(new Date(), "EEEE");
-    const todayBatches = batches.filter(b => b.batchDay === todayName || b.batchDay === "Everyday");
-    if (todayBatches.length > 0) {
-      return todayBatches.map(b => ({
+    const todayBatches = batches.filter(b => {
+      const days = b.batchDay?.split(",").map((d: string) => d.trim()) || [];
+      return days.includes(todayName) || b.batchDay === "Everyday";
+    });
+    
+    return todayBatches.map(b => {
+      const studentCount = students?.filter(s => s.batchId === b._id).length || 0;
+      return {
         id: b._id,
         subject: b.courseName,
         className: b.batchName,
         time: b.batchTime,
-        students: b.students?.length || 0,
+        students: studentCount,
         status: "Upcoming"
-      }));
-    }
-    // Fallback if no classes today
-    return batches.slice(0, 3).map(b => ({
-      id: b._id,
-      subject: b.courseName,
-      className: b.batchName,
-      time: b.batchTime,
-      students: b.students?.length || 0,
-      status: "Upcoming"
-    }));
-  }, [batches]);
+      };
+    });
+  }, [batches, students]);
 
   const activeBatchesCount = batches.filter(b => b.batchStatus === "Active").length;
   const pendingTasksCount = drawingTasks.length;
   
-  // Calculate total students from embedded roster
-  const totalStudents = batches.reduce((sum, b) => sum + (b.students?.length || 0), 0) || students.length;
+  const totalStudents = students?.length || 0;
   
-  const leaveBalanceCount = leaveBalance ? (leaveBalance.casual + leaveBalance.sick + leaveBalance.personal) : 9;
+  const leaveBalanceCount = leaveBalance ? (leaveBalance.casual + leaveBalance.sick + leaveBalance.personal) : 0;
   
-  const attendanceRate = batches.length > 0 
-    ? Math.round(batches.reduce((sum, b) => sum + (b.attendanceSummary?.averageAttendancePercent || 0), 0) / batches.length)
+  const getBatchAttendanceRate = (batchId: string) => {
+    const batchRecords = attendanceList.filter(a => a.batchId === batchId);
+    if (batchRecords.length === 0) return 0;
+    
+    let totalPresent = 0;
+    let totalS = 0;
+    for (const record of batchRecords) {
+      totalS += record.students.length;
+      totalPresent += record.students.filter((s: any) => s.status === 'Present').length;
+    }
+    return totalS > 0 ? Math.round((totalPresent / totalS) * 100) : 0;
+  };
+
+  let globalTotalStudents = 0;
+  let globalTotalPresent = 0;
+  attendanceList.forEach(record => {
+    globalTotalStudents += record.students.length;
+    globalTotalPresent += record.students.filter((s: any) => s.status === 'Present').length;
+  });
+  
+  const attendanceRate = globalTotalStudents > 0 
+    ? Math.round((globalTotalPresent / globalTotalStudents) * 100)
     : 0;
 
-  const performanceRating = performance?.averagePerformance || teacher.performanceScore || 0;
+  let calculatedRating = 0;
+  if (feedbacks && feedbacks.length > 0) {
+    const total = feedbacks.reduce((acc, f) => acc + (f.overallRating || 0), 0);
+    calculatedRating = Number((total / feedbacks.length).toFixed(1));
+  }
+
+  const performanceRating = calculatedRating > 0 
+    ? calculatedRating 
+    : (performance?.averagePerformance || teacher.performanceScore || 0);
 
   const pendingQueries = queries?.filter(q => q.status === "pending") || [];
-  // Use queries as slot requests if there are any, else use store fallback
-  const pendingSlotsCount = pendingQueries.length > 0 ? pendingQueries.length : slotRequestsFallback.filter(r => r.status === "Pending").length;
+  const pendingSlotsCount = pendingQueries.length;
   
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? "Good Morning" : currentHour < 18 ? "Good Afternoon" : "Good Evening";
 
   const smartInsights = [
-    `You have completed ${attendanceRate}% of average attendance marking.`,
-    `Batch ${batches[0]?.batchName || 'Junior'} is currently active.`,
+    `Your overall student attendance rate is ${attendanceRate}%.`,
+    batches.length > 0 ? `Your first batch ${batches[0].batchName} has ${students?.filter(s => s.batchId === batches[0]._id).length || 0} students.` : `You don't have any active batches yet.`,
     `${certificates.length} certificates have been issued.`
   ];
 
@@ -171,18 +193,12 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
             <div className="space-y-4">
               {todaysClasses.map((cls, i) => (
                 <div key={i} className="flex gap-4 p-4 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors group">
-                  <div className="flex flex-col items-center justify-center min-w-[80px] border-r border-border/50 pr-4">
-                    <span className="text-lg font-bold">{cls.time.split(" ")[0]}</span>
-                    <span className="text-xs text-muted-foreground uppercase">{cls.time.split(" ")[1] || "AM"}</span>
+                  <div className="flex flex-col items-center justify-center min-w-[100px] border-r border-border/50 pr-4 text-center">
+                    <span className="text-sm font-bold leading-tight">{cls.time}</span>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-lg">{cls.subject}</h3>
                     <p className="text-sm text-muted-foreground">{cls.className} • {cls.students} students</p>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="sm" className="rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white">
-                      <Play className="w-4 h-4 mr-1"/> Start
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -210,12 +226,17 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
                       {b.batchStatus}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">{b.courseName}</p>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">{b.attendanceSummary?.averageAttendancePercent || 0}%</span>
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-sm text-muted-foreground">{b.courseName}</p>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                      {students?.filter(s => s.batchId === b._id).length || 0} Students
+                    </span>
                   </div>
-                  <Progress value={b.attendanceSummary?.averageAttendancePercent || 0} className="h-1.5 mb-4" />
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-muted-foreground">Attendance</span>
+                    <span className="font-medium">{getBatchAttendanceRate(b._id)}%</span>
+                  </div>
+                  <Progress value={getBatchAttendanceRate(b._id)} className="h-1.5 mb-4" />
                   <Button asChild variant="outline" className="w-full text-xs h-8">
                     <Link href={`/teacher/batches/${b._id}`}>Open Batch</Link>
                   </Button>
