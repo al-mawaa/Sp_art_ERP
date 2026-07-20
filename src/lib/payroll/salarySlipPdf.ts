@@ -80,6 +80,13 @@ export function downloadSalarySlipPdf(payload: SalarySlipPayload) {
   doc.save(`salary-slip-${safeName}-${safeMonth}.pdf`);
 }
 
+export function previewSalarySlipPdf(payload: SalarySlipPayload) {
+  const doc = new jsPDF();
+  drawSalarySlipPage(doc, payload);
+  const pdfUrl = doc.output("bloburl");
+  window.open(pdfUrl, "_blank");
+}
+
 export function downloadAllSalarySlipsPdf(
   entries: Omit<SalarySlipPayload, "instituteName">[],
   instituteName: string,
