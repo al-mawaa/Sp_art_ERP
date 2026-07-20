@@ -18,14 +18,12 @@ export async function GET(request: NextRequest) {
 
     await dbConnect();
     const { searchParams } = new URL(request.url);
-    const batchId = (searchParams.get("batchId") || "").trim();
     const attendanceDate = (searchParams.get("date") || "").trim();
 
-    if (batchId && attendanceDate) {
+    if (attendanceDate) {
       const record = await getStaffAttendanceRecord(
         "senior-teacher",
         auth.seniorTeacher.id,
-        batchId,
         attendanceDate,
       );
       return NextResponse.json({ success: true, data: { record } });
@@ -57,7 +55,6 @@ export async function POST(request: NextRequest) {
     const result = await markStaffAttendance({
       role: "senior-teacher",
       userId: auth.seniorTeacher.id,
-      batchId: parsed.data.batchId,
       attendanceDate: parsed.data.attendanceDate,
       status: parsed.data.status,
       remarks: parsed.data.remarks ?? "",
@@ -67,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Attendance already submitted for this batch and date",
+          error: "Attendance already submitted for this date",
           data: { record: result.record, duplicate: true },
         },
         { status: 409 },

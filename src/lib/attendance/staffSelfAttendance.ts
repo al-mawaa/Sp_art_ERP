@@ -56,13 +56,11 @@ export async function listAssignedBatchesForStaff(role: StaffRole, userId: strin
 export async function getStaffAttendanceRecord(
   role: StaffRole,
   userId: string,
-  batchId: string,
   attendanceDate: string,
 ) {
   const record = await TeacherAttendance.findOne({
     role,
     teacherId: new mongoose.Types.ObjectId(userId),
-    batchId: new mongoose.Types.ObjectId(batchId),
     attendanceDate,
   });
   return record ? serializeTeacherAttendance(record) : null;
@@ -71,7 +69,6 @@ export async function getStaffAttendanceRecord(
 export async function markStaffAttendance(input: {
   role: StaffRole;
   userId: string;
-  batchId: string;
   attendanceDate: string;
   status: TeacherAttendanceStatus;
   remarks: string;
@@ -80,19 +77,11 @@ export async function markStaffAttendance(input: {
     throw new Error("PAST_DATE");
   }
 
-  const allowed = await staffCanAccessBatch(input.role, input.userId, input.batchId);
-  if (!allowed) throw new Error("FORBIDDEN");
-
-  const batch = await Batch.findById(input.batchId).select("batchName").lean();
-  if (!batch) throw new Error("NOT_FOUND");
-
   const userOid = new mongoose.Types.ObjectId(input.userId);
-  const batchOid = new mongoose.Types.ObjectId(input.batchId);
 
   const existing = await TeacherAttendance.findOne({
     role: input.role,
     teacherId: userOid,
-    batchId: batchOid,
     attendanceDate: input.attendanceDate,
   });
 
@@ -104,8 +93,6 @@ export async function markStaffAttendance(input: {
     const doc = await TeacherAttendance.create({
       teacherId: userOid,
       role: input.role,
-      batchId: batchOid,
-      batchName: batch.batchName,
       attendanceDate: input.attendanceDate,
       status: input.status,
       remarks: input.remarks,
@@ -117,7 +104,6 @@ export async function markStaffAttendance(input: {
       const dup = await TeacherAttendance.findOne({
         role: input.role,
         teacherId: userOid,
-        batchId: batchOid,
         attendanceDate: input.attendanceDate,
       });
       if (dup) return { duplicate: true as const, record: serializeTeacherAttendance(dup) };
@@ -139,7 +125,6 @@ export type StaffReportFilters = {
   role: StaffRole;
   from?: string;
   to?: string;
-  batchId?: string;
   userId?: string;
   search?: string;
   page?: number;
@@ -152,9 +137,6 @@ export async function buildStaffAttendanceReport(filters: StaffReportFilters) {
   const skip = (page - 1) * limit;
 
   const match: Record<string, unknown> = { role: filters.role };
-  if (filters.batchId && mongoose.Types.ObjectId.isValid(filters.batchId)) {
-    match.batchId = new mongoose.Types.ObjectId(filters.batchId);
-  }
   if (filters.userId && mongoose.Types.ObjectId.isValid(filters.userId)) {
     match.teacherId = new mongoose.Types.ObjectId(filters.userId);
   }
@@ -190,8 +172,8 @@ export async function buildStaffAttendanceReport(filters: StaffReportFilters) {
       id: (r._id as mongoose.Types.ObjectId).toString(),
       userId: uid,
       staffName: nameMap.get(uid) ?? (filters.role === "teacher" ? "Teacher" : "Senior Teacher"),
-      batchId: r.batchId.toString(),
-      batchName: r.batchName || "",
+      batchesCount: 0,
+      batchName: "Day-wise",
       attendanceStatus: r.status,
       attendanceDate: r.attendanceDate,
       remarks: r.remarks ?? "",
@@ -204,7 +186,6 @@ export async function buildStaffAttendanceReport(filters: StaffReportFilters) {
     rows = rows.filter(
       row =>
         row.staffName.toLowerCase().includes(q) ||
-        row.batchName.toLowerCase().includes(q) ||
         row.remarks.toLowerCase().includes(q),
     );
   }
@@ -237,16 +218,13 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
 
   const match: Record<string, unknown> = { role: filters.role };
-  if (filters.batchId && mongoose.Types.ObjectId.isValid(filters.batchId)) {
-    match.batchId = new mongoose.Types.ObjectId(filters.batchId);
-  }
   if (filters.userId && mongoose.Types.ObjectId.isValid(filters.userId)) {
     match.teacherId = new mongoose.Types.ObjectId(filters.userId);
   }
 
   const grouped = await TeacherAttendance.aggregate<{
     _id: { teacherId: mongoose.Types.ObjectId };
-    batchesCount: mongoose.Types.ObjectId[];
+    daysCount: number;
     remarks: string;
     recordId: mongoose.Types.ObjectId;
   }>([
@@ -255,7 +233,7 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
     {
       $group: {
         _id: { teacherId: "$teacherId" },
-        batchesCount: { $addToSet: "$batchId" },
+        daysCount: { $sum: 1 },
         remarks: { $first: "$remarks" },
         recordId: { $first: "$_id" },
       },
@@ -279,7 +257,7 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
       id: userId,
       userId,
       staffName: nameMap.get(userId) ?? (filters.role === "teacher" ? "Teacher" : "Senior Teacher"),
-      batchesCount: g.batchesCount.length,
+      batchesCount: g.daysCount || 0,
       remarks: g.remarks ?? "",
     };
   });
@@ -308,20 +286,10 @@ export async function buildStaffAttendanceGroupedList(filters: StaffReportFilter
   };
 }
 
-export function parseStaffPreviewId(id: string): { userId: string; batchId?: string } | null {
+export function parseStaffPreviewId(id: string): { userId: string } | null {
   const decoded = decodeURIComponent(id);
-  if (decoded.includes("_")) {
-    const parts = decoded.split("_");
-    if (parts.length !== 2) return null;
-    const [userId, batchId] = parts;
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(batchId)) {
-      return null;
-    }
-    return { userId, batchId };
-  } else {
-    if (!mongoose.Types.ObjectId.isValid(decoded)) return null;
-    return { userId: decoded };
-  }
+  if (!mongoose.Types.ObjectId.isValid(decoded)) return null;
+  return { userId: decoded };
 }
 
 export async function resolveStaffPreviewFromRecordId(recordId: string) {
@@ -330,7 +298,6 @@ export async function resolveStaffPreviewFromRecordId(recordId: string) {
   if (!row) return null;
   return {
     userId: row.teacherId.toString(),
-    batchId: row.batchId.toString(),
     role: row.role as StaffRole,
   };
 }
@@ -338,10 +305,9 @@ export async function resolveStaffPreviewFromRecordId(recordId: string) {
 export async function buildStaffAttendancePreview(input: {
   role: StaffRole;
   userId: string;
-  batchId?: string;
   month: string;
 }) {
-  const { role, userId, batchId, month } = input;
+  const { role, userId, month } = input;
   if (!/^\d{4}-\d{2}$/.test(month)) {
     throw new Error("INVALID_MONTH");
   }
@@ -401,8 +367,8 @@ export async function buildStaffAttendancePreview(input: {
       role,
     },
     batch: {
-      id: batchId ?? "all",
-      name: batchId ? "Specific Batch" : "Multiple Batches",
+      id: "all",
+      name: "Day-wise",
       course: "—",
       schedule: "—",
       totalAssigned: assignedBatchesCount,

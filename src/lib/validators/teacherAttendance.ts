@@ -4,7 +4,6 @@ import { isDateBeforeToday, PAST_DATE_MESSAGE } from "@/lib/leave/dateValidation
 export const staffAttendanceStatusSchema = z.enum(["Present", "Absent", "Half Day"]);
 
 export const staffAttendanceMarkSchema = z.object({
-  batchId: z.string().min(1, "Batch is required"),
   attendanceDate: z
     .string()
     .trim()

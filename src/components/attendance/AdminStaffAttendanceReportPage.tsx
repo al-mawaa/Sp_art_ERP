@@ -51,14 +51,12 @@ export function AdminStaffAttendanceReportPage({
   staffColumnLabel: string;
   backHref?: string;
 }) {
-  const [batchId, setBatchId] = useState("all");
   const [userId, setUserId] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [records, setRecords] = useState<ReportRow[]>([]);
   const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
-  const [batchOptions, setBatchOptions] = useState<{ id: string; batchName: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const listPath =
@@ -76,7 +74,6 @@ export function AdminStaffAttendanceReportPage({
         }>(res);
         if (res.ok && json.data) {
           setStaffOptions(json.data.staff ?? []);
-          setBatchOptions(json.data.batches ?? []);
         }
       } catch {
         /* optional */
@@ -92,7 +89,6 @@ export function AdminStaffAttendanceReportPage({
         page: String(page),
         limit: "20",
       });
-      if (batchId !== "all") params.set("batchId", batchId);
       if (userId !== "all") params.set("userId", userId);
       if (search.trim()) params.set("search", search.trim());
 
@@ -109,14 +105,13 @@ export function AdminStaffAttendanceReportPage({
     } finally {
       setLoading(false);
     }
-  }, [role, batchId, userId, search, page]);
+  }, [role, userId, search, page]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const clearFilters = () => {
-    setBatchId("all");
     setUserId("all");
     setSearch("");
     setPage(1);
@@ -131,7 +126,7 @@ export function AdminStaffAttendanceReportPage({
       title,
       records.map(r => ({
         staffName: r.staffName,
-        batchName: `Total Batches: ${r.batchesCount}`,
+        batchName: `Days Marked: ${r.batchesCount}`,
         attendanceStatus: "—",
         attendanceDate: "—",
         remarks: r.remarks,
@@ -150,7 +145,7 @@ export function AdminStaffAttendanceReportPage({
     <div className="space-y-6 pb-8">
       <PageHeader
         title={title}
-        subtitle={`Filter and preview ${staffColumnLabel.toLowerCase()} attendance by batch`}
+        subtitle={`Filter and preview ${staffColumnLabel.toLowerCase()} attendance`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -185,7 +180,7 @@ export function AdminStaffAttendanceReportPage({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground">{staffColumnLabel}</Label>
               <Select value={userId} onValueChange={v => { setUserId(v); setPage(1); }}>
@@ -203,28 +198,12 @@ export function AdminStaffAttendanceReportPage({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Batch</Label>
-              <Select value={batchId} onValueChange={v => { setBatchId(v); setPage(1); }}>
-                <SelectTrigger className="h-10 rounded-xl">
-                  <SelectValue placeholder="All batches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All batches</SelectItem>
-                  {batchOptions.map(b => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.batchName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
               <Label className="text-xs font-medium text-muted-foreground">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 <Input
                   className="h-10 rounded-xl pl-9 transition-all focus-visible:ring-primary/25"
-                  placeholder="Search by teacher, batch, or remarks"
+                  placeholder="Search by teacher or remarks"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   onKeyDown={e => {
@@ -257,7 +236,7 @@ export function AdminStaffAttendanceReportPage({
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/80">
                 <TableHead className="font-semibold">{staffColumnLabel}</TableHead>
-                <TableHead className="font-semibold text-center w-[140px]">Batches Assigned</TableHead>
+                <TableHead className="font-semibold text-center w-[140px]">Days Marked</TableHead>
                 <TableHead className="font-semibold">Remarks</TableHead>
                 <TableHead className="font-semibold text-right w-[120px]">Actions</TableHead>
               </TableRow>

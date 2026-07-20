@@ -59,7 +59,6 @@ export function StaffSelfAttendancePage({
 }: StaffSelfAttendanceConfig) {
   const minDate = todayDateString();
   const [batches, setBatches] = useState<BatchOption[]>([]);
-  const [batchId, setBatchId] = useState("");
   const [attendanceDate, setAttendanceDate] = useState(minDate);
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>("Present");
   const [remarks, setRemarks] = useState("");
@@ -79,14 +78,13 @@ export function StaffSelfAttendancePage({
     if (!res.ok) throw new Error(json.error || "Failed to load batches");
     const list = json.data?.batches ?? [];
     setBatches(list);
-    setBatchId(prev => prev || list[0]?.id || "");
   }, [apiPath]);
 
   const loadRecord = useCallback(async () => {
-    if (!batchId || !attendanceDate) return;
+    if (!attendanceDate) return;
     setLoadingRecord(true);
     try {
-      const params = new URLSearchParams({ batchId, date: attendanceDate });
+      const params = new URLSearchParams({ date: attendanceDate });
       const res = await fetch(`${apiPath}?${params}`, { credentials: "include" });
       const json = await parseJsonResponse<{
         error?: string;
@@ -104,7 +102,7 @@ export function StaffSelfAttendancePage({
     } finally {
       setLoadingRecord(false);
     }
-  }, [apiPath, batchId, attendanceDate]);
+  }, [apiPath, attendanceDate]);
 
   useEffect(() => {
     (async () => {
@@ -137,16 +135,12 @@ export function StaffSelfAttendancePage({
 
   const handleSubmit = async () => {
     if (submitLockRef.current || submitting) return;
-    if (!batchId) {
-      toast.error("Please select a batch");
-      return;
-    }
     if (isDateBeforeToday(attendanceDate)) {
       toast.error(PAST_DATE_MESSAGE);
       return;
     }
     if (existing) {
-      toast.error("Attendance already submitted for this batch and date");
+      toast.error("Attendance already submitted for this date");
       return;
     }
 
@@ -157,7 +151,7 @@ export function StaffSelfAttendancePage({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchId, attendanceDate, status, remarks }),
+        body: JSON.stringify({ attendanceDate, status, remarks }),
       });
       const json = await parseJsonResponse<{ error?: string; message?: string }>(res);
       if (res.status === 409) {
@@ -176,7 +170,7 @@ export function StaffSelfAttendancePage({
     }
   };
 
-  const selectedBatch = batches.find(b => b.id === batchId);
+
 
   return (
     <div className="space-y-6">
@@ -220,10 +214,10 @@ export function StaffSelfAttendancePage({
             </Card>
             <Card className="rounded-3xl border border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Selected batch</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Action</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold truncate">{selectedBatch?.batchName ?? "—"}</p>
+                <p className="text-lg font-semibold truncate">Daily Attendance</p>
               </CardContent>
             </Card>
             <Card className="rounded-3xl border border-border">
@@ -249,21 +243,6 @@ export function StaffSelfAttendancePage({
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Batch</Label>
-                  <Select value={batchId} onValueChange={setBatchId} disabled={!!existing}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select batch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {batches.map(b => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.batchName} · {b.courseName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="attendance-date">Attendance date</Label>
                   <Input
@@ -318,13 +297,13 @@ export function StaffSelfAttendancePage({
                 </div>
               ) : existing ? (
                 <p className="text-sm text-muted-foreground rounded-xl bg-muted/40 px-4 py-3">
-                  Attendance already submitted for this batch on {existing.attendanceDate}.
+                  Attendance already submitted for {existing.attendanceDate}.
                 </p>
               ) : null}
 
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || !!existing || loadingRecord || !batchId}
+                disabled={submitting || !!existing || loadingRecord}
                 className="rounded-full"
               >
                 {submitting ? (

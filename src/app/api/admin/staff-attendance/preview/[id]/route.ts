@@ -32,19 +32,16 @@ export async function GET(
     await dbConnect();
 
     let userId: string;
-    let batchId: string;
 
     const parsed = parseStaffPreviewId(id);
     if (parsed) {
       userId = parsed.userId;
-      batchId = parsed.batchId;
     } else {
       const resolved = await resolveStaffPreviewFromRecordId(id);
       if (!resolved) {
         return NextResponse.json({ success: false, error: "Report not found" }, { status: 404 });
       }
       userId = resolved.userId;
-      batchId = resolved.batchId;
       if (!role) role = resolved.role;
     }
 
@@ -52,7 +49,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Invalid role" }, { status: 400 });
     }
 
-    const data = await buildStaffAttendancePreview({ role, userId, batchId, month });
+    const data = await buildStaffAttendancePreview({ role, userId, month });
     return NextResponse.json({ success: true, data });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";

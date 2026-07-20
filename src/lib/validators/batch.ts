@@ -32,6 +32,7 @@ export const batchWriteSchema = z.object({
   batchCode: z.string().trim().optional(),
   courseName: z.string().trim().min(1, "Course is required"),
   batchTiming: z.string().trim().optional(),
+  batchType: z.enum(["Weekday", "Weekend"]).optional().default("Weekday"),
   batchDay: z.string().trim().min(1, "Batch schedule is required"),
   batchTime: z.string().trim().min(1, "Batch time is required"),
   startDate: z.string().trim().optional().default(""),

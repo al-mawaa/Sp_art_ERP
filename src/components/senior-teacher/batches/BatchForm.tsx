@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { batchWriteSchema, type BatchWriteInput } from "@/lib/validators/batch";
 import type { SerializedBatch } from "@/lib/batch/types";
@@ -31,6 +32,7 @@ const WEEKDAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 const emptyDefaults: BatchWriteInput = {
   batchName: "",
   courseName: "",
+  batchType: "Weekday",
   batchDay: "",
   batchTime: "",
   startMonth: "",
@@ -46,6 +48,7 @@ function batchToFormInput(b: SerializedBatch): BatchWriteInput {
   return {
     batchName: b.batchName,
     courseName: b.courseName,
+    batchType: b.batchType || "Weekday",
     batchDay: b.batchDay,
     batchTime: b.batchTime,
     startMonth: b.startMonth,
@@ -88,6 +91,7 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "students" });
 
   const courseName = form.watch("courseName");
+
   const batchDayValue = form.watch("batchDay") || "";
   const selectedBatchDays = batchDayValue
     .split(",")
@@ -342,28 +346,56 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label>Batch days</Label>
-              <ToggleGroup
-                type="multiple"
-                value={selectedBatchDays}
-                onValueChange={(values) => form.setValue("batchDay", values.join(", "), { shouldValidate: true })}
-                className="flex flex-wrap gap-2"
+              <Label>Batch Type & Schedule</Label>
+              <RadioGroup
+                value={form.watch("batchType")}
+                onValueChange={(val: "Weekday" | "Weekend") => {
+                  form.setValue("batchType", val, { shouldValidate: true });
+                  if (val === "Weekday") {
+                    form.setValue("batchDay", "Monday, Tuesday, Wednesday, Thursday, Friday", { shouldValidate: true });
+                  } else {
+                    form.setValue("batchDay", "Saturday, Sunday", { shouldValidate: true });
+                  }
+                }}
+                className="flex gap-4 mt-2"
               >
-                {WEEKDAY_OPTIONS.map(day => (
-                  <ToggleGroupItem
-                    key={day}
-                    value={day}
-                    variant="outline"
-                    className="rounded-full px-4 py-2 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                  >
-                    {day}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-              {form.formState.errors.batchDay && (
-                <p className="text-sm text-red-600">{form.formState.errors.batchDay.message}</p>
-              )}
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Weekday" id="r-weekday" />
+                  <Label htmlFor="r-weekday" className="cursor-pointer">Weekdays (Mon-Fri)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Weekend" id="r-weekend" />
+                  <Label htmlFor="r-weekend" className="cursor-pointer">Weekends (Sat-Sun)</Label>
+                </div>
+              </RadioGroup>
             </div>
+              
+            <div className="mt-4 pt-4 border-t">
+              <Label className="mb-2 block">Select Specific Days</Label>
+                <ToggleGroup
+                  type="multiple"
+                  value={selectedBatchDays}
+                  onValueChange={(values) => form.setValue("batchDay", values.join(", "), { shouldValidate: true })}
+                  className="flex flex-wrap gap-2 justify-start"
+                >
+                  {(form.watch("batchType") === "Weekday"
+                    ? ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+                    : ["Saturday", "Sunday"]
+                  ).map(day => (
+                    <ToggleGroupItem
+                      key={day}
+                      value={day}
+                      variant="outline"
+                      className="rounded-full px-4 py-2 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    >
+                      {day}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+                {form.formState.errors.batchDay && (
+                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.batchDay.message}</p>
+                )}
+              </div>
             <div className="space-y-2">
               <Label>Batch time</Label>
               <Input className="rounded-xl" placeholder="e.g. 4:00 PM – 5:30 PM" {...form.register("batchTime")} />
