@@ -258,19 +258,6 @@ export default function MyCoursesPage() {
                     </span>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-700">Progress</span>
-                      <span className="text-xs font-bold text-blue-600">{course.completionPercentage}%</span>
-                    </div>
-                    <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out"
-                        style={{ width: `${course.completionPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
                   <PaymentSummaryCard
                     enrollmentId={course.enrollmentId}
                     courseId={course.courseId}

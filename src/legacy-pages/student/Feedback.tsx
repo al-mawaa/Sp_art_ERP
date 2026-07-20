@@ -96,7 +96,7 @@ export function StudentFeedback() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Parent Feedback" subtitle="Help us make Little Brushes even better 🎨" />
+      <PageHeader title="Parent Feedback" subtitle="Help us make SP Art Hub even better 🎨" />
 
       <div className="card-pop overflow-hidden">
         <div className="gradient-primary text-white p-6">

@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 
 
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 
 
 
@@ -2010,15 +2011,9 @@ export function TeacherDrawingTests({ taskId }: { taskId?: string } = {}) {
 
 
 
-              <Button type="submit" className="gradient-primary text-white border-0" disabled={loadingSubmit}>
-
-
-
-                <Send className="w-4 h-4 mr-1" /> {loadingSubmit ? 'Sending…' : 'Send to senior teacher'}
-
-
-
-              </Button>
+              <LoadingButton type="submit" className="gradient-primary text-white border-0" isLoading={loadingSubmit} loadingText="Sending...">
+                <Send className="w-4 h-4 mr-1" /> Send to senior teacher
+              </LoadingButton>
 
 
 

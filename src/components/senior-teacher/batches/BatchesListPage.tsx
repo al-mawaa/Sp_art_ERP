@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -269,14 +270,16 @@ export function BatchesListPage() {
                             <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
                           </Link>
                         </Button>
-                        <Button
+                        <LoadingButton
                           variant="ghost"
                           size="sm"
                           className="rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => setDeleteId(b.id)}
+                          isLoading={false}
+                          loadingText="Deleting..."
                         >
                           <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-                        </Button>
+                        </LoadingButton>
                       </>
                     )}
                     <Button
@@ -328,15 +331,18 @@ export function BatchesListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="rounded-xl bg-red-600 hover:bg-red-700"
-              disabled={deleting}
-              onClick={e => {
-                e.preventDefault();
-                void handleDelete();
-              }}
-            >
-              {deleting ? "Deleting…" : "Delete"}
+            <AlertDialogAction asChild>
+              <LoadingButton
+                className="rounded-xl bg-red-600 hover:bg-red-700"
+                isLoading={deleting}
+                loadingText="Deleting..."
+                onClick={e => {
+                  e.preventDefault();
+                  void handleDelete();
+                }}
+              >
+                Delete
+              </LoadingButton>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

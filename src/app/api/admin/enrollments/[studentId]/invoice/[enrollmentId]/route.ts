@@ -77,7 +77,7 @@ export async function GET(
 
     const pdfBuffer = await generateEnrollmentInvoicePdf({
       invoiceId,
-      academyName: "Little Brushes Art Academy",
+      academyName: "SP Art Hub",
       studentName: String(student.fullName || "Student Name"),
       studentEmail: student.email || "",
       courseTitle: String(course.courseTitle || "Course Title"),
@@ -108,12 +108,12 @@ export async function GET(
       supportEmail:
         process.env.EMAIL_FROM ||
         process.env.SMTP_FROM ||
-        "support@littlebrushes.com",
-      supportPhone: process.env.SUPPORT_PHONE || "+91 90000 00000",
+        "spinstituteofart@gmail.com",
+      supportPhone: process.env.SUPPORT_PHONE || "+91 9819703242",
       gstNumber: process.env.GST_NUMBER,
     });
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

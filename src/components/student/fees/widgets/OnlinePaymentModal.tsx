@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { toast } from "sonner";
 import { CreditCard, AlertCircle } from "lucide-react";
 
@@ -70,7 +70,7 @@ export function OnlinePaymentModal({
         key: data.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_1DP5mmOlF5G5ag",
         amount: data.order.amount,
         currency: data.order.currency || "INR",
-        name: "Little Brushes Art Academy",
+        name: "SP Art Hub",
         description: isInstallment ? `Term ${termNo} Installment` : "Course Fee Payment",
         image: "/logo.png",
         order_id: data.order.id,
@@ -164,14 +164,15 @@ export function OnlinePaymentModal({
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <AlertCircle size={14} /> 100% Secure Payment
           </div>
-          <Button 
+          <LoadingButton 
             className="rounded-xl px-8 font-bold shadow-pop hover:shadow-lg transition-all" 
             style={{ background: "#072654", color: "white" }} 
             onClick={handlePayment}
-            disabled={loading}
+            isLoading={loading}
+            loadingText="Processing Payment..."
           >
-            {loading ? "Loading..." : `Pay ₹${balance.toLocaleString()}`}
-          </Button>
+            Pay ₹{balance.toLocaleString()}
+          </LoadingButton>
         </div>
       </DialogContent>
     </Dialog>

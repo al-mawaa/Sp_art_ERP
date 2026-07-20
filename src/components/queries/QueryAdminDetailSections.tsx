@@ -24,10 +24,6 @@ export function QueryAdminDetailSections({ detail }: { detail: UnifiedAdminQuery
         <p className="text-muted-foreground text-xs uppercase mb-1">Query information</p>
         <DetailRow label="Category" value={getCategoryLabel(detail.category)} />
         <DetailRow label="Created" value={new Date(detail.createdAt).toLocaleString("en-IN")} />
-        <div>
-          <p className="text-muted-foreground text-xs uppercase mb-1">Remarks</p>
-          <p className="whitespace-pre-wrap">{detail.remarks}</p>
-        </div>
       </div>
 
       {detail.category === "profile_correction" && detail.requestedChanges && (

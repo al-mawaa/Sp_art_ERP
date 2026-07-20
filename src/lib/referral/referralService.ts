@@ -21,7 +21,7 @@ import {
 export { calculateReferralCheckoutDiscount, getReferralEnrolleeDiscountTotal };
 
 const ALLOWED_PERCENTAGES: ReferralPercentage[] = [5, 10, 15, 20];
-const REFERRAL_CODE_PREFIX = "SPARTRF-";
+const REFERRAL_CODE_PREFIX = "SPART";
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;
@@ -70,7 +70,7 @@ export async function generateNextReferralCode() {
   let maxSequence = 0;
 
   for (const profile of profiles) {
-    const match = profile.referralCode.match(/^SPARTRF-(\d+)$/i);
+    const match = profile.referralCode.match(/^SPART(\d+)$/i);
     if (match) {
       maxSequence = Math.max(maxSequence, Number.parseInt(match[1], 10));
     }

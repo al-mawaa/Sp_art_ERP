@@ -50,7 +50,7 @@ export function buildCourseEnrollmentEmailHtml(params: {
           <tr>
             <td style="background:#1d4ed8;padding:28px 32px;color:#ffffff;text-align:left;">
               <h1 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;">Course Enrollment Confirmed</h1>
-              <p style="margin:12px 0 0;font-size:15px;line-height:1.7;opacity:0.9;">Hi ${escapeHtml(studentName)}, thank you for enrolling with Little Brushes Art Academy.</p>
+              <p style="margin:12px 0 0;font-size:15px;line-height:1.7;opacity:0.9;">Hi ${escapeHtml(studentName)}, thank you for enrolling with SP Art Hub.</p>
             </td>
           </tr>
           <tr>
@@ -59,9 +59,9 @@ export function buildCourseEnrollmentEmailHtml(params: {
               <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
                 ${buildDetailRow('Course', courseTitle)}
                 ${buildDetailRow('Course Code', courseCode)}
-                ${buildDetailRow('Discount', `${discountPercentage}% (${discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`)}
+                ${buildDetailRow('Discount', `${discountPercentage}% (₹${discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`)}
                 ${buildDetailRow('Enrollment Date', enrollmentDate)}
-                ${buildDetailRow('Amount Paid', `₹${amountPaid.toLocaleString('en-IN')}`)}
+                ${buildDetailRow('Amount Paid', `₹${amountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                 ${buildDetailRow('Payment Method', paymentMethod)}
                 ${buildDetailRow('Transaction ID', transactionId)}
                 ${buildDetailRow('Order ID', orderId)}
@@ -168,7 +168,7 @@ export async function sendCourseEnrollmentEmail(params: {
 
   const invoiceData: EnrollmentInvoiceData = {
     invoiceId,
-    academyName: 'Little Brushes Art Academy',
+    academyName: 'Sp Art Hub',
     studentName,
     studentEmail,
     courseTitle,

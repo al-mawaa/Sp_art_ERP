@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, UploadCloud, ImagePlus, X, Loader2 } from 'lucide
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +24,7 @@ const courseSchema = z.object({
   image: z.string().optional(),
   duration: z.coerce.number().min(1, 'Duration is required'),
   totalFees: z.coerce.number().min(0, 'Total fees is required'),
-  discountFees: z.coerce.number().min(0, 'Discount fees is required'),
+  discountFees: z.coerce.number().min(0, 'Payable amount is required'),
   status: z.enum(['active', 'inactive']).default('active'),
   notes: z.string().optional(),
   rulesAndRegulations: z.string().optional(),
@@ -339,7 +340,7 @@ export default function AdminCoursesPage() {
               { key: 'courseCode', header: 'Code' },
               { key: 'duration', header: 'Duration', render: row => `${row.duration} months` },
               { key: 'totalFees', header: 'Total Fees', render: row => `₹${row.totalFees.toFixed(2)}` },
-              { key: 'discountFees', header: 'Discount Fees', render: row => `₹${row.discountFees.toFixed(2)}` },
+              { key: 'discountFees', header: 'Payable amount', render: row => `₹${row.discountFees.toFixed(2)}` },
               { key: 'discountPercentage', header: 'Discount %', render: row => `${row.discountPercentage}%` },
               { key: 'status', header: 'Status', render: row => (
                 <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-medium ${row.status === 'active' ? 'bg-success/15 text-success' : 'bg-muted/15 text-muted-foreground'}`}>
@@ -461,7 +462,7 @@ export default function AdminCoursesPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="discountFees">Discount Fees</Label>
+                <Label htmlFor="discountFees">Payable amount</Label>
                 <Input id="discountFees" type="number" className="h-11 rounded-lg shadow-sm" min={0} step={0.01} {...form.register('discountFees', { valueAsNumber: true })} />
                 {form.formState.errors.discountFees && <p className="text-xs text-red-500">{form.formState.errors.discountFees.message}</p>}
               </div>
@@ -513,10 +514,9 @@ export default function AdminCoursesPage() {
               <Button type="button" variant="outline" className="rounded-lg px-4 h-10" onClick={() => { setOpen(false); clearForm(); }} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit" className="rounded-lg px-5 h-10 inline-flex items-center gap-2" disabled={submitting}>
-                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>{submitting ? 'Saving…' : 'Save Course'}</span>
-              </Button>
+              <LoadingButton type="submit" className="rounded-lg px-5 h-10" isLoading={submitting} loadingText="Saving...">
+                Save Course
+              </LoadingButton>
             </div>
           </form>
         </DialogContent>

@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -612,14 +613,16 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
 
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-4 z-50">
         <div className="max-w-7xl mx-auto flex gap-3 justify-end">
-          <Button 
+          <LoadingButton 
             type="submit" 
-            disabled={saving || fields.length === 0 || fields.length > form.watch("batchCapacity")} 
+            isLoading={saving}
+            loadingText="Saving..."
+            disabled={fields.length === 0 || fields.length > form.watch("batchCapacity")} 
             className="rounded-xl gradient-primary text-white border-0 px-8 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={form.handleSubmit(onSubmit)}
           >
-            {saving ? "Saving…" : mode === "create" ? "Create batch" : "Save changes"}
-          </Button>
+            {mode === "create" ? "Create batch" : "Save changes"}
+          </LoadingButton>
           <Button type="button" variant="outline" className="rounded-xl" asChild>
             <Link href={routes.list}>Cancel</Link>
           </Button>
@@ -682,9 +685,9 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
               <Button type="button" variant="outline" className="rounded-xl" onClick={() => setStudentModal(false)}>
                 Close
               </Button>
-              <Button type="button" className="rounded-xl" onClick={addSelectedStudents}>
+              <LoadingButton type="button" className="rounded-xl" onClick={addSelectedStudents} isLoading={false} loadingText="Adding...">
                 Add to batch
-              </Button>
+              </LoadingButton>
             </div>
           </div>
         </SheetContent>

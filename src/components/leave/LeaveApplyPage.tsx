@@ -6,6 +6,7 @@ import { Plus, Upload, X as XIcon, FileText, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -287,14 +288,15 @@ export function LeaveApplyPage({
                 )}
               </div>
             </div>
-            <Button
+            <LoadingButton
               type="submit"
-              disabled={submitting}
+              isLoading={submitting}
+              loadingText="Submitting..."
               className="w-full rounded-xl gradient-primary text-white border-0"
             >
               <Plus className="w-4 h-4 mr-1" />
-              {submitting ? "Submitting…" : "Submit"}
-            </Button>
+              Submit
+            </LoadingButton>
           </form>
         </div>
       </div>
@@ -333,15 +335,17 @@ export function LeaveApplyPage({
                     </td>
                     <td className="px-3 py-2 text-right">
                       {l.status === "Pending" && (
-                        <Button
+                        <LoadingButton
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50"
                           onClick={() => deleteLeave(l.id)}
+                          isLoading={false}
+                          loadingText="Deleting..."
                           title="Delete Request"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </LoadingButton>
                       )}
                     </td>
                   </tr>

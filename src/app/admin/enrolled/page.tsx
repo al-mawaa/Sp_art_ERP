@@ -120,6 +120,7 @@ export default function EnrolledPage() {
   const router = useRouter();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [studentEnrollments, setStudentEnrollments] = useState<StudentEnrollments[]>([]);
+  const [totalStudentsCount, setTotalStudentsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "overdue">("all");
   const [paymentModeFilter, setPaymentModeFilter] = useState<"all" | StudentPaymentMode>("all");
@@ -139,6 +140,17 @@ export default function EnrolledPage() {
         throw new Error(errorMsg);
       }
       setEnrollments(data.enrollments);
+
+      // Fetch total students count
+      try {
+        const studentsRes = await fetch('/api/students', { credentials: "include" });
+        if (studentsRes.ok) {
+          const studentsData = await studentsRes.json();
+          setTotalStudentsCount(studentsData.students?.length || 0);
+        }
+      } catch (err) {
+        console.error("Error fetching total students count:", err);
+      }
 
       // Group enrollments by student
       const grouped = new Map<string, StudentEnrollments>();
@@ -379,7 +391,7 @@ export default function EnrolledPage() {
             <Users className="h-8 w-8 text-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Total Students</p>
-              <p className="text-2xl font-bold">{studentEnrollments.length}</p>
+              <p className="text-2xl font-bold">{totalStudentsCount}</p>
             </div>
           </div>
         </div>
@@ -388,7 +400,7 @@ export default function EnrolledPage() {
             <BookOpen className="h-8 w-8 text-blue-500" />
             <div>
               <p className="text-sm text-muted-foreground">Total Enrollments</p>
-              <p className="text-2xl font-bold">{enrollments.length}</p>
+              <p className="text-2xl font-bold">{studentEnrollments.length}</p>
             </div>
           </div>
         </div>

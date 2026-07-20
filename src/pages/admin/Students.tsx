@@ -7,6 +7,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -108,6 +109,8 @@ export default function Students() {
   const teachers = useStore(s => s.teachers);
   const [selected, setSelected] = useState<typeof students[number] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [sendingReminders, setSendingReminders] = useState(false);
   const blankForm = {
     photo: "", name: "", dob: "", age: "", bloodGroup: "", gender: "",
     school: "", college: "", occupation: "",
@@ -239,6 +242,7 @@ export default function Students() {
   const onSubmitCredentials = async (data: CredentialsForm) => {
     if (!selectedStudentForCredentials) return;
 
+    setSubmitting(true);
     try {
       const response = await fetch('/api/student-credentials', {
         method: 'POST',
@@ -267,6 +271,8 @@ export default function Students() {
     } catch (error) {
       console.error('Error creating credentials:', error);
       toast.error('Failed to create credentials');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -296,14 +302,16 @@ export default function Students() {
         action={
           <Sheet open={addOpen} onOpenChange={setAddOpen}>
             <SheetTrigger asChild>
-              <Button className="rounded-xl gradient-primary text-white border-0 shadow-pop"><Plus className="w-4 h-4 mr-1" />Add Student</Button>
+              <LoadingButton className="rounded-xl gradient-primary text-white border-0 shadow-pop"><Plus className="w-4 h-4 mr-1" />Add Student</LoadingButton>
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
               <SheetHeader><SheetTitle>Student Enrollment Form</SheetTitle></SheetHeader>
-              <form className="space-y-6 mt-6 pb-10" onSubmit={e => {
+              <form className="space-y-6 mt-6 pb-10" onSubmit={async e => {
                 e.preventDefault();
                 if (!form.name.trim()) return toast.error("Student name is required");
-                actions.addStudent({
+                setSubmitting(true);
+                try {
+                  actions.addStudent({
                   name: form.name.trim(),
                   age: Number(form.age) || 8,
                   class: form.class || CLASSES[1],
@@ -331,6 +339,11 @@ export default function Students() {
                 toast.success("Student added — synced everywhere!");
                 setAddOpen(false);
                 setForm(blankForm);
+                } catch (error) {
+                  toast.error("Failed to add student");
+                } finally {
+                  setSubmitting(false);
+                }
               }}>
                 {/* Personal */}
                 <FormSection title="Personal Details">
@@ -428,7 +441,7 @@ export default function Students() {
                   </label>
                 </FormSection>
 
-                <Button type="submit" className="w-full rounded-xl gradient-primary text-white border-0">Add Student</Button>
+                <LoadingButton type="submit" className="w-full rounded-xl gradient-primary text-white border-0" isLoading={submitting} loadingText="Adding...">Add Student</LoadingButton>
               </form>
             </SheetContent>
           </Sheet>
@@ -449,7 +462,14 @@ export default function Students() {
                 ))}
               </div>
             </div>
-            <Button size="sm" variant="outline" className="rounded-lg" onClick={() => toast.success(`Renewal reminders sent to ${endingSoon.length} parents`)}>Send reminders</Button>
+            <LoadingButton size="sm" variant="outline" className="rounded-lg" isLoading={sendingReminders} loadingText="Sending..." onClick={async () => {
+              setSendingReminders(true);
+              try {
+                toast.success(`Renewal reminders sent to ${endingSoon.length} parents`);
+              } finally {
+                setSendingReminders(false);
+              }
+            }}>Send reminders</LoadingButton>
           </div>
         </div>
       )}
@@ -799,13 +819,14 @@ export default function Students() {
                   >
                     Cancel
                   </Button>
-                  <Button
+                  <LoadingButton
                     type="submit"
                     className="bg-orange-500 hover:bg-orange-600 text-white"
-                    disabled={credentialsForm.formState.isSubmitting}
+                    isLoading={submitting}
+                    loadingText="Creating..."
                   >
-                    {credentialsForm.formState.isSubmitting ? "Creating..." : "Create Credentials"}
-                  </Button>
+                    Create Credentials
+                  </LoadingButton>
                 </div>
               </form>
             </div>
@@ -902,16 +923,16 @@ function StudentProfile({ s, certificates, payments }: { s: StudentType; certifi
         </TabsContent>
         <TabsContent value="fees" className="mt-4 space-y-3">
           <div className="grid sm:grid-cols-3 gap-3">
-            <Field k="Total" v={`₹${s.totalFee.toLocaleString()}`} />
-            <Field k="Paid" v={`₹${s.paidFee.toLocaleString()}`} />
-            <Field k="Balance" v={`₹${(s.totalFee - s.paidFee).toLocaleString()}`} />
+            <Field k="Total" v={`₹${s.totalFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+            <Field k="Paid" v={`₹${s.paidFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+            <Field k="Balance" v={`₹${(s.totalFee - s.paidFee).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
           </div>
           <div className="card-soft overflow-hidden">
             <table className="w-full text-sm"><thead className="bg-muted"><tr>
               <th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Amount</th><th className="px-3 py-2 text-left">Mode</th>
             </tr></thead><tbody>
               {studentPays.length === 0 && <tr><td colSpan={3} className="text-center py-6 text-muted-foreground">No payments yet</td></tr>}
-              {studentPays.map(p => <tr key={p.id} className="border-t border-border/60"><td className="px-3 py-2">{p.date}</td><td className="px-3 py-2">₹{p.amount.toLocaleString()}</td><td className="px-3 py-2">{p.mode}</td></tr>)}
+              {studentPays.map(p => <tr key={p.id} className="border-t border-border/60"><td className="px-3 py-2">{p.date}</td><td className="px-3 py-2">₹{p.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td className="px-3 py-2">{p.mode}</td></tr>)}
             </tbody></table>
           </div>
         </TabsContent>

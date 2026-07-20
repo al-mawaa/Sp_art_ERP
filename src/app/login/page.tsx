@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Crown, Shield, GraduationCap, Users, BookOpen, ArrowRight, Sparkles } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
@@ -199,13 +199,14 @@ export default function Login() {
                   : "Enter the password from your credential record."}
               </p>
             </div>
-            <Button
+            <LoadingButton
               type="submit"
-              disabled={submitting}
+              isLoading={submitting}
+              loadingText="Signing in…"
               className="w-full h-11 rounded-xl gradient-primary text-white font-bold border-0 hover:opacity-95 shadow-pop"
             >
-              {submitting ? "Signing in…" : "Enter dashboard"} <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+              Enter dashboard <ArrowRight className="w-4 h-4 ml-1" />
+            </LoadingButton>
           </form>
 
           <p className="text-xs text-center text-muted-foreground">

@@ -164,9 +164,9 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
         {[
           { label: "Today's Classes", value: todaysClasses.length, icon: Calendar, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "Total Students", value: totalStudents, icon: Users, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-          { label: "Slot Requests", value: pendingSlotsCount, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
+          // { label: "Slot Requests", value: pendingSlotsCount, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
           { label: "Pending Tasks", value: pendingTasksCount, icon: FileText, color: "text-pink-500", bg: "bg-pink-500/10" },
-          { label: "Leave Balance", value: leaveBalanceCount, icon: CalendarOff, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+          // { label: "Leave Balance", value: leaveBalanceCount, icon: CalendarOff, color: "text-emerald-500", bg: "bg-emerald-500/10" },
         ].map((stat, i) => (
           <div key={i} className="glass-card p-5 group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
@@ -211,7 +211,7 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
           </div>
 
           {/* 5. MY BATCHES */}
-          <div className="glass-card p-6">
+          {/* <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-secondary" /> My Batches
@@ -243,7 +243,7 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
         </div>
 
@@ -278,7 +278,7 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
           </div>
 
           {/* 19. SMART INSIGHTS */}
-          <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-100 dark:border-indigo-900/50">
+          {/* <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-100 dark:border-indigo-900/50">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
               <TrendingUp className="w-5 h-5" /> Smart Insights
             </h2>
@@ -290,19 +290,19 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* 9. SLOT REQUESTS (Mini) */}
           <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
+            {/* <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-orange-500" /> Pending Slots
               </h2>
               <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-bold">
                 {pendingSlotsCount}
               </span>
-            </div>
-            <div className="space-y-3">
+            </div> */}
+            {/* <div className="space-y-3">
               {pendingQueries.length > 0 ? pendingQueries.slice(0,3).map(r => (
                 <div key={r._id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-3">
@@ -329,7 +329,7 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
               {pendingSlotsCount === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-2">No pending slot requests.</p>
               )}
-            </div>
+            </div> */}
           </div>
 
         </div>

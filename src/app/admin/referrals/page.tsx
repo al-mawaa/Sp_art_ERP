@@ -348,7 +348,7 @@ export default function AdminReferralsPage() {
                 <Input
                   value={filterCode}
                   onChange={e => setFilterCode(e.target.value.toUpperCase())}
-                  placeholder="SPARTRF-0001"
+                  placeholder="Enter Referral Code"
                   className="w-40 pl-8 uppercase"
                 />
               </div>

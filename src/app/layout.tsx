@@ -4,8 +4,8 @@ import { ClientProviders } from "./client-providers";
 import "@/index.css";
 
 export const metadata: Metadata = {
-  title: "Little Brushes Studio - ERP System",
-  description: "ERP system for Little Brushes Studio",
+  title: "SP Art Hub - ERP System",
+  description: "ERP system for SP Art Hub",
   icons: {
     icon: "/favicon.png",
   },

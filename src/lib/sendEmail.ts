@@ -31,7 +31,7 @@ export interface SendAccountCreationEmailOptions {
 }
 
 const buildHtml = ({ name, email, password, loginUrl, academyName }: Omit<SendAccountCreationEmailOptions, 'to'>) => {
-  const school = academyName || 'Little Brushes Art Academy';
+  const school = academyName || 'Sp Art Hub';
   const url = loginUrl || 'http://localhost:3000/login';
 
   return `
@@ -82,9 +82,9 @@ const buildHtml = ({ name, email, password, loginUrl, academyName }: Omit<SendAc
 
 export async function sendAccountCreationEmail(options: SendAccountCreationEmailOptions) {
   const { to, name, email, password, loginUrl, academyName } = options;
-  const subject = 'Welcome to Little Brushes Art Academy ERP';
+  const subject = 'Welcome to Sp Art hub';
   const html = buildHtml({ name, email, password, loginUrl, academyName });
-  const text = `Hello ${name},\n\nYour ERP account has been created successfully.\n\nLogin Credentials:\nEmail: ${email}\nPassword: ${password}\n\nLogin Here:\n${loginUrl ?? 'http://localhost:3000/login'}\n\nRegards,\nLittle Brushes Art Academy`;
+  const text = `Hello ${name},\n\nYour ERP account has been created successfully.\n\nLogin Credentials:\nEmail: ${email}\nPassword: ${password}\n\nLogin Here:\n${loginUrl ?? 'http://localhost:3000/login'}\n\nRegards,\nSP Art Hub`;
 
   return transporter.sendMail({
     from: EMAIL_FROM,
@@ -108,9 +108,9 @@ export interface SendCredentialUpdateEmailOptions {
 }
 
 const buildUpdateHtml = (opts: Omit<SendCredentialUpdateEmailOptions, 'to' | 'performedAt'> & { performedAt: string }) => {
-  const school = opts.academyName || 'Little Brushes Art Academy';
+  const school = opts.academyName || 'Sp Art hub';
   const url = opts.loginUrl || 'http://localhost:3000/login';
-  const support = opts.supportEmail || 'support@littlebrushes.in';
+  const support = opts.supportEmail || 'spinstituteofart@gmail.com';
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -171,7 +171,7 @@ export async function sendCredentialUpdateEmail(opts: SendCredentialUpdateEmailO
   const textLines = [`Hello ${name},`, '', 'Your account credentials have been updated.'];
   if (changedFields.email) textLines.push(`Updated Email: ${updatedEmail}`);
   if (changedFields.password) textLines.push(`Updated Password: ${updatedPassword ? updatedPassword : '[hidden]'}`);
-  textLines.push('', `Updated on: ${performedAtStr}`, '', `If you did not request this change, contact ${supportEmail || 'support@littlebrushes.in'}`);
+  textLines.push('', `Updated on: ${performedAtStr}`, '', `If you did not request this change, contact ${supportEmail || 'spinstituteofart@gmail.com'}`);
 
   return transporter.sendMail({
     from: EMAIL_FROM,

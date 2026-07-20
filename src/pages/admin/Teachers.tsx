@@ -8,6 +8,7 @@ import { Plus, Search, Pencil, Eye, UploadCloud, ChevronLeft, ChevronRight, File
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Avatar } from '@/components/shared/Avatar';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -195,6 +196,8 @@ export default function TeachersPage() {
   const [viewTeacher, setViewTeacher] = useState<Teacher | null>(null);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState<Record<string, boolean>>({});
 
   const {
     register,
@@ -268,6 +271,7 @@ export default function TeachersPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setUploadingPhoto(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -296,6 +300,8 @@ export default function TeachersPage() {
         }
       };
       reader.readAsDataURL(file);
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -317,6 +323,8 @@ export default function TeachersPage() {
       return;
     }
 
+    const docKey = fieldName;
+    setUploadingDoc(prev => ({ ...prev, [docKey]: true }));
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -342,6 +350,8 @@ export default function TeachersPage() {
     } catch (error) {
       console.error('Document upload error:', error);
       toast.error('Failed to upload document. Please try again.');
+    } finally {
+      setUploadingDoc(prev => ({ ...prev, [docKey]: false }));
     }
   };
 
@@ -545,10 +555,10 @@ export default function TeachersPage() {
                       <div className="flex h-full w-full items-center justify-center text-slate-400">Preview</div>
                     )}
                   </div>
-                  <Button type="button" variant="outline" className="mt-6 w-full" onClick={() => document.getElementById('teacher-photo-input')?.click()}>
+                  <LoadingButton type="button" variant="outline" className="mt-6 w-full" onClick={() => document.getElementById('teacher-photo-input')?.click()} isLoading={uploadingPhoto} loadingText="Uploading...">
                     <UploadCloud className="w-4 h-4 mr-2" />
                     Upload photo
-                  </Button>
+                  </LoadingButton>
                   <input id="teacher-photo-input" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </div>
 
@@ -569,16 +579,18 @@ export default function TeachersPage() {
                           <span className="text-slate-400">No file selected</span>
                         )}
                       </div>
-                      <Button
+                      <LoadingButton
                         type="button"
                         variant="outline"
                         size="sm"
                         className="w-full h-9 text-xs"
                         onClick={() => document.getElementById('aadhaar-card-input')?.click()}
+                        isLoading={uploadingDoc['teacherDocuments.aadhaarCard.fileUrl']}
+                        loadingText="Uploading..."
                       >
                         <UploadCloud className="w-3 h-3 mr-2" />
                         Upload Aadhaar Card
-                      </Button>
+                      </LoadingButton>
                       <input
                         id="aadhaar-card-input"
                         type="file"
@@ -601,16 +613,18 @@ export default function TeachersPage() {
                           <span className="text-slate-400">No file selected</span>
                         )}
                       </div>
-                      <Button
+                      <LoadingButton
                         type="button"
                         variant="outline"
                         size="sm"
                         className="w-full h-9 text-xs"
                         onClick={() => document.getElementById('pan-card-input')?.click()}
+                        isLoading={uploadingDoc['teacherDocuments.panCard.fileUrl']}
+                        loadingText="Uploading..."
                       >
                         <UploadCloud className="w-3 h-3 mr-2" />
                         Upload PAN Card
-                      </Button>
+                      </LoadingButton>
                       <input
                         id="pan-card-input"
                         type="file"
@@ -633,16 +647,18 @@ export default function TeachersPage() {
                           <span className="text-slate-400">No file selected</span>
                         )}
                       </div>
-                      <Button
+                      <LoadingButton
                         type="button"
                         variant="outline"
                         size="sm"
                         className="w-full h-9 text-xs"
                         onClick={() => document.getElementById('offer-letter-input')?.click()}
+                        isLoading={uploadingDoc['teacherDocuments.offerLetter.fileUrl']}
+                        loadingText="Uploading..."
                       >
                         <UploadCloud className="w-3 h-3 mr-2" />
                         Upload Offer Letter
-                      </Button>
+                      </LoadingButton>
                       <input
                         id="offer-letter-input"
                         type="file"
@@ -665,16 +681,18 @@ export default function TeachersPage() {
                           <span className="text-slate-400">No file selected</span>
                         )}
                       </div>
-                      <Button
+                      <LoadingButton
                         type="button"
                         variant="outline"
                         size="sm"
                         className="w-full h-9 text-xs"
                         onClick={() => document.getElementById('increment-letter-input')?.click()}
+                        isLoading={uploadingDoc['teacherDocuments.incrementLetter.fileUrl']}
+                        loadingText="Uploading..."
                       >
                         <UploadCloud className="w-3 h-3 mr-2" />
                         Upload Increment Letter
-                      </Button>
+                      </LoadingButton>
                       <input
                         id="increment-letter-input"
                         type="file"
@@ -840,12 +858,12 @@ export default function TeachersPage() {
                     {errors.status && <p className="text-sm text-destructive">{errors.status.message}</p>}
                   </div>
                   <div className="flex items-center gap-3 justify-end">
-                    <Button variant="outline" type="button" onClick={closeForm}>
+                    <Button variant="outline" type="button" onClick={closeForm} disabled={isSubmitting}>
                       Cancel
                     </Button>
-                    <Button type="submit" className="bg-primary text-white px-6 py-3">
+                    <LoadingButton type="submit" className="bg-primary text-white px-6 py-3" isLoading={isSubmitting} loadingText={editingTeacher ? 'Updating...' : 'Saving...'}>
                       {editingTeacher ? 'Update Teacher' : 'Save Teacher'}
-                    </Button>
+                    </LoadingButton>
                   </div>
                 </div>
               </div>
