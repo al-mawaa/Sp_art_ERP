@@ -18,6 +18,7 @@ export type SerializedBatch = {
   batchCode: string;
   courseName: string;
   batchTiming: string;
+  batchType?: "Weekday" | "Weekend";
   batchDay: string;
   batchTime: string;
   startDate: string;

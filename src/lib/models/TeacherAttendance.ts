@@ -7,8 +7,8 @@ export interface TeacherAttendanceDocument extends mongoose.Document {
   /** Staff user id (teacher or senior teacher MongoDB _id) */
   teacherId: mongoose.Types.ObjectId;
   role: StaffAttendanceRole;
-  batchId: mongoose.Types.ObjectId;
-  batchName: string;
+  batchId?: mongoose.Types.ObjectId;
+  batchName?: string;
   attendanceDate: string;
   status: TeacherAttendanceStatus;
   remarks: string;
@@ -27,7 +27,7 @@ const TeacherAttendanceSchema = new mongoose.Schema<TeacherAttendanceDocument>(
       required: true,
       index: true,
     },
-    batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", required: true, index: true },
+    batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", index: true },
     batchName: { type: String, default: "", trim: true },
     attendanceDate: { type: String, required: true, trim: true, index: true },
     status: {
@@ -42,7 +42,7 @@ const TeacherAttendanceSchema = new mongoose.Schema<TeacherAttendanceDocument>(
 );
 
 TeacherAttendanceSchema.index(
-  { role: 1, teacherId: 1, batchId: 1, attendanceDate: 1 },
+  { role: 1, teacherId: 1, attendanceDate: 1 },
   { unique: true },
 );
 TeacherAttendanceSchema.index({ batchId: 1, attendanceDate: 1 });

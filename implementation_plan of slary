@@ -1,0 +1,32 @@
+# Map Day-Wise Attendance to Batch-Wise Salary
+
+This plan updates the batch creation process to explicitly separate Weekday and Weekend batches, and applies different penalty multipliers for absences based on the batch type.
+
+## Proposed Changes
+
+### 1. Batch Form Updates (`BatchForm.tsx`)
+- We will replace the current multi-select day toggle with **two Radio Buttons**:
+  - **Weekdays**: Automatically sets the batch days to `Monday, Tuesday, Wednesday, Thursday, Friday`.
+  - **Weekends**: Automatically sets the batch days to `Saturday, Sunday`.
+- A new field `batchType` ("Weekday" or "Weekend") will be added to the batch model to explicitly categorize it.
+
+### 2. Database & Schema Updates
+- **`Batch` Model**: Add `batchType: { type: String, enum: ["Weekday", "Weekend"] }` to explicitly track this.
+- **`batchWriteSchema`**: Update validation to accept and require `batchType`.
+
+### 3. Payroll Deduction Logic (`payrollService.ts`)
+The salary calculation will now check the `batchType` of the missed batches to determine the penalty:
+
+1. **Calculate Base Salary Per Batch**: 
+   - `Salary Per Batch` = `Monthly Salary / Total Scheduled Batches for the Month`.
+2. **Determine Missed Batches for Absences & Leaves**:
+   - For every date the teacher was marked `Absent`, `Half Day`, or had a `Rejected Leave`:
+     - Determine the day of the week.
+     - Find all batches assigned to the teacher that run on that day of the week.
+3. **Apply Multipliers**:
+   - For each missed **Weekday** batch session: Deduct `1 × Salary Per Batch`.
+   - For each missed **Weekend** batch session: Deduct `2 × Salary Per Batch`.
+   - *(Note: Half days will deduct 50% of these respective amounts).*
+
+## User Review Required
+Does replacing the specific day selection with these two radio buttons (Weekdays vs Weekends) work for your use case? (This implies a Weekday batch always runs all 5 days Mon-Fri, and a Weekend batch always runs both Sat-Sun). If this looks correct, click **Proceed** and I will begin execution!
