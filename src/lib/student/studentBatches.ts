@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import Batch, { type BatchDocument } from "@/lib/models/Batch";
 import type { StudentDocument } from "@/lib/models/Student";
+import Teacher from "@/lib/models/Teacher";
+import SeniorTeacher from "@/lib/models/SeniorTeacher";
+
+// Ensure models are registered to prevent populate errors
+const _models = { Teacher, SeniorTeacher };
 
 export type StudentClassCard = {
   id: string;
