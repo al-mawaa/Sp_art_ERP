@@ -11,10 +11,12 @@ type Props = { params: Promise<{ id: string }> };
 export default async function CourseDetailPage({ params }: Props) {
   const { id } = await params;
   await dbConnect();
-  const course = await Course.findById(id).lean();
+  const course = await Course.findById(id).populate('teacherId').populate('seniorTeacherId').lean();
   if (!course) return notFound();
 
   const totalClasses = (course as unknown as { totalClasses?: number }).totalClasses ?? 24;
+  const teacherName = (course as any).teacherId?.fullName || null;
+  const seniorTeacherName = (course as any).seniorTeacherId?.fullName || null;
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -35,13 +37,8 @@ export default async function CourseDetailPage({ params }: Props) {
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-lg bg-muted/10 p-4">
-              <p className="text-xs text-muted-foreground">Duration</p>
-              <p className="font-semibold">{course.duration} {course.duration === 1 ? 'month' : 'months'}</p>
-            </div>
-
-            <div className="rounded-lg bg-muted/10 p-4">
-              <p className="text-xs text-muted-foreground">Total Classes</p>
-              <p className="font-semibold">{totalClasses}</p>
+              <p className="text-xs text-muted-foreground">Session</p>
+              <p className="font-semibold">{course.session}</p>
             </div>
 
             <div className="rounded-lg bg-muted/10 p-4">
@@ -49,10 +46,19 @@ export default async function CourseDetailPage({ params }: Props) {
               <p className="font-semibold">₹{course.totalFees}</p>
             </div>
 
-            <div className="rounded-lg bg-muted/10 p-4">
-              <p className="text-xs text-muted-foreground">Instructor</p>
-              <p className="font-semibold">{course.instructor ?? 'TBA'}</p>
-            </div>
+            {teacherName && (
+              <div className="rounded-lg bg-muted/10 p-4">
+                <p className="text-xs text-muted-foreground">Teacher</p>
+                <p className="font-semibold">{teacherName}</p>
+              </div>
+            )}
+
+            {seniorTeacherName && (
+              <div className="rounded-lg bg-muted/10 p-4">
+                <p className="text-xs text-muted-foreground">Senior Teacher</p>
+                <p className="font-semibold">{seniorTeacherName}</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 flex flex-col gap-3">

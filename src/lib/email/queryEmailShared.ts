@@ -36,7 +36,7 @@ export function wrapQueryEmail(title: string, body: string) {
     <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;">
       <h2 style="color:#ea580c;margin:0 0 16px;">${escapeHtml(title)}</h2>
       ${body}
-      <p style="color:#64748b;font-size:13px;margin-top:24px;">Sp Art Hub</p>
+      <p style="color:#64748b;font-size:13px;margin-top:24px;">SP Art Hub</p>
     </div>
   </body></html>`;
 }

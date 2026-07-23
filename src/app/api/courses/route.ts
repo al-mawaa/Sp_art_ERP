@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    const courses = await Course.find().sort({ createdAt: -1 });
+    const courses = await Course.find().sort({ createdAt: -1 }).populate('teacherId').populate('seniorTeacherId');
     return NextResponse.json({
       courses: courses.map((course) => ({
         id: course._id.toString(),
@@ -17,7 +17,13 @@ export async function GET(request: NextRequest) {
         courseCode: course.courseCode,
         image: course.image,
         instructor: course.instructor,
-        duration: course.duration,
+        session: course.session,
+        remainingDays: course.remainingDays,
+        teacherId: course.teacherId?.toString(),
+        teacherName: (course.teacherId as any)?.fullName || null,
+        seniorTeacherId: course.seniorTeacherId?.toString(),
+        seniorTeacherName: (course.seniorTeacherId as any)?.fullName || null,
+        validUntil: course.validUntil?.toISOString() ?? '',
         startDate: course.startDate?.toISOString() ?? '',
         endDate: course.endDate?.toISOString() ?? '',
         totalFees: course.totalFees,
@@ -47,7 +53,11 @@ export async function POST(request: NextRequest) {
       courseCode,
       image,
       instructor,
-      duration,
+      session,
+      remainingDays,
+      teacherId,
+      seniorTeacherId,
+      validUntil,
       startDate,
       endDate,
       totalFees,
@@ -77,10 +87,9 @@ export async function POST(request: NextRequest) {
 
     const totalFeesNumber = Number(totalFees);
     const discountFeesNumber = Number(discountFees);
-    const durationNumber = Number(duration);
 
-    if (Number.isNaN(totalFeesNumber) || Number.isNaN(discountFeesNumber) || Number.isNaN(durationNumber)) {
-      return NextResponse.json({ error: 'Duration, totalFees and discountFees must be numbers' }, { status: 400 });
+    if (Number.isNaN(totalFeesNumber) || Number.isNaN(discountFeesNumber)) {
+      return NextResponse.json({ error: 'totalFees and discountFees must be numbers' }, { status: 400 });
     }
 
     const existingCourse = await Course.findOne({ courseCode: courseCode.trim() });
@@ -90,6 +99,7 @@ export async function POST(request: NextRequest) {
 
     let parsedStartDate: Date | undefined = undefined;
     let parsedEndDate: Date | undefined = undefined;
+    let parsedValidUntil: Date | undefined = undefined;
     if (startDate !== undefined && startDate !== null && startDate !== '') {
       parsedStartDate = new Date(startDate);
       if (isNaN(parsedStartDate.getTime())) {
@@ -100,6 +110,12 @@ export async function POST(request: NextRequest) {
       parsedEndDate = new Date(endDate);
       if (isNaN(parsedEndDate.getTime())) {
         return NextResponse.json({ error: 'End date is invalid' }, { status: 400 });
+      }
+    }
+    if (validUntil !== undefined && validUntil !== null && validUntil !== '') {
+      parsedValidUntil = new Date(validUntil);
+      if (isNaN(parsedValidUntil.getTime())) {
+        return NextResponse.json({ error: 'Valid Until date is invalid' }, { status: 400 });
       }
     }
 
@@ -116,7 +132,11 @@ export async function POST(request: NextRequest) {
       courseCode: courseCode.trim(),
       image: image || undefined,
       instructor: instructor || undefined,
-      duration: durationNumber,
+      session: session || '1',
+      remainingDays: remainingDays || undefined,
+      teacherId: teacherId || undefined,
+      seniorTeacherId: seniorTeacherId || undefined,
+      ...(parsedValidUntil ? { validUntil: parsedValidUntil } : {}),
       ...(parsedStartDate ? { startDate: parsedStartDate } : {}),
       ...(parsedEndDate ? { endDate: parsedEndDate } : {}),
       totalFees: totalFeesNumber,
@@ -140,7 +160,11 @@ export async function POST(request: NextRequest) {
           courseCode: course.courseCode,
           image: course.image,
           instructor: course.instructor,
-          duration: course.duration,
+          session: course.session,
+          remainingDays: course.remainingDays,
+          teacherId: course.teacherId?.toString(),
+          seniorTeacherId: course.seniorTeacherId?.toString(),
+          validUntil: course.validUntil?.toISOString() ?? '',
           startDate: course.startDate?.toISOString() ?? '',
           endDate: course.endDate?.toISOString() ?? '',
           totalFees: course.totalFees,

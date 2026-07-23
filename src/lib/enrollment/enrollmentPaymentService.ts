@@ -145,7 +145,7 @@ export async function resolvePaymentOrder(ctx: OrderContext): Promise<ResolvedOr
   if (!course) throw new Error("Course not found");
 
   const baseFee = Math.max(0, Number(course.discountFees ?? course.totalFees ?? 0));
-  const duration = Number(course.duration ?? 2);
+  const duration = Number(course.session ?? 2);
 
   if (enrollmentId) {
     if (!mongoose.Types.ObjectId.isValid(enrollmentId)) {
@@ -243,7 +243,7 @@ export async function processSuccessfulPayment(input: ProcessPaymentInput) {
   if (!student) throw new Error("Student not found");
 
   const baseFee = Math.max(0, Number(course.discountFees ?? course.totalFees ?? 0));
-  const duration = Number(course.duration ?? 2);
+  const duration = Number(course.session ?? 2);
   const breakdown = calculatePaymentBreakdown(baseFee, duration, paymentType);
   const invoiceId = `INV-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
   const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM || "spinstituteofart@gmail.com";
