@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import Student from '@/lib/models/Student';
 import StudentCredentials from '@/lib/models/StudentCredentials';
+import Credential from '@/lib/models/Credentials';
 import Batch from '@/lib/models/Batch';
 import CourseEnrollment from '@/lib/models/CourseEnrollment';
 import Course from '@/lib/models/Course';
@@ -42,23 +43,51 @@ export async function GET(request: NextRequest) {
 
     const students = await Student.find(filter).sort({ createdAt: -1 });
     const credentials = await StudentCredentials.find({ role: 'Student' }).sort({ createdAt: -1 });
+    const mainCredentials = await Credential.find({ role: 'student' }).sort({ createdAt: -1 });
 
     const existingBadges = new Set(students.map(s => s.badgeId));
     const existingEmails = new Set(students.filter(s => s.email).map(s => s.email));
 
-    const credentialStudents = credentials
+    // Combine and deduplicate student credentials
+    const allCreds = [
+      ...credentials.map(c => ({
+        id: c._id.toString(),
+        name: c.name,
+        email: c.email,
+        badgeId: c.studentIdNumber?.trim() || c.studentId,
+        phone: c.mobileNumber,
+        createdAt: c.createdAt,
+      })),
+      ...mainCredentials.map(c => ({
+        id: c._id.toString(),
+        name: c.name,
+        email: c.email,
+        badgeId: c.username || c._id.toString(),
+        phone: c.mobileNumber,
+        createdAt: c.createdAt,
+      }))
+    ];
+
+    const seenEmails = new Set();
+    const credentialStudents = allCreds
       .filter(c => {
-        const badge = c.studentIdNumber?.trim() || c.studentId;
-        return !existingBadges.has(badge) && !existingEmails.has(c.email);
+        if (existingBadges.has(c.badgeId) || existingEmails.has(c.email)) {
+          return false;
+        }
+        if (seenEmails.has(c.email)) {
+          return false;
+        }
+        seenEmails.add(c.email);
+        return true;
       })
-      .map(doc => ({
-        id: doc._id.toString(),
-        name: doc.name,
-        email: doc.email,
-        badgeId: doc.studentIdNumber?.trim() || doc.studentId,
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        badgeId: c.badgeId,
         class: 'Not Assigned',
         feeStatus: 'Pending',
-        phone: doc.mobileNumber,
+        phone: c.phone,
         photo: undefined,
         parentName: undefined,
         dob: undefined,
@@ -79,7 +108,7 @@ export async function GET(request: NextRequest) {
         courseDurationMonths: undefined,
         artTeacher: undefined,
         vanFacility: undefined,
-        createdAt: doc.createdAt,
+        createdAt: c.createdAt,
       }));
 
     // Fetch active course enrollments for all students in bulk
