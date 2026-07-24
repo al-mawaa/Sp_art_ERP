@@ -22,7 +22,11 @@ const courseSchema = z.object({
   category: z.string().min(1, 'Course category is required'),
   courseCode: z.string().min(1, 'Course code is required'),
   image: z.string().optional(),
-  duration: z.coerce.number().min(1, 'Duration is required'),
+  session: z.string().min(1, 'Session is required'),
+  remainingDays: z.string().optional(),
+  teacherId: z.string().optional(),
+  seniorTeacherId: z.string().optional(),
+  validUntil: z.string().optional(),
   totalFees: z.coerce.number().min(0, 'Total fees is required'),
   discountFees: z.coerce.number().min(0, 'Payable amount is required'),
   status: z.enum(['active', 'inactive']).default('active'),
@@ -40,7 +44,13 @@ type CourseRow = {
   courseCode: string;
   image?: string;
   instructor?: string;
-  duration: number;
+  session: string;
+  remainingDays?: string;
+  teacherId?: string;
+  teacherName?: string;
+  seniorTeacherId?: string;
+  seniorTeacherName?: string;
+  validUntil?: string;
   totalFees: number;
   discountFees: number;
   discountPercentage: number;
@@ -65,6 +75,8 @@ export default function AdminCoursesPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [teachers, setTeachers] = useState<{ id: string; fullName: string }[]>([]);
+  const [seniorTeachers, setSeniorTeachers] = useState<{ id: string; fullName: string }[]>([]);
 
   const form = useForm<CourseForm>({
     resolver: zodResolver(courseSchema),
@@ -73,7 +85,11 @@ export default function AdminCoursesPage() {
       category: '',
       courseCode: '',
       image: '',
-      duration: 1,
+      session: '1',
+      remainingDays: '',
+      teacherId: '',
+      seniorTeacherId: '',
+      validUntil: '',
       totalFees: 0,
       discountFees: 0,
       status: 'active',
@@ -110,6 +126,30 @@ export default function AdminCoursesPage() {
       toast.error('Unable to load courses');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const response = await fetch('/api/teachers');
+      const result = await response.json();
+      if (response.ok) {
+        setTeachers(result.teachers?.filter((t: any) => t.status === 'Active').map((t: any) => ({ id: t.id, fullName: t.fullName })) || []);
+      }
+    } catch (error) {
+      console.error('Error loading teachers:', error);
+    }
+  };
+
+  const fetchSeniorTeachers = async () => {
+    try {
+      const response = await fetch('/api/senior-teachers');
+      const result = await response.json();
+      if (response.ok) {
+        setSeniorTeachers(result.teachers?.filter((t: any) => t.status === 'Active').map((t: any) => ({ id: t.id, fullName: t.fullName })) || []);
+      }
+    } catch (error) {
+      console.error('Error loading senior teachers:', error);
     }
   };
 
@@ -152,6 +192,8 @@ export default function AdminCoursesPage() {
 
   useEffect(() => {
     fetchCourses();
+    fetchTeachers();
+    fetchSeniorTeachers();
   }, []);
 
   // prevent background scroll when modal is open
@@ -172,7 +214,11 @@ export default function AdminCoursesPage() {
       category: '',
       courseCode: '',
       image: '',
-      duration: 1,
+      session: '1',
+      remainingDays: '',
+      teacherId: '',
+      seniorTeacherId: '',
+      validUntil: '',
       totalFees: 0,
       discountFees: 0,
       status: 'active',
@@ -195,7 +241,11 @@ export default function AdminCoursesPage() {
       category: row.category ?? '',
       courseCode: row.courseCode,
       image: row.image ?? '',
-      duration: row.duration,
+      session: row.session,
+      remainingDays: row.remainingDays ?? '',
+      teacherId: row.teacherId ?? '',
+      seniorTeacherId: row.seniorTeacherId ?? '',
+      validUntil: row.validUntil ?? '',
       totalFees: row.totalFees,
       discountFees: row.discountFees,
       status: row.status,
@@ -238,7 +288,11 @@ export default function AdminCoursesPage() {
         category: values.category,
         courseCode: values.courseCode,
         image: values.image || undefined,
-        duration: Number(values.duration),
+        session: values.session,
+        remainingDays: values.remainingDays || undefined,
+        teacherId: values.teacherId || undefined,
+        seniorTeacherId: values.seniorTeacherId || undefined,
+        validUntil: values.validUntil || undefined,
         totalFees: Number(values.totalFees),
         discountFees: Number(values.discountFees),
         discountPercentage,
@@ -268,7 +322,13 @@ export default function AdminCoursesPage() {
         categorySlug: result.course.categorySlug,
         courseCode: result.course.courseCode,
         image: result.course.image,
-        duration: result.course.duration,
+        session: result.course.session,
+        remainingDays: result.course.remainingDays,
+        teacherId: result.course.teacherId,
+        teacherName: result.course.teacherName,
+        seniorTeacherId: result.course.seniorTeacherId,
+        seniorTeacherName: result.course.seniorTeacherName,
+        validUntil: result.course.validUntil,
         totalFees: result.course.totalFees,
         discountFees: result.course.discountFees,
         discountPercentage: result.course.discountPercentage,
@@ -338,7 +398,7 @@ export default function AdminCoursesPage() {
             columns={[
               { key: 'courseTitle', header: 'Course' },
               { key: 'courseCode', header: 'Code' },
-              { key: 'duration', header: 'Duration', render: row => `${row.duration} months` },
+              { key: 'session', header: 'Session', render: row => row.session },
               { key: 'totalFees', header: 'Total Fees', render: row => `₹${row.totalFees.toFixed(2)}` },
               { key: 'discountFees', header: 'Payable amount', render: row => `₹${row.discountFees.toFixed(2)}` },
               { key: 'discountPercentage', header: 'Discount %', render: row => `${row.discountPercentage}%` },
@@ -450,9 +510,43 @@ export default function AdminCoursesPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="duration">Duration (months)</Label>
-                <Input id="duration" type="number" className="h-11 rounded-lg shadow-sm" min={1} step={1} {...form.register('duration', { valueAsNumber: true })} />
-                {form.formState.errors.duration && <p className="text-xs text-red-500">{form.formState.errors.duration.message}</p>}
+                <Label htmlFor="session">Session</Label>
+                <Input id="session" className="h-11 rounded-lg shadow-sm" {...form.register('session')} />
+                {form.formState.errors.session && <p className="text-xs text-red-500">{form.formState.errors.session.message}</p>}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="remainingDays">Remaining Days</Label>
+                <Input id="remainingDays" className="h-11 rounded-lg shadow-sm" placeholder="e.g., 10 Days Remaining" {...form.register('remainingDays')} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="teacherId">Teacher</Label>
+                <Select value={form.watch('teacherId')} onValueChange={(value) => form.setValue('teacherId', value)}>
+                  <SelectTrigger id="teacherId" className="h-11 rounded-lg shadow-sm"><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                  <SelectContent>
+                    {teachers.map(teacher => (
+                      <SelectItem key={teacher.id} value={teacher.id}>{teacher.fullName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="seniorTeacherId">Senior Teacher</Label>
+                <Select value={form.watch('seniorTeacherId')} onValueChange={(value) => form.setValue('seniorTeacherId', value)}>
+                  <SelectTrigger id="seniorTeacherId" className="h-11 rounded-lg shadow-sm"><SelectValue placeholder="Select senior teacher" /></SelectTrigger>
+                  <SelectContent>
+                    {seniorTeachers.map(seniorTeacher => (
+                      <SelectItem key={seniorTeacher.id} value={seniorTeacher.id}>{seniorTeacher.fullName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="validUntil">Valid Until</Label>
+                <Input id="validUntil" type="date" className="h-11 rounded-lg shadow-sm" {...form.register('validUntil')} />
               </div>
 
               <div className="grid gap-2">

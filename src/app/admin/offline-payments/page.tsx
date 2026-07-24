@@ -191,7 +191,6 @@ export default function AdminOfflinePaymentsPage() {
           rejected_count: data.rejected_count ?? 0,
         });
       } else {
-        console.error(data);
         toast.error(data?.error || "Failed to load offline payments");
       }
     } catch (error) {
@@ -614,7 +613,7 @@ export default function AdminOfflinePaymentsPage() {
                       type="number"
                       min="0"
                       max={amountPerTerm}
-                      placeholder={`Amount paid now (Max: ₹${amountPerTerm})`}
+                      placeholder={`Amount paid now (Min: ₹${amountPerTerm})`}
                       className="h-10 rounded-xl bg-white"
                       value={upfrontPayment}
                       onChange={(e) => setUpfrontPayment(e.target.value)}

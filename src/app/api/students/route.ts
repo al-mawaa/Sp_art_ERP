@@ -79,6 +79,8 @@ export async function GET(request: NextRequest) {
         courseDurationMonths: undefined,
         artTeacher: undefined,
         vanFacility: undefined,
+        branch: undefined,
+        courseName: undefined,
         createdAt: doc.createdAt,
       }));
 
@@ -132,6 +134,9 @@ export async function GET(request: NextRequest) {
         howYouKnowUs: doc.howYouKnowUs ?? doc.howYouComeToKnow,
         howYouComeToKnow: doc.howYouComeToKnow,
         batchId: doc.batchId?.toString(),
+        branch: doc.branch,
+        courseName: doc.courseName,
+        vanFacility: doc.vanFacility,
         currentCourse: courses.length > 0 ? courses[0] : undefined,
         currentCourses: courses.length > 1 ? courses : undefined,
         createdAt: doc.createdAt,
@@ -188,6 +193,9 @@ export async function POST(request: NextRequest) {
       howYouComeToKnow,
       batchId,
       feeStatus = 'Pending',
+      branch,
+      courseName,
+      vanFacility,
     } = body;
 
     // Auto-generate badge ID if not provided
@@ -257,6 +265,9 @@ export async function POST(request: NextRequest) {
       howYouComeToKnow,
       batchId,
       feeStatus,
+      branch,
+      courseName,
+      vanFacility,
     });
 
     // Add student to batch if batchId is provided

@@ -82,7 +82,7 @@ export async function GET(
       studentEmail: student.email || "",
       courseTitle: String(course.courseTitle || "Course Title"),
       courseCode: String(course.courseCode || "N/A"),
-      courseDurationMonths: Number(course.duration ?? 0),
+      courseDurationMonths: Number(course.session ?? 0),
       baseAmount: Number(enrollment.baseAmount ?? 0),
       amountPaid: Number(enrollment.paidAmount ?? enrollment.amount ?? 0),
       discountPercentage: Number(

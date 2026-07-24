@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     let courseAmount = Number(enrollment?.totalAmount ?? enrollment?.amount ?? 0);
     if (courseAmount <= 0 && course) {
       const baseFee = Math.max(0, Number(course.discountFees ?? course.totalFees ?? 0));
-      const duration = Number(course.duration ?? 2);
+      const duration = Number(course.session ?? 2);
       const resolvedPaymentType: PaymentType =
         enrollment?.paymentType === "installment" ? "installment" : "full";
       const breakdown = calculatePaymentBreakdown(baseFee, duration, resolvedPaymentType);

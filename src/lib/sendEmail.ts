@@ -31,7 +31,7 @@ export interface SendAccountCreationEmailOptions {
 }
 
 const buildHtml = ({ name, email, password, loginUrl, academyName }: Omit<SendAccountCreationEmailOptions, 'to'>) => {
-  const school = academyName || 'Sp Art Hub';
+  const school = academyName || 'SP Art Hub';
   const url = loginUrl || 'http://localhost:3000/login';
 
   return `
@@ -82,7 +82,7 @@ const buildHtml = ({ name, email, password, loginUrl, academyName }: Omit<SendAc
 
 export async function sendAccountCreationEmail(options: SendAccountCreationEmailOptions) {
   const { to, name, email, password, loginUrl, academyName } = options;
-  const subject = 'Welcome to Sp Art hub';
+  const subject = 'Welcome to SP Art hub';
   const html = buildHtml({ name, email, password, loginUrl, academyName });
   const text = `Hello ${name},\n\nYour ERP account has been created successfully.\n\nLogin Credentials:\nEmail: ${email}\nPassword: ${password}\n\nLogin Here:\n${loginUrl ?? 'http://localhost:3000/login'}\n\nRegards,\nSP Art Hub`;
 
@@ -108,7 +108,7 @@ export interface SendCredentialUpdateEmailOptions {
 }
 
 const buildUpdateHtml = (opts: Omit<SendCredentialUpdateEmailOptions, 'to' | 'performedAt'> & { performedAt: string }) => {
-  const school = opts.academyName || 'Sp Art hub';
+  const school = opts.academyName || 'SP Art hub';
   const url = opts.loginUrl || 'http://localhost:3000/login';
   const support = opts.supportEmail || 'spinstituteofart@gmail.com';
   return `

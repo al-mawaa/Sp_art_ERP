@@ -38,6 +38,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       howYouComeToKnow,
       batchId,
       feeStatus = 'Pending',
+      branch,
+      courseName,
+      vanFacility,
     } = body;
 
     if (!fullName || !badgeId) {
@@ -144,6 +147,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         howYouComeToKnow,
         batchId,
         feeStatus,
+        branch,
+        courseName,
+        vanFacility,
       },
       { returnDocument: 'after', runValidators: true }
     );
@@ -203,6 +209,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         howYouComeToKnow: updatedStudent.howYouComeToKnow,
         howYouKnowUs: updatedStudent.howYouKnowUs,
         batchId: updatedStudent.batchId?.toString(),
+        branch: updatedStudent.branch,
+        courseName: updatedStudent.courseName,
+        vanFacility: updatedStudent.vanFacility,
         createdAt: updatedStudent.createdAt,
       },
     });
