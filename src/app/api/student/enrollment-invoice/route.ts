@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     studentEmail: student.email || '',
     courseTitle: course.courseTitle,
     courseCode: course.courseCode,
-    courseDurationMonths: course.duration || 0,
+    courseDurationMonths: Number(course.session) || 0,
     amountPaid: enrollment.amount || 0,
     discountPercentage: enrollment.discountPercentage ?? course.discountPercentage ?? 0,
     discountAmount: enrollment.discountAmount ?? Math.max(0, (course.totalFees ?? 0) - (enrollment.amount ?? 0)),

@@ -168,7 +168,7 @@ export async function sendCourseEnrollmentEmail(params: {
 
   const invoiceData: EnrollmentInvoiceData = {
     invoiceId,
-    academyName: 'Sp Art Hub',
+    academyName: 'SP Art Hub',
     studentName,
     studentEmail,
     courseTitle,

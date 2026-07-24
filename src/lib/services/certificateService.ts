@@ -136,7 +136,7 @@ export async function approveCertificate(certificateId: string) {
     doc.moveDown(0.5);
     doc.fontSize(24).fillColor('#0f172a').text(course.courseTitle || 'Course', { align: 'center' });
     
-    const duration = course.durationMonths ? `${course.durationMonths} Months` : 'Course Duration';
+    const duration = course.session ? `${course.session} Months` : 'Course Duration';
     doc.moveDown(0.5);
     doc.fontSize(12).fillColor('#64748b').text(`Duration: ${duration}`, { align: 'center' });
     

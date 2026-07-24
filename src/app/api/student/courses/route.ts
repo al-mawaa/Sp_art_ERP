@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
           courseCode: course.courseCode,
           image: course.image,
           instructor: course.instructor,
-          duration: course.duration,
+          duration: Number(course.session) || 0,
           startDate: course.startDate?.toISOString() ?? '',
           endDate: course.endDate?.toISOString() ?? '',
           totalFees: course.totalFees,

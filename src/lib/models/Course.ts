@@ -7,7 +7,11 @@ export interface CourseDocument extends mongoose.Document {
   courseCode: string;
   image?: string;
   instructor?: string;
-  duration: number;
+  session: string;
+  remainingDays?: string;
+  teacherId?: mongoose.Types.ObjectId;
+  seniorTeacherId?: mongoose.Types.ObjectId;
+  validUntil?: Date;
   startDate?: Date;
   endDate?: Date;
   totalFees: number;
@@ -30,7 +34,11 @@ const CourseSchema = new mongoose.Schema<CourseDocument>(
     courseCode: { type: String, required: true, unique: true, sparse: true },
     image: { type: String },
     instructor: { type: String },
-    duration: { type: Number, required: true, default: 1 },
+    session: { type: String, required: true, default: '1' },
+    remainingDays: { type: String },
+    teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher' },
+    seniorTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'SeniorTeacher' },
+    validUntil: { type: Date },
     startDate: { type: Date },
     endDate: { type: Date },
     totalFees: { type: Number, required: true, default: 0 },

@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         courseId: course._id?.toString() ?? enrollment.courseId.toString(),
         courseTitle: course.courseTitle,
         courseCode: course.courseCode,
-        courseDuration: course.duration ?? 0,
+        courseDuration: Number(course.session) || 0,
         courseFee: course.discountFees ?? course.totalFees ?? 0,
         batchName: batch?.batchName ?? "Not Assigned",
         enrollmentDate: enrollment.enrollmentDate,

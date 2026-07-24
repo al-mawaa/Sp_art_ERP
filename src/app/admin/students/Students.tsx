@@ -43,6 +43,9 @@ type Student = {
   howYouKnowUs?: string;
   howYouComeToKnow?: string;
   batchId?: string;
+  branch?: string;
+  courseName?: string;
+  vanFacility?: boolean;
 };
 
 type EnrollmentDetails = {
@@ -93,10 +96,15 @@ type StudentForm = {
   howYouKnowUsSelect: string;
   howYouKnowUsOther: string;
   batchId: string;
+  branch: string;
+  courseName: string;
+  vanFacility: boolean;
 };
 
 const CLASSES = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
 const FEE_STATUS = ['Paid', 'Pending', 'Overdue'] as const;
+
+const BRANCH_OPTIONS = ['Mumbai', 'Pune', 'Nagpur'];
 
 const HOW_YOU_KNOW_US_OPTIONS = [
   'Instagram',
@@ -139,6 +147,9 @@ const defaultForm: StudentForm = {
   howYouKnowUsSelect: '',
   howYouKnowUsOther: '',
   batchId: '',
+  branch: '',
+  courseName: '',
+  vanFacility: false,
 };
 
 const formatDateInputValue = (value?: string) => {
@@ -178,6 +189,9 @@ const mapStudentToForm = (student: Student): StudentForm => {
     howYouKnowUsSelect: isPredefinedOption ? savedValue : 'Other',
     howYouKnowUsOther: isPredefinedOption ? '' : savedValue,
     batchId: student.batchId?.toString() ?? '',
+    branch: student.branch ?? '',
+    courseName: student.courseName ?? '',
+    vanFacility: student.vanFacility ?? false,
   };
 };
 
@@ -213,6 +227,9 @@ const buildStudentPayload = (form: StudentForm) => {
     howYouKnowUs,
     batchId: form.batchId || undefined,
     feeStatus: form.feeStatus,
+    branch: form.branch || undefined,
+    courseName: form.courseName || undefined,
+    vanFacility: form.vanFacility,
   };
 };
 
@@ -755,6 +772,62 @@ export default function StudentsPage() {
                 </div>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="branch">Select Branch</Label>
+                  <Select
+                    value={form.branch}
+                    onValueChange={(value) => setForm(current => ({ ...current, branch: value }))}
+                  >
+                    <SelectTrigger id="branch">
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRANCH_OPTIONS.map(branch => (
+                        <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="courseName">Course Name</Label>
+                  <Input
+                    id="courseName"
+                    value={form.courseName}
+                    onChange={(e) => setForm(current => ({ ...current, courseName: e.target.value }))}
+                    placeholder="Enter course name"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Van Facility</Label>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="vanFacilityYes"
+                      name="vanFacility"
+                      checked={form.vanFacility === true}
+                      onChange={() => setForm(current => ({ ...current, vanFacility: true }))}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="vanFacilityYes" className="text-sm cursor-pointer">Yes</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="vanFacilityNo"
+                      name="vanFacility"
+                      checked={form.vanFacility === false}
+                      onChange={() => setForm(current => ({ ...current, vanFacility: false }))}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="vanFacilityNo" className="text-sm cursor-pointer">No</label>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="batchId">Batch</Label>
                 <Select
@@ -875,6 +948,8 @@ export default function StudentsPage() {
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Course details</div>
                   <div className="grid gap-2 text-sm">
                     <div><span className="font-medium">Current course:</span> {currentEnrollment?.courseTitle || 'N/A'}</div>
+                    <div><span className="font-medium">Branch:</span> {viewStudent.branch || 'N/A'}</div>
+                    <div><span className="font-medium">Van Facility:</span> {viewStudent.vanFacility ? 'Yes' : 'No'}</div>
                     {currentBatch?.batchDay && <div><span className="font-medium">Batch days:</span> {currentBatch.batchDay}</div>}
                     {currentBatch?.batchTime && <div><span className="font-medium">Batch time:</span> {currentBatch.batchTime}</div>}
                     {(currentBatch?.startDate || currentBatch?.startMonth) && (currentBatch?.endDate || currentBatch?.endMonth) && (

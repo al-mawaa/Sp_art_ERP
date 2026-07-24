@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         courseCode?: string;
         instructor?: string;
         image?: string;
-        duration?: number;
+        session?: string;
         totalFees?: number;
         discountFees?: number;
         discountPercentage?: number;
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         courseCode: course.courseCode,
         instructor: course.instructor || "Not Assigned",
         image: course.image,
-        duration: course.duration,
+        duration: Number(course.session) || 0,
         totalFees: course.totalFees,
         discountFees: course.discountFees,
         discountPercentage: course.discountPercentage,

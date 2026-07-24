@@ -22,6 +22,9 @@ interface CourseCardProps {
   image?: string;
   description?: string;
   duration: number;
+  session: string;
+  remainingDays?: string;
+  validUntil?: string;
   instructor?: string;
   totalClasses?: number;
   totalFees: number;
@@ -39,6 +42,9 @@ export function CourseCard({
   image,
   description,
   duration,
+  session,
+  remainingDays,
+  validUntil,
   instructor,
   totalClasses = 24,
   totalFees,
@@ -201,14 +207,38 @@ export function CourseCard({
             </div>
           </div>
 
-          {/* Classes */}
+          {/* Classes/Session */}
           <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-2">
             <Users className="h-3.5 w-3.5 flex-shrink-0 text-primary/60" />
             <div>
-              <p className="text-[10px] text-muted-foreground">Classes</p>
-              <p className="text-xs font-semibold text-foreground">{totalClasses}</p>
+              <p className="text-[10px] text-muted-foreground">Session</p>
+              <p className="text-xs font-semibold text-foreground">{session}</p>
             </div>
           </div>
+
+          {/* Remaining Days */}
+          {remainingDays && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-2 border border-red-200 animate-pulse">
+              <Clock className="h-3.5 w-3.5 flex-shrink-0 text-red-600" />
+              <div>
+                <p className="text-[10px] text-red-600 font-semibold">Remaining Days</p>
+                <p className="text-xs font-bold text-red-700">{remainingDays}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Valid Until */}
+          {validUntil && (
+            <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-2">
+              <Clock className="h-3.5 w-3.5 flex-shrink-0 text-primary/60" />
+              <div>
+                <p className="text-[10px] text-muted-foreground">Valid Until</p>
+                <p className="text-xs font-semibold text-foreground">
+                  {new Date(validUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Pricing Section */}

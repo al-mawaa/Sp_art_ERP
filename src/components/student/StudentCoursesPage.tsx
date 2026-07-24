@@ -23,6 +23,9 @@ interface Course {
   image?: string;
   instructor?: string;
   duration: number;
+  session: string;
+  remainingDays?: string;
+  validUntil?: string;
   startDate: string;
   endDate: string;
   totalFees: number;
@@ -281,7 +284,10 @@ export function StudentCoursesPage() {
                 courseCode={course.courseCode}
                 courseTitle={course.courseTitle}
                 image={course.image}
-                duration={course.duration}
+                duration={Number(course.session) || 0}
+                session={course.session}
+                remainingDays={course.remainingDays}
+                validUntil={course.validUntil}
                 instructor={course.instructor}
                 totalFees={course.totalFees}
                 discountFees={course.discountFees}
