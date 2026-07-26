@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     const students = await Student.find(filter).sort({ createdAt: -1 });
-    const credentials = await Credential.find({ role: { $in: ['student', 'Student'] } }).sort({ createdAt: -1 });
+    const credentials = await Credential.find({ role: 'student' }).sort({ createdAt: -1 });
 
     const existingBadges = new Set(students.map(s => s.badgeId));
     const existingEmails = new Set(students.filter(s => s.email).map(s => s.email));
