@@ -28,7 +28,7 @@ async function getUniqueBadgeId(role: 'teacher' | 'senior_teacher' | 'student') 
     const students = await Student.find().select('badgeId').sort({ createdAt: 1 }).lean();
     let maxSequence = 0;
     for (const student of students) {
-      const match = student.badgeId?.match(/^SPART(\d+)$/i);
+      const match = student.badgeId?.match(/^SPART-?(\d+)$/i);
       if (match) {
         maxSequence = Math.max(maxSequence, Number.parseInt(match[1], 10));
       }

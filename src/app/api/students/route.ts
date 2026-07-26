@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import Student from '@/lib/models/Student';
-import StudentCredentials from '@/lib/models/StudentCredentials';
+import Credential from '@/lib/models/Credentials';
 import Batch from '@/lib/models/Batch';
 import CourseEnrollment from '@/lib/models/CourseEnrollment';
 import Course from '@/lib/models/Course';
@@ -13,7 +13,7 @@ async function generateStudentBadgeId() {
   const students = await Student.find().select('badgeId').sort({ createdAt: 1 }).lean();
   let maxSequence = 0;
   for (const student of students) {
-    const match = student.badgeId?.match(/^SPART(\d+)$/i);
+    const match = student.badgeId?.match(/^SPART-?(\d+)$/i);
     if (match) {
       maxSequence = Math.max(maxSequence, Number.parseInt(match[1], 10));
     }
@@ -41,21 +41,21 @@ export async function GET(request: NextRequest) {
     }
 
     const students = await Student.find(filter).sort({ createdAt: -1 });
-    const credentials = await StudentCredentials.find({ role: 'Student' }).sort({ createdAt: -1 });
+    const credentials = await Credential.find({ role: { $in: ['student', 'Student'] } }).sort({ createdAt: -1 });
 
     const existingBadges = new Set(students.map(s => s.badgeId));
     const existingEmails = new Set(students.filter(s => s.email).map(s => s.email));
 
     const credentialStudents = credentials
       .filter(c => {
-        const badge = c.studentIdNumber?.trim() || c.studentId;
+        const badge = (c as any).studentIdNumber?.trim() || (c as any).studentId || c.username || c._id.toString();
         return !existingBadges.has(badge) && !existingEmails.has(c.email);
       })
       .map(doc => ({
         id: doc._id.toString(),
         name: doc.name,
         email: doc.email,
-        badgeId: doc.studentIdNumber?.trim() || doc.studentId,
+        badgeId: (doc as any).studentIdNumber?.trim() || (doc as any).studentId || doc.username || doc._id.toString(),
         class: 'Not Assigned',
         feeStatus: 'Pending',
         phone: doc.mobileNumber,
