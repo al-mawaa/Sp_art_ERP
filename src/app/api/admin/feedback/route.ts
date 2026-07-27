@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       
       return {
         id: fb._id.toString(),
-        studentName: fb.anonymous ? `${studentName} (Anonymous)` : studentName,
+        studentName: fb.anonymous ? "Anonymous" : studentName,
         studentId: fb.studentId?._id?.toString() || null,
         teacherName: teacherMap.get(teacherIdStr) || fb.originalTeacherName || "Unknown",
         teacherId: teacherIdStr || null,
@@ -133,6 +133,7 @@ export async function GET(request: NextRequest) {
         status: fb.status,
         adminRemark: fb.adminRemark,
         submittedDate: fb.createdAt,
+        anonymous: fb.anonymous,
       };
     });
 

@@ -9,6 +9,7 @@ import {
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { MyDocumentsCard } from "@/components/shared/MyDocumentsCard";
 import Link from "next/link";
 
 interface DashboardProps {
@@ -154,31 +155,28 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
       </div>
 
       {/* 2. EXECUTIVE SUMMARY */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: "Teachers", value: totalTeachers, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "Students", value: totalStudents, icon: UserCheck, color: "text-indigo-500", bg: "bg-indigo-500/10" },
           { label: "Batches", value: activeBatchesCount, icon: BookOpen, color: "text-purple-500", bg: "bg-purple-500/10" },
-          { label: "Classes Today", value: todaysClasses.length, icon: Calendar, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Slot Approvals", value: pendingSlotsCount, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
-          { label: "Pending Tasks", value: pendingTasksCount, icon: FileText, color: "text-pink-500", bg: "bg-pink-500/10" },
         ].map((stat, i) => (
-          <div key={i} className="glass-card p-5 group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <div key={i} className="glass-card p-6 group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+            <div className={`w-14 h-14 rounded-xl ${stat.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+              <stat.icon className={`w-7 h-7 ${stat.color}`} />
             </div>
-            <div className="text-3xl font-bold mb-1">{stat.value}</div>
+            <div className="text-4xl font-bold mb-1">{stat.value}</div>
             <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT & CENTER COLUMNS */}
-        <div className="xl:col-span-2 space-y-8">
+        {/* LEFT COLUMN - Teacher Management */}
+        <div className="lg:col-span-2 space-y-8">
           
-          {/* 4. TEACHER MANAGEMENT */}
+          {/* TEACHER MANAGEMENT */}
           <div className="glass-card p-6 border-blue-500/20 shadow-blue-500/5">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -207,11 +205,11 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
             </div>
 
             <div className="space-y-3">
-              {teachers.slice(0,3).map(t => {
+              {teachers.slice(0,4).map(t => {
                 const perf = performances.find(p => p.teacherId === t._id.toString());
                 const score = perf?.averagePerformance || 4.5;
                 return (
-                  <div key={t._id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+                  <div key={t._id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-4">
                       <Avatar name={t.fullName} src={t.photo} size={40} />
                       <div>
@@ -226,82 +224,7 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
                   </div>
                 )
               })}
-              {teachers.length === 0 && <p className="text-center py-4 text-muted-foreground">No teachers managed yet.</p>}
-            </div>
-          </div>
-
-          {/* 3. TODAY'S CLASS SCHEDULE */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" /> Today's Class Schedule
-              </h2>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/senior-teacher/classes">View All <ChevronRight className="w-4 h-4 ml-1"/></Link>
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              {todaysClasses.slice(0,4).map((cls, i) => (
-                <div key={cls._id} className="flex gap-4 p-4 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors group">
-                  <div className="flex flex-col items-center justify-center min-w-[80px] border-r border-border/50 pr-4">
-                    <span className="text-lg font-bold">{cls.batchTime?.split(" ")[0] || '10:00'}</span>
-                    <span className="text-xs text-muted-foreground uppercase">{cls.batchTime?.split(" ")[1] || "AM"}</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg">{cls.courseName}</h3>
-                    <p className="text-sm text-muted-foreground">{cls.batchName} • {cls.students?.length || 0} students</p>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="sm" variant="outline" className="rounded-full">
-                      View Class
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {todaysClasses.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl">
-                  No classes scheduled for today.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 6. BATCH OVERVIEW */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-secondary" /> Batch Overview
-              </h2>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/senior-teacher/batches">View All <ChevronRight className="w-4 h-4 ml-1"/></Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {batches.slice(0,4).map((b) => (
-                <div key={b._id} className="p-4 rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 hover:-translate-y-1 transition-transform">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold">{b.batchName}</h3>
-                    <span className="text-xs px-2 py-1 bg-success/10 text-success rounded-full font-medium">
-                      {b.batchStatus}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">{b.courseName}</p>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">{b.attendanceSummary?.averageAttendancePercent || 0}%</span>
-                  </div>
-                  <Progress value={b.attendanceSummary?.averageAttendancePercent || 0} className="h-1.5 mb-4" />
-                  <Button asChild variant="outline" className="w-full text-xs h-8">
-                    <Link href={`/senior-teacher/batches/${b._id}`}>Open Batch</Link>
-                  </Button>
-                </div>
-              ))}
-              {batches.length === 0 && (
-                 <div className="col-span-2 text-center py-8 text-muted-foreground bg-muted/20 rounded-xl">
-                 No batches assigned.
-               </div>
-              )}
+              {teachers.length === 0 && <p className="text-center py-8 text-muted-foreground">No teachers managed yet.</p>}
             </div>
           </div>
 
@@ -310,108 +233,42 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
         {/* RIGHT COLUMN */}
         <div className="space-y-8">
           
-          {/* 14. QUICK ACTIONS */}
+          {/* QUICK ACTIONS */}
           <div className="glass-card p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                <Activity className="w-5 h-5 text-purple-500" /> Quick Actions
             </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/teachers">
+            <div className="space-y-3">
+              <Button asChild variant="outline" className="w-full h-auto py-3 flex items-center justify-start gap-3 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
+                <Link href="/senior-teacher/teachers" className="flex items-center gap-3">
                   <Users className="w-5 h-5" /> Manage Teachers
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/students">
+              <Button asChild variant="outline" className="w-full h-auto py-3 flex items-center justify-start gap-3 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
+                <Link href="/senior-teacher/students" className="flex items-center gap-3">
                   <UserCheck className="w-5 h-5" /> Open Students
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/batches">
+              <Button asChild variant="outline" className="w-full h-auto py-3 flex items-center justify-start gap-3 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
+                <Link href="/senior-teacher/batches" className="flex items-center gap-3">
                   <BookOpen className="w-5 h-5" /> Manage Batches
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/attendance">
+              <Button asChild variant="outline" className="w-full h-auto py-3 flex items-center justify-start gap-3 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
+                <Link href="/senior-teacher/attendance" className="flex items-center gap-3">
                   <CheckSquare className="w-5 h-5" /> Attendance
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/slot-requests">
-                  <Clock className="w-5 h-5" /> Slot Requests
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/leave">
+              <Button asChild variant="outline" className="w-full h-auto py-3 flex items-center justify-start gap-3 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
+                <Link href="/senior-teacher/leave" className="flex items-center gap-3">
                   <CalendarOff className="w-5 h-5" /> Leave Approvals
                 </Link>
               </Button>
             </div>
           </div>
 
-          {/* 17. SMART INSIGHTS */}
-          <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-100 dark:border-indigo-900/50">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-              <TrendingUp className="w-5 h-5" /> Smart Insights
-            </h2>
-            <div className="space-y-3">
-              {smartInsights.map((insight, i) => (
-                <div key={i} className="flex gap-3 text-sm text-indigo-900/80 dark:text-indigo-200/80 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-                  <p>{insight}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 8. SLOT REQUESTS */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-orange-500" /> Pending Slots
-              </h2>
-              <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-bold">
-                {pendingSlotsCount}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {queries.slice(0,3).map(q => (
-                <div key={q._id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={q.personName || "User"} size={32} />
-                    <div>
-                      <p className="text-sm font-bold">{q.personName}</p>
-                      <p className="text-xs text-muted-foreground">{q.category}</p>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" asChild>
-                    <Link href="/senior-teacher/slot-requests">Review</Link>
-                  </Button>
-                </div>
-              ))}
-              {queries.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-2">No pending slot requests.</p>
-              )}
-            </div>
-          </div>
-
-          {/* 9. DRAWING TASK MONITOR */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <FileText className="w-5 h-5 text-pink-500" /> Drawing Tasks
-              </h2>
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 rounded-lg bg-pink-500/10 text-pink-700 dark:text-pink-300">
-                <span className="font-bold">Pending Review</span>
-                <span className="font-bold text-xl">{drawingTasks.length}</span>
-              </div>
-              <Button asChild variant="outline" className="w-full text-xs">
-                <Link href="/senior-teacher/drawing-tasks">Evaluate Tasks</Link>
-              </Button>
-            </div>
-          </div>
+          {/* MY DOCUMENTS */}
+          <MyDocumentsCard apiEndpoint="/api/senior-teacher/documents" />
 
         </div>
       </div>

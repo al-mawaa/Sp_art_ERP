@@ -33,6 +33,7 @@ export type StudentProfileDto = {
   courseName: string;
   teacherName: string;
   role: string;
+  profileEditCompleted: boolean;
   classes: {
     id: string;
     batchName: string;
@@ -81,6 +82,7 @@ export function toProfileDto(doc: StudentDocument): StudentProfileDto {
     courseName: doc.className ?? "",
     teacherName: "",
     role: "student",
+    profileEditCompleted: doc.profileEditCompleted ?? false,
     classes: [],
   };
 }
