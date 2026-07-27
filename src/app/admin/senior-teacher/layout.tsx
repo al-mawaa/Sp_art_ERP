@@ -12,9 +12,8 @@ const seniorNav: NavItem[] = [
   { to: "/admin/senior-teacher/classes", label: "My Classes", icon: CalendarDays },
   { to: "/admin/senior-teacher/attendance", label: "Attendance", icon: ClipboardCheck },
   { to: "/admin/senior-teacher/drawing-tasks", label: "Drawing Tasks", icon: Palette },
-  { to: "/admin/senior-teacher/performance", label: "Performance", icon: TrendingUp },
-  { to: "/admin/senior-teacher/progress", label: "Student Progress", icon: TrendingUp },
-  { to: "/admin/senior-teacher/slot-requests", label: "Slot Requests", icon: ClipboardList },
+  // { to: "/admin/senior-teacher/performance", label: "Performance", icon: TrendingUp },
+  // { to: "/admin/senior-teacher/progress", label: "Student Progress", icon: TrendingUp },
   { to: "/admin/senior-teacher/chat", label: "Chat", icon: MessageSquare },
 ];
 
