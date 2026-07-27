@@ -9,6 +9,7 @@ import {
 import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { MyDocumentsCard } from "@/components/shared/MyDocumentsCard";
 import Link from "next/link";
 import { useStore } from "@/store/dataStore"; // Using this for slot requests per plan
 
@@ -331,6 +332,9 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
               )}
             </div> */}
           </div>
+
+          {/* MY DOCUMENTS */}
+          <MyDocumentsCard apiEndpoint="/api/teacher/documents" />
 
         </div>
       </div>

@@ -11,28 +11,21 @@ import { findBatchesForStudent } from "@/lib/student/studentBatches";
 export const runtime = "nodejs";
 
 const updateSchema = z.object({
-  fullName: z.string().trim().min(2, "Name must be at least 2 characters").optional(),
-  phone: z.string().trim().max(20).optional(),
-  age: z.number().int().min(1).max(120).nullable().optional(),
-  gender: z.string().trim().max(30).optional(),
-  profileImage: z
-    .string()
-    .optional()
-    .refine(v => !v || v.startsWith("http"), "Profile image must be a valid URL"),
-  dob: z.string().trim().optional().nullable(),
-  bloodGroup: z.string().trim().max(10).optional(),
-  school: z.string().trim().max(200).optional(),
-  college: z.string().trim().max(200).optional(),
-  occupation: z.string().trim().max(200).optional(),
-  fatherName: z.string().trim().max(120).optional(),
-  fatherMobile: z.string().trim().max(20).optional(),
-  fatherOccupation: z.string().trim().max(200).optional(),
-  motherName: z.string().trim().max(120).optional(),
-  motherMobile: z.string().trim().max(20).optional(),
-  motherOccupation: z.string().trim().max(200).optional(),
-  address: z.string().trim().max(500).optional(),
   howYouKnowUs: z.string().trim().max(100).optional(),
-  howYouComeToKnow: z.string().trim().max(100).optional(),
+  dob: z.string().optional(),
+  gender: z.string().optional(),
+  bloodGroup: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  fatherMobile: z.string().optional(),
+  motherMobile: z.string().optional(),
+  school: z.string().optional(),
+  college: z.string().optional(),
+  occupation: z.string().optional(),
+  fatherName: z.string().optional(),
+  motherName: z.string().optional(),
+  fatherOccupation: z.string().optional(),
+  motherOccupation: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -91,14 +84,6 @@ export async function PUT(request: NextRequest) {
 
     await dbConnect();
 
-    const access = await getStudentProfileEditAccess(auth.student.id);
-    if (!access.canEditProfile) {
-      return apiError(
-        "Profile editing is locked. Submit a query and wait for admin approval.",
-        403,
-      );
-    }
-
     const student = await updateStudentProfile(auth.student.id, "", parsed.data);
 
     if (!student) {
@@ -108,11 +93,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Set profileEditCompleted to true after first edit
+    if (!student.profileEditCompleted) {
+      student.profileEditCompleted = true;
+      await student.save();
+    }
+
+    // Consume profile edit access if it was from an admin-approved request
     await consumeProfileEditAccess("student", auth.student.id);
 
     return apiSuccess(
       { profile: toProfileDto(student) },
-      { message: "Profile saved to students collection" },
+      { message: "Profile saved successfully" },
     );
   } catch (error) {
     console.error("[student/profile PUT]", error);

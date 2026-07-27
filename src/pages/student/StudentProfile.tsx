@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Home, MessageSquarePlus, Pencil, Save, UploadCloud, User } from "lucide-react";
+import { Home, MessageSquarePlus, Pencil, Save, User } from "lucide-react";
 import { StudentQueryRequestModal } from "@/components/student/StudentQueryRequestModal";
+import { ProfileUpdateRequestModal } from "@/components/student/ProfileUpdateRequestModal";
 import { QueryStatusBadge } from "@/components/student/QueryStatusBadge";
 import type { StudentQueryDto } from "@/lib/student/studentQueryAccess";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -42,26 +42,25 @@ const HOW_YOU_KNOW_US_OPTIONS = [
 ] as const;
 
 type FormState = {
-  fullName: string;
-  phone: string;
-  age: string;
-  gender: string;
-  profileImage: string;
+  email: string;
+  studentId: string;
+  howYouKnowUs: string;
+  howYouKnowUsSelect: string;
+  howYouKnowUsOther: string;
   dob: string;
+  gender: string;
   bloodGroup: string;
+  phone: string;
+  address: string;
+  fatherMobile: string;
+  motherMobile: string;
   school: string;
   college: string;
   occupation: string;
   fatherName: string;
-  fatherMobile: string;
-  fatherOccupation: string;
   motherName: string;
-  motherMobile: string;
+  fatherOccupation: string;
   motherOccupation: string;
-  address: string;
-  howYouKnowUs: string;
-  howYouKnowUsSelect: string;
-  howYouKnowUsOther: string;
 };
 
 function profileToForm(p: StudentProfileData): FormState {
@@ -69,26 +68,25 @@ function profileToForm(p: StudentProfileData): FormState {
   const isPredefinedOption = HOW_YOU_KNOW_US_OPTIONS.includes(savedValue as typeof HOW_YOU_KNOW_US_OPTIONS[number]);
   
   return {
-    fullName: p.fullName,
-    phone: p.phone,
-    age: p.age != null ? String(p.age) : "",
-    gender: p.gender || "",
-    profileImage: p.profileImage,
-    dob: p.dob || "",
-    bloodGroup: p.bloodGroup || "",
-    school: p.school || "",
-    college: p.college || "",
-    occupation: p.occupation || "",
-    fatherName: p.fatherName || "",
-    fatherMobile: p.fatherMobile || "",
-    fatherOccupation: p.fatherOccupation || "",
-    motherName: p.motherName || "",
-    motherMobile: p.motherMobile || "",
-    motherOccupation: p.motherOccupation || "",
-    address: p.address || "",
+    email: p.email,
+    studentId: p.studentId,
     howYouKnowUs: savedValue,
     howYouKnowUsSelect: isPredefinedOption ? savedValue : 'Other',
     howYouKnowUsOther: isPredefinedOption ? '' : savedValue,
+    dob: p.dob || '',
+    gender: p.gender || '',
+    bloodGroup: p.bloodGroup || '',
+    phone: p.phone || '',
+    address: p.address || '',
+    fatherMobile: p.fatherMobile || '',
+    motherMobile: p.motherMobile || '',
+    school: p.school || '',
+    college: p.college || '',
+    occupation: p.occupation || '',
+    fatherName: p.fatherName || '',
+    motherName: p.motherName || '',
+    fatherOccupation: p.fatherOccupation || '',
+    motherOccupation: p.motherOccupation || '',
   };
 }
 
@@ -118,11 +116,10 @@ export function StudentProfilePage() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [queryOpen, setQueryOpen] = useState(false);
+  const [profileUpdateOpen, setProfileUpdateOpen] = useState(false);
   const [canEditProfile, setCanEditProfile] = useState(false);
   const [latestQuery, setLatestQuery] = useState<StudentQueryDto | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -165,24 +162,6 @@ export function StudentProfilePage() {
     void loadProfile();
   }, [loadProfile]);
 
-  const handleImageUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "student-profiles");
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setForm(f => (f ? { ...f, profileImage: data.url } : f));
-      toast.success("Photo uploaded");
-    } catch (error) {
-      toast.error((error as Error).message || "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSave = async () => {
     if (!form || !profile) return;
     
@@ -194,33 +173,30 @@ export function StudentProfilePage() {
     
     setSaving(true);
     try {
-      // If admin typed anything in "Please specify" field, save that text
+      // If user typed anything in "Please specify" field, save that text
       // Otherwise, save the dropdown selection
       const finalHowYouKnowUs = form.howYouKnowUsOther.trim() 
         ? form.howYouKnowUsOther 
         : form.howYouKnowUsSelect;
       
       const payload = {
-        fullName: form.fullName.trim(),
-        phone: form.phone.trim(),
+        howYouKnowUs: finalHowYouKnowUs,
+        dob: form.dob,
         gender: form.gender,
-        profileImage: form.profileImage,
-        age: form.age ? Number(form.age) : null,
-        dob: form.dob || null,
-        bloodGroup: form.bloodGroup.trim(),
-        school: form.school.trim(),
-        college: form.college.trim(),
-        occupation: form.occupation.trim(),
-        fatherName: form.fatherName.trim(),
-        fatherMobile: form.fatherMobile.trim(),
-        fatherOccupation: form.fatherOccupation.trim(),
-        motherName: form.motherName.trim(),
-        motherMobile: form.motherMobile.trim(),
-        motherOccupation: form.motherOccupation.trim(),
-        address: form.address.trim(),
-        howYouComeToKnow: form.howYouKnowUsSelect || undefined,
-        howYouKnowUs: form.howYouKnowUsOther.trim() ? form.howYouKnowUsOther : form.howYouKnowUsSelect || undefined,
+        bloodGroup: form.bloodGroup,
+        phone: form.phone,
+        address: form.address,
+        fatherMobile: form.fatherMobile,
+        motherMobile: form.motherMobile,
+        school: form.school,
+        college: form.college,
+        occupation: form.occupation,
+        fatherName: form.fatherName,
+        motherName: form.motherName,
+        fatherOccupation: form.fatherOccupation,
+        motherOccupation: form.motherOccupation,
       };
+      
       const res = await fetch("/api/student/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -286,40 +262,8 @@ export function StudentProfilePage() {
 
       <div className="card-soft overflow-hidden">
         <div className="gradient-mint text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-          <div className="relative">
-            <div className="h-28 w-28 rounded-3xl border-4 border-white/30 bg-white/20 overflow-hidden flex items-center justify-center">
-              {form.profileImage ? (
-                <img src={form.profileImage} alt={profile.fullName} className="h-full w-full object-cover" />
-              ) : (
-                <User className="w-12 h-12 text-white/80" />
-              )}
-            </div>
-            {editing && (
-              <>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) void handleImageUpload(file);
-                    e.target.value = "";
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                >
-                  <UploadCloud className="w-3.5 h-3.5 mr-1" />
-                  {uploading ? "Uploading…" : "Upload"}
-                </Button>
-              </>
-            )}
+          <div className="h-28 w-28 rounded-3xl border-4 border-white/30 bg-white/20 overflow-hidden flex items-center justify-center">
+            <User className="w-12 h-12 text-white/80" />
           </div>
           <div className="text-center sm:text-left flex-1">
             <div className="text-xs uppercase tracking-widest font-bold opacity-90">Student portal</div>
@@ -356,7 +300,7 @@ export function StudentProfilePage() {
                   Cancel
                 </Button>
               </>
-            ) : canEditProfile ? (
+            ) : (!profile.profileEditCompleted || canEditProfile) ? (
               <Button
                 className="rounded-xl gradient-primary text-white border-0"
                 onClick={() => setEditing(true)}
@@ -382,91 +326,105 @@ export function StudentProfilePage() {
             }}
           />
 
+          <ProfileUpdateRequestModal
+            open={profileUpdateOpen}
+            onOpenChange={setProfileUpdateOpen}
+            currentProfile={{
+              dob: profile.dob,
+              gender: profile.gender,
+              bloodGroup: profile.bloodGroup,
+              phone: profile.phone,
+              address: profile.address,
+              fatherMobile: profile.fatherMobile,
+              motherMobile: profile.motherMobile,
+              howYouKnowUs: profile.howYouKnowUs,
+            }}
+            onSubmitted={() => {
+              void loadProfile();
+            }}
+          />
+
           <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
-            <h3 className="font-display font-bold text-lg">Personal details</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-display font-bold text-lg">Personal details</h3>
+              {(!profile.profileEditCompleted || canEditProfile) && !editing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-xl text-primary hover:bg-primary/5"
+                  onClick={() => setEditing(true)}
+                >
+                  <Pencil className="w-4 h-4 mr-1" /> Edit
+                </Button>
+              )}
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
+              <ReadOnlyField label="Student name" value={profile.fullName} />
+              <ReadOnlyField label="Badge ID" value={profile.studentId} />
+              <ReadOnlyField label="Email" value={profile.email} />
               {editing ? (
-                <>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="fullName">Student name</Label>
-                    <Input
-                      id="fullName"
-                      value={form.fullName}
-                      onChange={e => setForm({ ...form, fullName: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <ReadOnlyField label="Badge ID" value={profile.studentId} />
-                  <ReadOnlyField label="Email" value={profile.email} />
-                  <div className="space-y-1.5">
-                    <Label htmlFor="dob">Date of birth</Label>
-                    <Input
-                      id="dob"
-                      type="date"
-                      value={form.dob}
-                      onChange={e => setForm({ ...form, dob: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="age">Age</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={form.age}
-                      onChange={e => setForm({ ...form, age: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="bloodGroup">Blood group</Label>
-                    <Input
-                      id="bloodGroup"
-                      value={form.bloodGroup}
-                      onChange={e => setForm({ ...form, bloodGroup: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Gender</Label>
-                    <Select
-                      value={form.gender || "unset"}
-                      onValueChange={v => setForm({ ...form, gender: v === "unset" ? "" : v })}
-                    >
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unset">Not specified</SelectItem>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                </>
+                <div className="space-y-1.5">
+                  <Label htmlFor="dob">Date of birth</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={form.dob}
+                    onChange={e => setForm({ ...form, dob: e.target.value })}
+                    className="rounded-xl"
+                  />
+                </div>
               ) : (
-                <>
-                  <ReadOnlyField label="Student name" value={profile.fullName} />
-                  <ReadOnlyField label="Badge ID" value={profile.studentId} />
-                  <ReadOnlyField label="Email" value={profile.email} />
-                  <ReadOnlyField label="Date of birth" value={formatDisplayDate(profile.dob)} />
-                  <ReadOnlyField label="Age" value={profile.age != null ? String(profile.age) : ""} />
-                  <ReadOnlyField label="Blood group" value={profile.bloodGroup} />
-                  <ReadOnlyField label="Gender" value={profile.gender} />
-                  <ReadOnlyField label="Phone" value={profile.phone} />
-                </>
+                <ReadOnlyField label="Date of birth" value={formatDisplayDate(profile.dob)} />
+              )}
+              <ReadOnlyField label="Age" value={profile.age != null ? String(profile.age) : ""} />
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="bloodGroup">Blood group</Label>
+                  <Input
+                    id="bloodGroup"
+                    value={form.bloodGroup}
+                    onChange={e => setForm({ ...form, bloodGroup: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="e.g., A+, B-, O+"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Blood group" value={profile.bloodGroup} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={form.gender}
+                    onValueChange={v => setForm({ ...form, gender: v })}
+                  >
+                    <SelectTrigger id="gender" className="rounded-xl">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <ReadOnlyField label="Gender" value={profile.gender} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="e.g., +91 9876543210"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Phone" value={profile.phone} />
               )}
             </div>
           </div>
@@ -475,41 +433,46 @@ export function StudentProfilePage() {
             <h3 className="font-display font-bold text-lg">Education & occupation</h3>
             <div className="grid gap-4 sm:grid-cols-3">
               {editing ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="school">School</Label>
-                    <Input
-                      id="school"
-                      value={form.school}
-                      onChange={e => setForm({ ...form, school: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="college">College</Label>
-                    <Input
-                      id="college"
-                      value={form.college}
-                      onChange={e => setForm({ ...form, college: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="occupation">Occupation</Label>
-                    <Input
-                      id="occupation"
-                      value={form.occupation}
-                      onChange={e => setForm({ ...form, occupation: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                </>
+                <div className="space-y-1.5">
+                  <Label htmlFor="school">School</Label>
+                  <Input
+                    id="school"
+                    value={form.school}
+                    onChange={e => setForm({ ...form, school: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter school name"
+                  />
+                </div>
               ) : (
-                <>
-                  <ReadOnlyField label="School" value={profile.school} />
-                  <ReadOnlyField label="College" value={profile.college} />
-                  <ReadOnlyField label="Occupation" value={profile.occupation} />
-                </>
+                <ReadOnlyField label="School" value={profile.school} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="college">College</Label>
+                  <Input
+                    id="college"
+                    value={form.college}
+                    onChange={e => setForm({ ...form, college: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter college name"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="College" value={profile.college} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="occupation">Occupation</Label>
+                  <Input
+                    id="occupation"
+                    value={form.occupation}
+                    onChange={e => setForm({ ...form, occupation: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter occupation"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Occupation" value={profile.occupation} />
               )}
             </div>
           </div>
@@ -518,73 +481,90 @@ export function StudentProfilePage() {
             <h3 className="font-display font-bold text-lg">Parent / guardian details</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               {editing ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fatherName">Father&apos;s name</Label>
-                    <Input
-                      id="fatherName"
-                      value={form.fatherName}
-                      onChange={e => setForm({ ...form, fatherName: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fatherMobile">Father&apos;s mobile</Label>
-                    <Input
-                      id="fatherMobile"
-                      value={form.fatherMobile}
-                      onChange={e => setForm({ ...form, fatherMobile: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="motherName">Mother&apos;s name</Label>
-                    <Input
-                      id="motherName"
-                      value={form.motherName}
-                      onChange={e => setForm({ ...form, motherName: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="motherMobile">Mother&apos;s mobile</Label>
-                    <Input
-                      id="motherMobile"
-                      value={form.motherMobile}
-                      onChange={e => setForm({ ...form, motherMobile: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fatherOccupation">Father occupation</Label>
-                    <Input
-                      id="fatherOccupation"
-                      value={form.fatherOccupation}
-                      onChange={e => setForm({ ...form, fatherOccupation: e.target.value })}
-                      className="rounded-xl"
-                      placeholder="Enter father's occupation"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="motherOccupation">Mother occupation</Label>
-                    <Input
-                      id="motherOccupation"
-                      value={form.motherOccupation}
-                      onChange={e => setForm({ ...form, motherOccupation: e.target.value })}
-                      className="rounded-xl"
-                      placeholder="Enter mother's occupation"
-                    />
-                  </div>
-                </>
+                <div className="space-y-1.5">
+                  <Label htmlFor="fatherName">Father's name</Label>
+                  <Input
+                    id="fatherName"
+                    value={form.fatherName}
+                    onChange={e => setForm({ ...form, fatherName: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter father's name"
+                  />
+                </div>
               ) : (
-                <>
-                  <ReadOnlyField label="Father's name" value={profile.fatherName} />
-                  <ReadOnlyField label="Father's mobile" value={profile.fatherMobile} />
-                  <ReadOnlyField label="Mother's name" value={profile.motherName} />
-                  <ReadOnlyField label="Mother's mobile" value={profile.motherMobile} />
-                  <ReadOnlyField label="Father occupation" value={profile.fatherOccupation} />
-                  <ReadOnlyField label="Mother occupation" value={profile.motherOccupation} />
-                </>
+                <ReadOnlyField label="Father's name" value={profile.fatherName} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="fatherMobile">Father's mobile</Label>
+                  <Input
+                    id="fatherMobile"
+                    type="tel"
+                    value={form.fatherMobile}
+                    onChange={e => setForm({ ...form, fatherMobile: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="e.g., +91 9876543210"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Father's mobile" value={profile.fatherMobile} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="motherName">Mother's name</Label>
+                  <Input
+                    id="motherName"
+                    value={form.motherName}
+                    onChange={e => setForm({ ...form, motherName: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter mother's name"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Mother's name" value={profile.motherName} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="motherMobile">Mother's mobile</Label>
+                  <Input
+                    id="motherMobile"
+                    type="tel"
+                    value={form.motherMobile}
+                    onChange={e => setForm({ ...form, motherMobile: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="e.g., +91 9876543210"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Mother's mobile" value={profile.motherMobile} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="fatherOccupation">Father occupation</Label>
+                  <Input
+                    id="fatherOccupation"
+                    value={form.fatherOccupation}
+                    onChange={e => setForm({ ...form, fatherOccupation: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter father's occupation"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Father occupation" value={profile.fatherOccupation} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="motherOccupation">Mother occupation</Label>
+                  <Input
+                    id="motherOccupation"
+                    value={form.motherOccupation}
+                    onChange={e => setForm({ ...form, motherOccupation: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter mother's occupation"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Mother occupation" value={profile.motherOccupation} />
               )}
             </div>
           </div>
@@ -593,50 +573,50 @@ export function StudentProfilePage() {
             <h3 className="font-display font-bold text-lg">Address & referral</h3>
             <div className="grid gap-4">
               {editing ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      value={form.address}
-                      onChange={e => setForm({ ...form, address: e.target.value })}
-                      className="rounded-xl min-h-[100px]"
+                <div className="space-y-1.5">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={form.address}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter your full address"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Address" value={profile.address} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="howYouKnowUsSelect">How you came to know us</Label>
+                  <Select
+                    value={form.howYouKnowUsSelect}
+                    onValueChange={v => setForm({ ...form, howYouKnowUsSelect: v })}
+                  >
+                    <SelectTrigger id="howYouKnowUsSelect" className="rounded-xl">
+                      <SelectValue placeholder="Select an option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOW_YOU_KNOW_US_OPTIONS.map(option => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="space-y-1.5 mt-2">
+                    <Label htmlFor="howYouKnowUsOther">Or specify custom value</Label>
+                    <Input
+                      id="howYouKnowUsOther"
+                      value={form.howYouKnowUsOther}
+                      onChange={e => setForm({ ...form, howYouKnowUsOther: e.target.value })}
+                      placeholder="Type custom value here (overrides dropdown selection)"
+                      className="rounded-xl"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="howYouKnowUsSelect">How you came to know us</Label>
-                    <Select
-                      value={form.howYouKnowUsSelect}
-                      onValueChange={v => setForm({ ...form, howYouKnowUsSelect: v })}
-                    >
-                      <SelectTrigger id="howYouKnowUsSelect" className="rounded-xl">
-                        <SelectValue placeholder="Select an option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HOW_YOU_KNOW_US_OPTIONS.map(option => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="space-y-1.5 mt-2">
-                      <Label htmlFor="howYouKnowUsOther">Or specify custom value</Label>
-                      <Input
-                        id="howYouKnowUsOther"
-                        value={form.howYouKnowUsOther}
-                        onChange={e => setForm({ ...form, howYouKnowUsOther: e.target.value })}
-                        placeholder="Type custom value here (overrides dropdown selection)"
-                        className="rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </>
+                </div>
               ) : (
-                <>
-                  <ReadOnlyField label="Address" value={profile.address} />
-                  <ReadOnlyField label="How you came to know us" value={profile.howYouKnowUs} />
-                </>
+                <ReadOnlyField label="How you came to know us" value={profile.howYouKnowUs} />
               )}
             </div>
           </div>

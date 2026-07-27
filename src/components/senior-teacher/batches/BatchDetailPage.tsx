@@ -18,7 +18,6 @@ import { batchFetch } from "@/lib/batch/batchFetch";
 import { useBatchRoutes } from "@/lib/batch/useBatchRoutes";
 import { canManageBatches } from "@/lib/batch/permissions";
 import { messageFromUnknown } from "@/lib/errors/messageFromUnknown";
-import { BatchTeacherAttendancePanel } from "@/components/attendance/BatchTeacherAttendancePanel";
 
 type BatchDetailPageProps = {
   id: string;
@@ -123,9 +122,9 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
         </div>
       </div>
 
-      <div className="grid w-full gap-4 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+      <div className="grid w-full gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-3 space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 auto-rows-fr">
             <StatCard
               label="Course"
               value={batch.courseName}
@@ -179,78 +178,83 @@ export function BatchDetailPage({ id, readOnly = false, listHref }: BatchDetailP
             </Card>
           )}
         </div>
-
-        <Card className="min-h-full rounded-2xl border-slate-200 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="font-display text-lg flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              Teacher attendance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BatchTeacherAttendancePanel batchId={batch.id} />
-          </CardContent>
-        </Card>
       </div>
 
-      <Card className="rounded-2xl border-slate-200 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="font-display text-lg flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Teachers ({(batch.teachers || []).length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {(batch.teachers || []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No teachers assigned.</p>
-          ) : (
-            <div className="space-y-3">
-              {(batch.teachers || []).map(t => (
-                <div key={t.id} className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                      {t.fullName?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "T"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{t.fullName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{t.email}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {(batch.seniorTeachers || []).length > 0 && (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Teachers Card */}
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="font-display text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Senior Teachers ({(batch.seniorTeachers || []).length})
+              Teachers ({(batch.teachers || []).length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {(batch.seniorTeachers || []).map(t => (
-                <div key={t.id} className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-amber-100 text-amber-800 text-sm font-medium">
-                      {t.fullName?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "S"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{t.fullName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{t.email}</p>
+            {(batch.teachers || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No teachers assigned.</p>
+            ) : (
+              <div className="space-y-3">
+                {(batch.teachers || []).map(t => (
+                  <div key={t.id} className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                        {t.fullName?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "T"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{t.fullName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{t.email}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
 
+        {/* Senior Teachers Card */}
+        {(batch.seniorTeachers || []).length > 0 ? (
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-display text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Senior Teachers ({(batch.seniorTeachers || []).length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(batch.seniorTeachers || []).map(t => (
+                  <div key={t.id} className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-amber-100 text-amber-800 text-sm font-medium">
+                        {t.fullName?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "S"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{t.fullName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{t.email}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-display text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Senior Teachers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">No senior teachers assigned.</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Students Table Card */}
       <Card className="rounded-2xl border-slate-200 shadow-sm overflow-x-auto">
         <CardHeader className="pb-4">
           <CardTitle className="font-display text-lg flex items-center gap-2">

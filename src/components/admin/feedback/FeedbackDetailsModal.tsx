@@ -41,6 +41,7 @@ type FeedbackItem = {
   status: "Submitted" | "Reviewed" | "Closed";
   adminRemark?: string;
   submittedDate: string;
+  anonymous?: boolean;
 };
 
 export function FeedbackDetailsModal({
@@ -115,7 +116,7 @@ export function FeedbackDetailsModal({
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Student</div>
-                  <div className="font-medium">{feedback.studentName}</div>
+                  <div className="font-medium">{feedback.anonymous ? "Anonymous" : feedback.studentName}</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -161,13 +162,6 @@ export function FeedbackDetailsModal({
                 </SelectContent>
               </Select>
 
-              <h4 className="font-medium text-sm mt-4">Internal Remarks</h4>
-              <Textarea
-                placeholder="Add notes for admins..."
-                value={adminRemark}
-                onChange={(e) => setAdminRemark(e.target.value)}
-                className="min-h-[100px]"
-              />
             </div>
           </div>
 

@@ -34,6 +34,8 @@ export interface StudentDocument extends mongoose.Document {
   branch?: string;
   courseName?: string;
   vanFacility?: boolean;
+  /** Flag to track if student has completed their one-time profile edit */
+  profileEditCompleted?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +73,7 @@ const StudentSchema = new mongoose.Schema<StudentDocument>({
   branch: { type: String },
   courseName: { type: String },
   vanFacility: { type: Boolean, default: false },
+  profileEditCompleted: { type: Boolean, default: false },
 }, {
   timestamps: true,
   collection: 'students',
