@@ -172,5 +172,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   conversation.lastMessageAt = new Date();
   await conversation.save();
 
+  try {
+    const otherParticipants = await ChatParticipant.find({
+      conversationId: conversation._id,
+      userId: { $ne: auth.user.id }
+    }).lean();
+
+    if (otherParticipants.length > 0) {
+      const recipientIds = otherParticipants.map(p => p.userId);
+      const { sendNotification } = await import("@/lib/services/notificationService");
+      await sendNotification({
+        title: `New message from ${auth.user.name}`,
+        message: text || `Sent an attachment: ${fileName}`,
+        type: "Chat Message",
+        priority: "Medium",
+        targetUsers: recipientIds,
+        deliveryChannels: ["In-app"],
+      });
+    }
+  } catch (err) {
+    console.error("Failed to send message notification:", err);
+  }
+
   return apiSuccess(normalizeMessage(message), { status: 201 });
 }

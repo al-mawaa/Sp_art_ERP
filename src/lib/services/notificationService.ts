@@ -5,6 +5,7 @@ import StudentModel from "../models/Student";
 import TeacherModel from "../models/Teacher";
 import SeniorTeacherModel from "../models/SeniorTeacher";
 import CourseEnrollmentModel from "../models/CourseEnrollment";
+import BatchModel from "../models/Batch";
 import nodemailer from "nodemailer";
 
 // Setup Nodemailer transporter
@@ -57,16 +58,17 @@ export const sendNotification = async (notificationData: any) => {
     // b. By Roles
     if (notification.targetRoles && notification.targetRoles.length > 0) {
       const roles = notification.targetRoles.map((r: string) => r.toLowerCase().replace('_', ' '));
+      const hasAll = roles.includes('all');
       
-      if (roles.includes('student')) {
+      if (roles.includes('student') || hasAll) {
         const students = await StudentModel.find({}).lean();
         addUsers(students, 'Student');
       }
-      if (roles.includes('teacher')) {
+      if (roles.includes('teacher') || hasAll) {
         const teachers = await TeacherModel.find({ status: 'Active' }).lean();
         addUsers(teachers, 'Teacher');
       }
-      if (roles.includes('senior teacher')) {
+      if (roles.includes('senior teacher') || hasAll) {
         const srTeachers = await SeniorTeacherModel.find({ status: 'Active' }).lean();
         addUsers(srTeachers, 'Senior_Teacher');
       }
@@ -81,18 +83,34 @@ export const sendNotification = async (notificationData: any) => {
       (notification.targetCourses && notification.targetCourses.length > 0)
     ) {
       const query: Record<string, unknown> = {};
+      const batchStudentIds: string[] = [];
+
       if (notification.targetBatches && notification.targetBatches.length > 0) {
         query.batchId = { $in: notification.targetBatches };
+
+        // Fetch roster students from the Batch model
+        const batches = await BatchModel.find({ _id: { $in: notification.targetBatches } }).lean();
+        for (const b of batches) {
+          if (b.students) {
+            for (const s of b.students) {
+              if (s.studentId) {
+                batchStudentIds.push(s.studentId.toString());
+              }
+            }
+          }
+        }
       }
       if (notification.targetCourses && notification.targetCourses.length > 0) {
         query.courseId = { $in: notification.targetCourses };
       }
       
       const enrollments = await CourseEnrollmentModel.find(query).select('studentId').lean();
-      const studentIds = enrollments.map(e => e.studentId.toString());
+      const enrollmentStudentIds = enrollments.map(e => e.studentId.toString());
       
-      if (studentIds.length > 0) {
-        const matchedStudents = await StudentModel.find({ _id: { $in: studentIds } }).lean();
+      const allTargetStudentIds = Array.from(new Set([...batchStudentIds, ...enrollmentStudentIds]));
+
+      if (allTargetStudentIds.length > 0) {
+        const matchedStudents = await StudentModel.find({ _id: { $in: allTargetStudentIds } }).lean();
         addUsers(matchedStudents, 'Student');
       }
     }

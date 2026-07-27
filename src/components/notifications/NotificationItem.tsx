@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Info, Calendar, FileText, CheckCircle2, AlertCircle, CreditCard, Users, Briefcase } from "lucide-react";
+import { Bell, Info, Calendar, FileText, CheckCircle2, AlertCircle, CreditCard, Users, Briefcase, MessageSquare } from "lucide-react";
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 export default function NotificationItem({ recipientData, onClose }: { recipientData: any, onClose: () => void }) {
@@ -28,6 +28,10 @@ export default function NotificationItem({ recipientData, onClose }: { recipient
       case "Exam": return <FileText className="w-5 h-5 text-purple-500" />;
       case "Fee Reminder": return <CreditCard className="w-5 h-5 text-red-500" />;
       case "System Alert": return <AlertCircle className="w-5 h-5 text-orange-500" />;
+      case "Chat":
+      case "New Message":
+      case "Chat Message":
+        return <MessageSquare className="w-5 h-5 text-indigo-500" />;
       default: return <Bell className="w-5 h-5 text-primary" />;
     }
   };
@@ -48,7 +52,18 @@ export default function NotificationItem({ recipientData, onClose }: { recipient
 
     // Smart Actions Routing based on Notification Type
     const type = notification.type;
-    if (type === "Fee Reminder") {
+    if (type === "Chat" || type === "New Message" || type === "Chat Message") {
+      const role = recipientData.role?.toLowerCase();
+      if (role === "student") {
+        router.push("/student/chat");
+      } else if (role === "teacher") {
+        router.push("/teacher/chat");
+      } else if (role === "senior_teacher" || role === "senior teacher") {
+        router.push("/senior-teacher/chat");
+      } else if (role === "admin") {
+        router.push("/admin/chat");
+      }
+    } else if (type === "Fee Reminder") {
       router.push("/student/fees");
     } else if (type === "Exam") {
       router.push("/student/exams");

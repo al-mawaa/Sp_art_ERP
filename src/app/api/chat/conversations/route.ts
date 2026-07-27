@@ -174,6 +174,20 @@ export async function POST(request: NextRequest) {
     },
   ]);
 
+  try {
+    const { sendNotification } = await import("@/lib/services/notificationService");
+    await sendNotification({
+      title: "New Chat Started",
+      message: `${auth.user.name} started a new chat conversation with you.`,
+      type: "Chat Message",
+      priority: "Medium",
+      targetUsers: [recipient.id],
+      deliveryChannels: ["In-app"],
+    });
+  } catch (err) {
+    console.error("Failed to send chat start notification:", err);
+  }
+
   return apiSuccess({ conversationId: conversation._id.toString() }, { status: 201 });
 }
 
