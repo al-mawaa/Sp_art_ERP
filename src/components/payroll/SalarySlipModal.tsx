@@ -13,45 +13,8 @@ interface SalarySlipModalProps {
 }
 
 export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps) {
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen || !entry) return;
-
-    const loadProfile = async () => {
-      setLoading(true);
-      try {
-        const endpoint =
-          entry.staffType === "teacher"
-            ? "/api/teacher/profile"
-            : "/api/senior-teacher/profile";
-        
-        const res = await fetch(endpoint, { credentials: "include" });
-        const json = await res.json();
-        if (res.ok && json.success) {
-          setProfile(json.data.profile);
-        } else {
-          // Fallback if profile API doesn't return successful response
-          setProfile({
-            department: "Fine Arts",
-            branchName: "Main Branch",
-            joiningDate: "",
-            employmentType: "Full-Time",
-            email: `${entry.staffName.toLowerCase().replace(/\s+/g, "")}@sparthub.com`
-          });
-        }
-      } catch (error) {
-        console.error("Error loading profile details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, [isOpen, entry]);
 
   if (!entry) return null;
 
@@ -145,6 +108,7 @@ export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps
   };
 
   // Simulate Email Slip
+  const email = `${entry.staffName.toLowerCase().replace(/\s+/g, "")}@sparthub.com`;
   const handleEmail = () => {
     setEmailSending(true);
     toast.promise(
