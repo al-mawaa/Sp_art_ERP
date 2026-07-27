@@ -259,18 +259,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: `Course with ID ${courseId} not found` }, { status: 404 });
     }
 
-    const existingPending = await OfflinePayment.findOne({
-      studentId: new mongoose.Types.ObjectId(studentId),
-      courseId: new mongoose.Types.ObjectId(courseId),
-      paymentMethod: 'offline',
-      paymentStatus: 'pending',
-    });
-    if (existingPending) {
-      return NextResponse.json(
-        { success: false, error: 'A pending offline payment already exists for this student and course' },
-        { status: 409 },
-      );
-    }
+
 
     const utcTodayStart = new Date();
     utcTodayStart.setUTCHours(0, 0, 0, 0);
@@ -290,8 +279,8 @@ export async function POST(request: NextRequest) {
       studentId: new mongoose.Types.ObjectId(studentId),
       courseId: new mongoose.Types.ObjectId(courseId),
     });
-    if (existingEnrollment) {
-      return NextResponse.json({ success: false, error: 'Student is already enrolled in this course' }, { status: 409 });
+    if (existingEnrollment && existingEnrollment.paymentPlanStatus === 'paid') {
+      return NextResponse.json({ success: false, error: 'Student is already enrolled and fully paid for this course' }, { status: 409 });
     }
 
     const studentName = student.fullName || 'Student';
@@ -310,24 +299,38 @@ export async function POST(request: NextRequest) {
 
       const session = await mongoose.startSession();
       session.startTransaction();
-      let enrollment;
+      let enrollId;
       try {
-        enrollment = await CourseEnrollment.create([{
-          studentId: student._id,
-          courseId: course._id,
-          enrollmentDate: new Date(),
-          status: 'active',
-          paymentType: 'installment',
-          baseAmount: courseFee,
-          installmentCharge,
-          totalAmount,
-          paidAmount: upfrontPayment,
-          remainingAmount: totalAmount - upfrontPayment,
-          paymentPlanStatus: upfrontPayment >= totalAmount ? 'paid' : upfrontPayment > 0 ? 'partially_paid' : 'pending',
-          paymentMethod: 'offline'
-        }], { session });
-
-        const enrollId = enrollment[0]._id;
+        if (existingEnrollment) {
+          // Update the existing enrollment instead of creating a new one
+          existingEnrollment.paymentType = 'installment';
+          existingEnrollment.baseAmount = courseFee;
+          existingEnrollment.installmentCharge = installmentCharge;
+          existingEnrollment.totalAmount = totalAmount;
+          existingEnrollment.paidAmount = upfrontPayment;
+          existingEnrollment.remainingAmount = totalAmount - upfrontPayment;
+          existingEnrollment.paymentPlanStatus = upfrontPayment >= totalAmount ? 'paid' : upfrontPayment > 0 ? 'partially_paid' : 'pending';
+          existingEnrollment.paymentMethod = 'offline';
+          
+          await existingEnrollment.save({ session });
+          enrollId = existingEnrollment._id;
+        } else {
+          const enrollment = await CourseEnrollment.create([{
+            studentId: student._id,
+            courseId: course._id,
+            enrollmentDate: new Date(),
+            status: 'active',
+            paymentType: 'installment',
+            baseAmount: courseFee,
+            installmentCharge,
+            totalAmount,
+            paidAmount: upfrontPayment,
+            remainingAmount: totalAmount - upfrontPayment,
+            paymentPlanStatus: upfrontPayment >= totalAmount ? 'paid' : upfrontPayment > 0 ? 'partially_paid' : 'pending',
+            paymentMethod: 'offline'
+          }], { session });
+          enrollId = enrollment[0]._id;
+        }
         
         const installmentsToCreate = parsedDueDates.map((date, i) => {
           let paidAmt = 0;

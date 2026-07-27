@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import dbConnect from '@/lib/mongodb';
 import Course from '@/lib/models/Course';
+import Teacher from '@/lib/models/Teacher';
+import SeniorTeacher from '@/lib/models/SeniorTeacher';
 import { notFound } from 'next/navigation';
 import React from 'react';
 

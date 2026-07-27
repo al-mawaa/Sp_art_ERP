@@ -669,7 +669,7 @@ export default function AdminOfflinePaymentsPage() {
         </form>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-4">
+      <section className="grid grid-cols-4 gap-4">
         <div className="rounded-3xl border border-border/70 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
           <p className="text-sm text-muted-foreground">Pending</p>
           <p className="mt-2 text-3xl font-semibold">{summary.pending_count}</p>
