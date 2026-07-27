@@ -95,13 +95,10 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
     attendanceStatusColor = "text-muted-foreground";
   }
 
-  const pendingSlotsCount = queries.length;
-
   const smartInsights = [
     `You have completed ${attendanceRate}% of average attendance marking.`,
     `Batch ${batches[0]?.batchName || 'Advanced'} is currently active.`,
     `${certificates.length} certificates have been issued to students.`,
-    `${pendingSlotsCount} slot requests require approval.`,
   ];
 
   return (
@@ -154,13 +151,12 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
       </div>
 
       {/* 2. EXECUTIVE SUMMARY */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {[
           { label: "Teachers", value: totalTeachers, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "Students", value: totalStudents, icon: UserCheck, color: "text-indigo-500", bg: "bg-indigo-500/10" },
           { label: "Batches", value: activeBatchesCount, icon: BookOpen, color: "text-purple-500", bg: "bg-purple-500/10" },
           { label: "Classes Today", value: todaysClasses.length, icon: Calendar, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Slot Approvals", value: pendingSlotsCount, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
           { label: "Pending Tasks", value: pendingTasksCount, icon: FileText, color: "text-pink-500", bg: "bg-pink-500/10" },
         ].map((stat, i) => (
           <div key={i} className="glass-card p-5 group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
@@ -337,11 +333,6 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
-                <Link href="/senior-teacher/slot-requests">
-                  <Clock className="w-5 h-5" /> Slot Requests
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-3 flex flex-col items-center gap-2 rounded-xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all">
                 <Link href="/senior-teacher/leave">
                   <CalendarOff className="w-5 h-5" /> Leave Approvals
                 </Link>
@@ -364,36 +355,6 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
             </div>
           </div>
 
-          {/* 8. SLOT REQUESTS */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-orange-500" /> Pending Slots
-              </h2>
-              <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-bold">
-                {pendingSlotsCount}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {queries.slice(0,3).map(q => (
-                <div key={q._id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={q.personName || "User"} size={32} />
-                    <div>
-                      <p className="text-sm font-bold">{q.personName}</p>
-                      <p className="text-xs text-muted-foreground">{q.category}</p>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" asChild>
-                    <Link href="/senior-teacher/slot-requests">Review</Link>
-                  </Button>
-                </div>
-              ))}
-              {queries.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-2">No pending slot requests.</p>
-              )}
-            </div>
-          </div>
 
           {/* 9. DRAWING TASK MONITOR */}
           <div className="glass-card p-6">
