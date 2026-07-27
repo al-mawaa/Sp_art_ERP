@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/StatusPill";
 import { toast } from "sonner";
-import { downloadSalarySlipPdf, previewSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
+import { downloadSalarySlipPdf } from "@/lib/payroll/salarySlipPdf";
+import { SalarySlipModal } from "@/components/payroll/SalarySlipModal";
 
 type SalaryHistoryRow = {
   id: string;
@@ -38,6 +39,8 @@ export function SeniorTeacherSalaryPage() {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<SalaryHistoryRow | null>(null);
   const [history, setHistory] = useState<SalaryHistoryRow[]>([]);
+  const [selectedEntry, setSelectedEntry] = useState<SalaryHistoryRow | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -85,10 +88,25 @@ export function SeniorTeacherSalaryPage() {
               <div className="text-xs text-muted-foreground">Deduction</div>
               <div className="text-lg font-bold">{current ? money(current.deductionAmount) : "—"}</div>
             </div>
-            <div className="card-soft p-4">
-              <div className="text-xs text-muted-foreground">Net Salary</div>
-              <div className="text-lg font-bold">{current ? money(current.netSalary) : "—"}</div>
-              {current ? <div className="mt-1"><StatusPill status={current.payrollStatus} /></div> : null}
+            <div className="card-soft p-4 flex flex-col justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground">Net Salary</div>
+                <div className="text-lg font-bold">{current ? money(current.netSalary) : "—"}</div>
+                {current ? <div className="mt-1"><StatusPill status={current.payrollStatus} /></div> : null}
+              </div>
+              {current ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 w-full text-xs h-8 rounded-lg"
+                  onClick={() => {
+                    setSelectedEntry(current);
+                    setIsModalOpen(true);
+                  }}
+                >
+                  <Eye className="w-3.5 h-3.5 mr-1" /> Preview Slip
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -126,12 +144,10 @@ export function SeniorTeacherSalaryPage() {
                               size="sm"
                               variant="outline"
                               className="rounded-lg"
-                              onClick={() =>
-                                previewSalarySlipPdf({
-                                  instituteName: "Little Brushes Art Academy",
-                                  ...row,
-                                })
-                              }
+                              onClick={() => {
+                                setSelectedEntry(row);
+                                setIsModalOpen(true);
+                              }}
                             >
                               <Eye className="w-3.5 h-3.5 mr-1" /> Preview
                             </Button>
@@ -141,7 +157,7 @@ export function SeniorTeacherSalaryPage() {
                               className="rounded-lg"
                               onClick={() =>
                                 downloadSalarySlipPdf({
-                                  instituteName: "Little Brushes Art Academy",
+                                  instituteName: "Sp Arts",
                                   ...row,
                                 })
                               }
@@ -157,6 +173,12 @@ export function SeniorTeacherSalaryPage() {
               </div>
             )}
           </div>
+
+          <SalarySlipModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            entry={selectedEntry}
+          />
         </>
       )}
     </div>

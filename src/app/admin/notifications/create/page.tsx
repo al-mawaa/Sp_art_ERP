@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +32,7 @@ const notificationSchema = z.object({
   type: z.string().min(1, "Notification type is required"),
   priority: z.enum(["Low", "Medium", "High", "Urgent"]),
   targetRoles: z.array(z.string()).default([]),
+  targetBatches: z.array(z.string()).default([]),
   deliveryChannels: z.array(z.string()).min(1, "Select at least one delivery channel"),
   scheduledAt: z.string().optional(),
   status: z.enum(["Draft", "Sent", "Scheduled"]).default("Sent"),
@@ -41,6 +42,29 @@ type NotificationFormValues = z.infer<typeof notificationSchema>;
 
 export default function CreateNotificationPage() {
   const router = useRouter();
+  const [batchesList, setBatchesList] = useState<{ id: string; batchName: string; courseName: string; batchTiming: string }[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [audienceType, setAudienceType] = useState<"all" | "roles" | "batches">("all");
+
+  useEffect(() => {
+    async function loadBatches() {
+      setLoadingBatches(true);
+      try {
+        const res = await fetch("/api/admin/batches");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setBatchesList(data.batches);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load batches:", err);
+      } finally {
+        setLoadingBatches(false);
+      }
+    }
+    loadBatches();
+  }, []);
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
@@ -51,6 +75,7 @@ export default function CreateNotificationPage() {
       type: "General Announcement",
       priority: "Medium",
       targetRoles: [],
+      targetBatches: [],
       deliveryChannels: ["In-app"],
       status: "Sent",
     },
@@ -82,7 +107,16 @@ export default function CreateNotificationPage() {
     if (data.scheduledAt) {
       data.status = "Scheduled";
     }
-    mutation.mutate(data);
+    const finalData = { ...data };
+    if (audienceType === "all") {
+      finalData.targetRoles = ["all"];
+      finalData.targetBatches = [];
+    } else if (audienceType === "roles") {
+      finalData.targetBatches = [];
+    } else if (audienceType === "batches") {
+      finalData.targetRoles = [];
+    }
+    mutation.mutate(finalData);
   };
 
   const saveDraft = () => {
@@ -205,32 +239,107 @@ export default function CreateNotificationPage() {
                 )}
               />
 
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold">Target Audience (Roles)</h3>
-                <div className="flex flex-wrap gap-4">
-                  {["Student", "Teacher", "Senior_Teacher", "HR", "Admin"].map((role) => (
-                    <FormField
-                      key={role}
-                      control={form.control}
-                      name="targetRoles"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(role)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([...field.value, role])
-                                  : field.onChange(field.value?.filter((value) => value !== role))
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">{role.replace("_", " ")}</FormLabel>
-                        </FormItem>
-                      )}
-                    />
+              <div className="space-y-4 border-b pb-6">
+                <h3 className="text-sm font-semibold">Target Audience Selection</h3>
+                <div className="flex rounded-xl bg-muted p-1 max-w-md">
+                  {(["all", "roles", "batches"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setAudienceType(type)}
+                      className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all ${
+                        audienceType === type
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {type === "all" ? "All Users" : type === "roles" ? "By Roles" : "By Batches"}
+                    </button>
                   ))}
                 </div>
+
+                {audienceType === "all" && (
+                  <p className="text-sm text-muted-foreground">
+                    This notification will be sent to all users in the system (Students, Teachers, Senior Teachers, etc.).
+                  </p>
+                )}
+
+                {audienceType === "roles" && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase">Select Roles</h4>
+                    <div className="flex flex-wrap gap-4">
+                      {["Student", "Teacher", "Senior_Teacher", "HR", "Admin"].map((role) => (
+                        <FormField
+                          key={role}
+                          control={form.control}
+                          name="targetRoles"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(role)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, role])
+                                      : field.onChange(field.value?.filter((value) => value !== role))
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer">{role.replace("_", " ")}</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {audienceType === "batches" && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase">Select Batches</h4>
+                    {loadingBatches ? (
+                      <p className="text-sm text-muted-foreground animate-pulse">Loading batches...</p>
+                    ) : batchesList.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No active batches found.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {batchesList.map((batch) => (
+                          <FormField
+                            key={batch.id}
+                            control={form.control}
+                            name="targetBatches"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0 border rounded-xl p-3 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(batch.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, batch.id])
+                                        : field.onChange(field.value?.filter((value) => value !== batch.id))
+                                    }}
+                                  />
+                                </FormControl>
+                                <div className="space-y-0.5 cursor-pointer" onClick={() => {
+                                  const checked = field.value?.includes(batch.id);
+                                  field.onChange(
+                                    !checked
+                                      ? [...field.value, batch.id]
+                                      : field.value?.filter((value) => value !== batch.id)
+                                  );
+                                }}>
+                                  <FormLabel className="font-medium text-sm cursor-pointer">{batch.batchName}</FormLabel>
+                                  <p className="text-xs text-muted-foreground">{batch.courseName}</p>
+                                  <p className="text-[10px] text-muted-foreground/80">{batch.batchTiming}</p>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
