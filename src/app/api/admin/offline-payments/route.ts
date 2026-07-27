@@ -134,8 +134,12 @@ export async function GET(request: NextRequest) {
   const nextDueDateMap = new Map();
 
   if (installmentPayments.length > 0) {
-    const studentIds = installmentPayments.map(p => (p.studentId as { _id?: mongoose.Types.ObjectId })._id || p.studentId);
-    const courseIds = installmentPayments.map(p => (p.courseId as { _id?: mongoose.Types.ObjectId })._id || p.courseId);
+    const studentIds = installmentPayments
+      .map(p => p.studentId ? ((p.studentId as any)._id || p.studentId) : null)
+      .filter(Boolean);
+    const courseIds = installmentPayments
+      .map(p => p.courseId ? ((p.courseId as any)._id || p.courseId) : null)
+      .filter(Boolean);
 
     const enrollments = await CourseEnrollment.find({
       studentId: { $in: studentIds },
@@ -149,13 +153,18 @@ export async function GET(request: NextRequest) {
     }).sort({ termNo: 1 }).lean() as Array<{ _id: mongoose.Types.ObjectId; enrollmentId: mongoose.Types.ObjectId; paymentStatus: string; dueDate: Date; termNo: number; amount: number; paidAmount?: number; paidDate?: Date; }>;
 
     for (const enroll of enrollments) {
-      enrollmentMap.set(`${enroll.studentId.toString()}_${enroll.courseId.toString()}`, enroll);
-      const enrollInstalls = allInstallments.filter(i => i.enrollmentId.toString() === enroll._id.toString());
+      const sKey = enroll.studentId ? enroll.studentId.toString() : '';
+      const cKey = enroll.courseId ? enroll.courseId.toString() : '';
+      enrollmentMap.set(`${sKey}_${cKey}`, enroll);
+      
+      const enrollInstalls = allInstallments.filter(i => i.enrollmentId && enroll._id && i.enrollmentId.toString() === enroll._id.toString());
       const nextInstallment = enrollInstalls.find(i => i.paymentStatus === 'pending');
-      if (nextInstallment) {
+      if (nextInstallment && enroll._id) {
         nextDueDateMap.set(enroll._id.toString(), nextInstallment.dueDate);
       }
-      enrollmentMap.set(`inst_${enroll._id.toString()}`, enrollInstalls);
+      if (enroll._id) {
+        enrollmentMap.set(`inst_${enroll._id.toString()}`, enrollInstalls);
+      }
     }
   }
 

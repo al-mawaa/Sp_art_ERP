@@ -177,7 +177,6 @@ export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps
                 <div className="flex justify-between items-start border-b-2 border-primary/20 pb-6 mb-6">
                   {/* Left Side: Academy details */}
                   <div className="flex items-start gap-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/logoMain.png" alt="Sp Arts Logo" className="w-14 h-14 object-contain shrink-0 rounded-lg" />
                     <div>
                       <h1 className="font-extrabold text-xl tracking-tight text-slate-900 leading-none">
