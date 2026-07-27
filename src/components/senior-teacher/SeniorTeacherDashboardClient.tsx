@@ -95,11 +95,7 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
     attendanceStatusColor = "text-muted-foreground";
   }
 
-  const smartInsights = [
-    `You have completed ${attendanceRate}% of average attendance marking.`,
-    `Batch ${batches[0]?.batchName || 'Advanced'} is currently active.`,
-    `${certificates.length} certificates have been issued to students.`,
-  ];
+
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -340,20 +336,6 @@ export function SeniorTeacherDashboardClient({ data }: DashboardProps) {
             </div>
           </div>
 
-          {/* 17. SMART INSIGHTS */}
-          <div className="glass-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-100 dark:border-indigo-900/50">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-              <TrendingUp className="w-5 h-5" /> Smart Insights
-            </h2>
-            <div className="space-y-3">
-              {smartInsights.map((insight, i) => (
-                <div key={i} className="flex gap-3 text-sm text-indigo-900/80 dark:text-indigo-200/80 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-                  <p>{insight}</p>
-                </div>
-              ))}
-            </div>
-          </div>
 
 
           {/* 9. DRAWING TASK MONITOR */}
