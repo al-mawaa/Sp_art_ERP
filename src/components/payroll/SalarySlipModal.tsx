@@ -40,17 +40,7 @@ export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps
   };
 
   // Derived information
-  const department = profile?.specialization || profile?.department || "Fine Arts & Drawing";
-  const branchName = profile?.branchName || "Main Art Hub Studio";
-  const joiningDate = profile?.joiningDate ? formatDate(profile.joiningDate) : "01 Jun 2024";
-  const employmentType = profile?.employmentType || "Full-Time";
-  const email = profile?.email || `${entry.staffName.toLowerCase().replace(/\s+/g, "")}@sparthub.com`;
-  const paymentMode = "Bank Transfer (NEFT/IMPS)";
-  const bankName = "HDFC Bank Ltd";
-  const maskedAccount = "XXXX XXXX 5892";
-  const transactionId = `TXN${entry.month.replace("-", "")}${entry.employeeId.slice(-4)}`;
-  const referenceNumber = `REF${Math.floor(10000000 + Math.random() * 90000000)}`;
-  const paymentDateStr = entry.payrollStatus === "Paid" ? `05 ${entry.month.split("-")[1] === "12" ? "Jan" : "Month"} ${entry.month.split("-")[0]}` : "—";
+  const email = `${entry.staffName.toLowerCase().replace(/\s+/g, "")}@sparthub.com`;
 
   // Slip Number Generation
   const slipNumber = `SLIP-${entry.month.replace("-", "")}-${entry.employeeId}`;
@@ -58,25 +48,6 @@ export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps
   // Attendance summary calculations
   const totalDays = entry.presentCount + entry.absentCount + entry.halfDayCount + entry.leaveCount;
   const attendanceRate = totalDays > 0 ? ((entry.presentCount + entry.halfDayCount * 0.5) / totalDays * 100).toFixed(1) : "100.0";
-
-  // Earnings Breakdown (60% Basic, 40% Allowances)
-  const basicSalary = entry.monthlySalary * 0.6;
-  const allowances = entry.monthlySalary * 0.4;
-  const overtimeEarnings = 0;
-  const performanceBonus = 0;
-  const festivalBonus = 0;
-  const specialBonus = 0;
-  const incentive = 0;
-  const grossSalary = entry.monthlySalary + overtimeEarnings + performanceBonus + festivalBonus + specialBonus + incentive;
-
-  // Deductions Breakdown
-  const leaveDeduction = entry.deductionAmount;
-  const lateDeduction = 0;
-  const professionalTax = 0;
-  const advanceRecovery = 0;
-  const loanDeduction = 0;
-  const otherDeductions = 0;
-  const totalDeductions = leaveDeduction + lateDeduction + professionalTax + advanceRecovery + loanDeduction + otherDeductions;
 
   // Net Salary
   const netSalary = entry.netSalary;
@@ -107,21 +78,29 @@ export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps
     );
   };
 
-  // Simulate Email Slip
-  const email = `${entry.staffName.toLowerCase().replace(/\s+/g, "")}@sparthub.com`;
+  // Send Email Slip
   const handleEmail = () => {
     setEmailSending(true);
     toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 2000)),
+      async () => {
+        const res = await fetch("/api/payroll/email-slip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entryId: entry.id }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error || "Failed to send email");
+        }
+        setEmailSending(false);
+        return json.message || "Email sent successfully!";
+      },
       {
         loading: `Sending Salary Slip to ${email}...`,
-        success: () => {
+        success: (msg) => msg,
+        error: (err) => {
           setEmailSending(false);
-          return `Salary Slip successfully emailed to ${email}!`;
-        },
-        error: () => {
-          setEmailSending(false);
-          return "Failed to send email.";
+          return err.message || "Failed to send email.";
         },
       }
     );
@@ -198,9 +177,8 @@ export function SalarySlipModal({ isOpen, onClose, entry }: SalarySlipModalProps
                 <div className="flex justify-between items-start border-b-2 border-primary/20 pb-6 mb-6">
                   {/* Left Side: Academy details */}
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-tr from-primary to-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
-                      SP
-                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logoMain.png" alt="Sp Arts Logo" className="w-14 h-14 object-contain shrink-0 rounded-lg" />
                     <div>
                       <h1 className="font-extrabold text-xl tracking-tight text-slate-900 leading-none">
                         Sp Arts
