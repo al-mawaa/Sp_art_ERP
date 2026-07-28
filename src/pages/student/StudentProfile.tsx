@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -61,6 +62,8 @@ type FormState = {
   motherName: string;
   fatherOccupation: string;
   motherOccupation: string;
+  courseName: string;
+  vanFacility: string;
 };
 
 function profileToForm(p: StudentProfileData): FormState {
@@ -87,6 +90,8 @@ function profileToForm(p: StudentProfileData): FormState {
     motherName: p.motherName || '',
     fatherOccupation: p.fatherOccupation || '',
     motherOccupation: p.motherOccupation || '',
+    courseName: p.courseName || '',
+    vanFacility: p.vanFacility ? 'Yes' : 'No',
   };
 }
 
@@ -195,6 +200,8 @@ export function StudentProfilePage() {
         motherName: form.motherName,
         fatherOccupation: form.fatherOccupation,
         motherOccupation: form.motherOccupation,
+        courseName: form.courseName,
+        vanFacility: form.vanFacility === 'Yes',
       };
       
       const res = await fetch("/api/student/profile", {
@@ -425,6 +432,41 @@ export function StudentProfilePage() {
                 </div>
               ) : (
                 <ReadOnlyField label="Phone" value={profile.phone} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="courseName">Course name</Label>
+                  <Input
+                    id="courseName"
+                    value={form.courseName}
+                    onChange={e => setForm({ ...form, courseName: e.target.value })}
+                    className="rounded-xl"
+                    placeholder="Enter course name"
+                  />
+                </div>
+              ) : (
+                <ReadOnlyField label="Course name" value={profile.courseName} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label>Van facility</Label>
+                  <RadioGroup
+                    value={form.vanFacility}
+                    onValueChange={v => setForm({ ...form, vanFacility: v })}
+                    className="flex gap-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Yes" id="van-yes" />
+                      <Label htmlFor="van-yes" className="cursor-pointer">Yes</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="No" id="van-no" />
+                      <Label htmlFor="van-no" className="cursor-pointer">No</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              ) : (
+                <ReadOnlyField label="Van facility" value={profile.vanFacility ? "Yes" : "No"} />
               )}
             </div>
           </div>
