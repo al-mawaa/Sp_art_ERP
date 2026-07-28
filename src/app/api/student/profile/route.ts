@@ -26,6 +26,8 @@ const updateSchema = z.object({
   motherName: z.string().optional(),
   fatherOccupation: z.string().optional(),
   motherOccupation: z.string().optional(),
+  courseName: z.string().trim().max(100).optional(),
+  vanFacility: z.boolean().optional(),
 });
 
 export async function GET(request: NextRequest) {

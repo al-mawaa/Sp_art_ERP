@@ -34,6 +34,7 @@ export type StudentProfileDto = {
   teacherName: string;
   role: string;
   profileEditCompleted: boolean;
+  vanFacility: boolean;
   classes: {
     id: string;
     batchName: string;
@@ -79,10 +80,11 @@ export function toProfileDto(doc: StudentDocument): StudentProfileDto {
     howYouKnowUs: doc.howYouKnowUs ?? doc.howYouComeToKnow ?? "",
     batchName: doc.className ?? "",
     batchTiming: "",
-    courseName: doc.className ?? "",
+    courseName: doc.courseName ?? doc.className ?? "",
     teacherName: "",
     role: "student",
     profileEditCompleted: doc.profileEditCompleted ?? false,
+    vanFacility: doc.vanFacility ?? false,
     classes: [],
   };
 }
@@ -187,6 +189,8 @@ export type StudentProfileUpdate = {
   address?: string;
   howYouKnowUs?: string;
   howYouComeToKnow?: string;
+  courseName?: string;
+  vanFacility?: boolean;
 };
 
 /** Update existing `students` document only — never inserts. */
@@ -231,6 +235,12 @@ export async function updateStudentProfile(
   }
   if (data.howYouComeToKnow !== undefined) {
     student.howYouComeToKnow = data.howYouComeToKnow || undefined;
+  }
+  if (data.courseName !== undefined) {
+    student.courseName = data.courseName || undefined;
+  }
+  if (data.vanFacility !== undefined) {
+    student.vanFacility = data.vanFacility;
   }
 
   await student.save();
