@@ -119,7 +119,12 @@ export function RoleLayout({ navItems, role, children }: { navItems: Array<NavIt
       }
     }
     logout();
-    router.push("/login");
+    const loginPath = role === "student" ? "/student/login" 
+                    : role === "teacher" ? "/teacher/login"
+                    : role === "senior-teacher" ? "/senior-teacher/login"
+                    : role === "admin" ? "/admin/login"
+                    : "/login";
+    router.push(loginPath);
   };
 
   return (
@@ -270,8 +275,13 @@ export function RequireRoles({ roles, children }: { roles: Role[]; children: Rea
     if (!hydrated) return;
 
     if (!user) {
-      console.log("[RequireRoles] no user → /login", { pathname: window.location.pathname, roles });
-      router.push("/login");
+      const loginPath = roles.includes("student") ? "/student/login"
+                      : roles.includes("teacher") ? "/teacher/login"
+                      : roles.includes("senior-teacher") ? "/senior-teacher/login"
+                      : roles.includes("admin") ? "/admin/login"
+                      : "/login";
+      console.log("[RequireRoles] no user → login", { pathname: window.location.pathname, roles, loginPath });
+      router.push(loginPath);
       return;
     }
 
@@ -308,8 +318,13 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
     if (!hydrated) return;
 
     if (!user) {
-      console.log("[RequireRole] no user → /login", { required: role, pathname: window.location.pathname });
-      router.push("/login");
+      const loginPath = role === "student" ? "/student/login"
+                      : role === "teacher" ? "/teacher/login"
+                      : role === "senior-teacher" ? "/senior-teacher/login"
+                      : role === "admin" ? "/admin/login"
+                      : "/login";
+      console.log("[RequireRole] no user → login", { required: role, pathname: window.location.pathname, loginPath });
+      router.push(loginPath);
       return;
     }
 

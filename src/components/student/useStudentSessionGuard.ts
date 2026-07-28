@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export function useSeniorTeacherSessionGuard() {
+/** Ensures student session cookie exists (not just localStorage). */
+export function useStudentSessionGuard() {
   const router = useRouter();
   const { user, logout, hydrated } = useAuth();
   const [sessionOk, setSessionOk] = useState(false);
@@ -13,7 +14,7 @@ export function useSeniorTeacherSessionGuard() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (user?.role !== "senior-teacher") {
+    if (user?.role !== "student") {
       setChecking(false);
       return;
     }
@@ -21,15 +22,15 @@ export function useSeniorTeacherSessionGuard() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/senior-teacher/session", { credentials: "include" });
+        const res = await fetch("/api/student/session", { credentials: "include" });
         if (cancelled) return;
         if (!res.ok) {
           if (res.status === 401) {
             logout();
-            toast.error("Session expired. Please sign in again as Senior Teacher.");
-            router.replace("/senior-teacher/login");
+            toast.error("Session expired. Please sign in again as Student.");
+            router.replace("/student/login");
           } else {
-            toast.error("Could not verify senior teacher session. Try again or sign in.");
+            toast.error("Could not verify student session. Try again or sign in.");
           }
           setSessionOk(false);
           return;

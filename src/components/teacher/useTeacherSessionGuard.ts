@@ -28,7 +28,7 @@ export function useTeacherSessionGuard() {
           if (res.status === 401) {
             logout();
             toast.error("Session expired. Please sign in again as Teacher.");
-            router.replace("/login");
+            router.replace("/teacher/login");
           } else {
             toast.error("Could not verify teacher session. Try again or sign in.");
           }

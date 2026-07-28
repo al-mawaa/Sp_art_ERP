@@ -144,7 +144,7 @@ export function StudentProfilePage() {
       }
     } catch (error) {
       toast.error((error as Error).message);
-      router.push("/login");
+      router.push("/student/login");
     } finally {
       setLoading(false);
     }
