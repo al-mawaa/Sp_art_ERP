@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     const result = await validateReferralCode(code, auth.student.id);
     if (result.valid === false) {
-      return NextResponse.json({ valid: false, error: result.error }, { status: 400 });
+      return NextResponse.json({ valid: false, error: result.error });
     }
 
     let discountPreview: ReturnType<typeof calculateReferralCheckoutDiscount> | undefined;
