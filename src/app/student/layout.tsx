@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { RoleLayout, NavItem } from "@/components/layouts/RoleLayout";
 import { RequireRole } from "@/components/layouts/RoleLayout";
+import { useStudentSessionGuard } from "@/components/student/useStudentSessionGuard";
 
 const studentNav: NavItem[] = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -25,6 +26,7 @@ const studentNav: NavItem[] = [
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { sessionOk, checking } = useStudentSessionGuard();
 
   if (pathname?.startsWith("/student/login")) {
     return <>{children}</>;
@@ -32,9 +34,19 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <RequireRole role="student">
-      <RoleLayout navItems={studentNav} role="student">
-        {children}
-      </RoleLayout>
+      {checking ? (
+        <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+          Verifying student session…
+        </div>
+      ) : sessionOk ? (
+        <RoleLayout navItems={studentNav} role="student">
+          {children}
+        </RoleLayout>
+      ) : (
+        <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground px-6 text-center">
+          Redirecting to login…
+        </div>
+      )}
     </RequireRole>
   );
 }
