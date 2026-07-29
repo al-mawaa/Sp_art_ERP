@@ -10,7 +10,16 @@ export async function PATCH(req: NextRequest, { params }: any) {
     const body = await req.json();
 
     if (body.action === 'approve') {
-      const result = await approveCertificate(id);
+      const { customStudentName, customCourseTitle, fromDate, toDate, grade, conductedAt, issueDate } = body;
+      const result = await approveCertificate(id, {
+        customStudentName,
+        customCourseTitle,
+        fromDate,
+        toDate,
+        grade,
+        conductedAt,
+        issueDate
+      });
       return NextResponse.json({ success: true, data: result });
     }
 

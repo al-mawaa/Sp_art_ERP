@@ -11,6 +11,12 @@ export interface CertificateDocument extends mongoose.Document {
   qrCodeUrl?: string;
   downloadCount: number;
   shareCount: number;
+  customStudentName?: string;
+  customCourseTitle?: string;
+  fromDate?: string;
+  toDate?: string;
+  grade?: string;
+  conductedAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +64,26 @@ const CertificateSchema = new mongoose.Schema<CertificateDocument>(
     shareCount: {
       type: Number,
       default: 0,
+    },
+    customStudentName: {
+      type: String,
+    },
+    customCourseTitle: {
+      type: String,
+    },
+    fromDate: {
+      type: String,
+    },
+    toDate: {
+      type: String,
+    },
+    grade: {
+      type: String,
+      default: 'B',
+    },
+    conductedAt: {
+      type: String,
+      default: 'SP ART HUB',
     },
   },
   {

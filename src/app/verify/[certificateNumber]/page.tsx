@@ -119,7 +119,7 @@ export default function VerifyCertificatePage() {
               <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
                 {data.pdfUrl ? (
                   <a 
-                    href={data.pdfUrl} 
+                    href={data.pdfUrl.includes("/api/view-pdf") ? data.pdfUrl : `/api/view-pdf?url=${encodeURIComponent(data.pdfUrl)}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl font-medium transition-colors w-full justify-center"

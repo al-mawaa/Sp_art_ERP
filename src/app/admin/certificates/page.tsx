@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Award, Search, Filter, Download, CheckCircle, 
-  XCircle, RefreshCw, Printer, Eye, MoreVertical 
+  XCircle, RefreshCw, Printer, Eye, MoreVertical, Plus, X 
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,6 +14,26 @@ export default function AdminCertificatesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Dropdown list data for custom creation
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [allCourses, setAllCourses] = useState<any[]>([]);
+
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'approve' | 'create_custom'>('approve');
+  const [selectedCert, setSelectedCert] = useState<any>(null);
+
+  // Form Fields
+  const [studentId, setStudentId] = useState("");
+  const [courseId, setCourseId] = useState("");
+  const [customStudentName, setCustomStudentName] = useState("");
+  const [customCourseTitle, setCustomCourseTitle] = useState("");
+  const [conductedAt, setConductedAt] = useState("SP ART HUB");
+  const [grade, setGrade] = useState("B");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchCertificates = async () => {
     try {
@@ -33,6 +53,28 @@ export default function AdminCertificatesPage() {
   useEffect(() => {
     fetchCertificates();
   }, [statusFilter]);
+
+  useEffect(() => {
+    // Pre-load students and courses for dropdown list
+    const loadDropdownData = async () => {
+      try {
+        const studentRes = await fetch('/api/students');
+        const studentData = await studentRes.json();
+        if (studentData.students) {
+          setAllStudents(studentData.students);
+        }
+
+        const courseRes = await fetch('/api/courses');
+        const courseData = await courseRes.json();
+        if (courseData.courses) {
+          setAllCourses(courseData.courses);
+        }
+      } catch (e) {
+        console.error('Error loading dropdown data:', e);
+      }
+    };
+    loadDropdownData();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +98,29 @@ export default function AdminCertificatesPage() {
       }
     } catch (e) {
       toast.error(`Error processing ${action}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleApproveWithCustomData = async (id: string, customData: any) => {
+    try {
+      setIsProcessing(true);
+      const res = await fetch(`/api/admin/certificates/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', ...customData })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Certificate approved and generated successfully`);
+        setIsModalOpen(false);
+        fetchCertificates();
+      } else {
+        toast.error(data.error || `Failed to approve certificate`);
+      }
+    } catch (e) {
+      toast.error(`Error approving certificate`);
     } finally {
       setIsProcessing(false);
     }
@@ -109,6 +174,117 @@ export default function AdminCertificatesPage() {
     }
   };
 
+  const openApproveModal = (cert: any) => {
+    setSelectedCert(cert);
+    setModalMode('approve');
+    setStudentId(cert.studentId?._id || cert.studentId || "");
+    setCourseId(cert.courseId?._id || cert.courseId || "");
+    setCustomStudentName(cert.studentId?.fullName || cert.studentId?.name || "");
+    setCustomCourseTitle(cert.courseId?.courseTitle || cert.courseId?.title || "");
+    setConductedAt(cert.conductedAt || "SP ART HUB");
+    setGrade(cert.grade || "B");
+    setFromDate(cert.fromDate || "");
+    setToDate(cert.toDate || "");
+    setIssueDate(cert.issueDate ? cert.issueDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+    setIsModalOpen(true);
+  };
+
+  const openCreateCustomModal = () => {
+    setSelectedCert(null);
+    setModalMode('create_custom');
+    setStudentId("");
+    setCourseId("");
+    setCustomStudentName("");
+    setCustomCourseTitle("");
+    setConductedAt("SP ART HUB");
+    setGrade("B");
+    setFromDate("");
+    setToDate("");
+    setIssueDate(new Date().toISOString().split('T')[0]);
+    setIsModalOpen(true);
+  };
+
+  const handleStudentChange = (id: string) => {
+    setStudentId(id);
+    const stud = allStudents.find(s => s.id === id || s._id === id);
+    if (stud) {
+      setCustomStudentName(stud.name || stud.fullName || "");
+    }
+  };
+
+  const handleCourseChange = (id: string) => {
+    setCourseId(id);
+    const crs = allCourses.find(c => c.id === id || c._id === id);
+    if (crs) {
+      setCustomCourseTitle(crs.courseTitle || crs.title || "");
+    }
+  };
+
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      customStudentName,
+      customCourseTitle,
+      fromDate,
+      toDate,
+      grade,
+      conductedAt,
+      issueDate,
+    };
+
+    if (modalMode === 'approve') {
+      try {
+        setIsProcessing(true);
+        const res = await fetch(`/api/admin/certificates/${selectedCert._id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve', ...payload })
+        });
+        const data = await res.json();
+        if (data.success) {
+          toast.success(`Certificate approved and generated successfully`);
+          setIsModalOpen(false);
+          fetchCertificates();
+          // Open PDF immediately
+          window.open(`/api/view-pdf?id=${selectedCert._id}`, "_blank");
+        } else {
+          toast.error(data.error || `Failed to approve certificate`);
+        }
+      } catch (e) {
+        toast.error(`Error approving certificate`);
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
+      if (!studentId || !courseId) {
+        toast.error("Please select a student and course");
+        return;
+      }
+      try {
+        setIsProcessing(true);
+        const res = await fetch('/api/admin/certificates/create-custom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, courseId, ...payload })
+        });
+        const data = await res.json();
+        if (data.success) {
+          toast.success("Custom certificate generated successfully!");
+          setIsModalOpen(false);
+          fetchCertificates();
+          // Open PDF immediately
+          window.open(`/api/view-pdf?id=${data.data._id}`, "_blank");
+        } else {
+          toast.error(data.error || "Failed to create custom certificate");
+        }
+      } catch (e) {
+        toast.error("Error creating custom certificate");
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
@@ -130,6 +306,13 @@ export default function AdminCertificatesPage() {
         </div>
         
         <div className="flex items-center gap-3">
+          <button 
+            onClick={openCreateCustomModal}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Create Custom
+          </button>
           <button 
             onClick={handleAutoGenerate}
             disabled={isProcessing}
@@ -249,10 +432,10 @@ export default function AdminCertificatesPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="font-medium text-slate-700">{cert.studentId?.fullName || 'Unknown'}</span>
+                      <span className="font-medium text-slate-700">{cert.customStudentName || cert.studentId?.fullName || 'Unknown'}</span>
                     </td>
                     <td className="p-4">
-                      <span className="text-slate-600">{cert.courseId?.courseTitle || 'Unknown Course'}</span>
+                      <span className="text-slate-600">{cert.customCourseTitle || cert.courseId?.courseTitle || 'Unknown Course'}</span>
                     </td>
                     <td className="p-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -269,10 +452,10 @@ export default function AdminCertificatesPage() {
                         {cert.status === 'pending_approval' && (
                           <>
                             <button 
-                              onClick={() => handleAction(cert._id, 'approve')}
+                              onClick={() => openApproveModal(cert)}
                               disabled={isProcessing}
                               className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg tooltip"
-                              title="Approve"
+                              title="Approve & Customize"
                             >
                               <CheckCircle size={18} />
                             </button>
@@ -289,7 +472,7 @@ export default function AdminCertificatesPage() {
                         {cert.status === 'approved' && cert.pdfUrl && (
                           <>
                             <a 
-                              href={cert.pdfUrl}
+                              href={cert.pdfUrl.includes("/api/view-pdf") ? cert.pdfUrl : `/api/view-pdf?url=${encodeURIComponent(cert.pdfUrl)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg tooltip"
@@ -298,8 +481,7 @@ export default function AdminCertificatesPage() {
                               <Eye size={18} />
                             </a>
                             <a 
-                              href={cert.pdfUrl}
-                              download
+                              href={`${cert.pdfUrl}&download=true`}
                               className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg tooltip"
                               title="Download"
                             >
@@ -324,6 +506,173 @@ export default function AdminCertificatesPage() {
           </table>
         </div>
       </div>
+
+      {/* Customize & Approve/Create Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-slate-100 flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {modalMode === 'approve' ? 'Customize & Generate Certificate' : 'Create Custom Certificate'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {modalMode === 'approve' ? 'Configure the variables before generating the final PDF' : 'Manually create a brand new certificate'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleModalSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+              {modalMode === 'create_custom' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Student</label>
+                    <select
+                      value={studentId}
+                      onChange={(e) => handleStudentChange(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                      <option value="">-- Choose Student --</option>
+                      {allStudents.map(s => (
+                        <option key={s.id || s._id} value={s.id || s._id}>
+                          {s.name || s.fullName} ({s.badgeId || 'No Badge ID'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Course</label>
+                    <select
+                      value={courseId}
+                      onChange={(e) => handleCourseChange(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                      <option value="">-- Choose Course --</option>
+                      {allCourses.map(c => (
+                        <option key={c.id || c._id} value={c.id || c._id}>
+                          {c.courseTitle || c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : null}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Name (On Certificate)</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Shourya Manore"
+                  value={customStudentName}
+                  onChange={(e) => setCustomStudentName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Course Name (On Certificate)</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Basic Cartoon"
+                  value={customCourseTitle}
+                  onChange={(e) => setCustomCourseTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Conducted At</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. SP ART HUB"
+                  value={conductedAt}
+                  onChange={(e) => setConductedAt(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. B or A+"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Issue Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">From Date</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dec 2025"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">To Date</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. May 2026"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 -mx-6 -mb-6 rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-100 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm shadow-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isProcessing && <RefreshCw size={14} className="animate-spin" />}
+                  Generate & Approve
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
