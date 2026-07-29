@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { HeroSection } from "./dashboard/HeroSection";
 import { ExecutiveKPIs } from "./dashboard/ExecutiveKPIs";
 import { RevenueAnalytics } from "./dashboard/RevenueAnalytics";
-import { LiveMonitors } from "./dashboard/LiveMonitors";
 import { OperationsOverview } from "./dashboard/OperationsOverview";
 
 interface DashboardProps {
@@ -81,12 +80,14 @@ export function AdminDashboardClient({ data }: DashboardProps) {
       
       <ExecutiveKPIs kpiData={kpiData} />
       
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
-        <div className="xl:col-span-3 space-y-6 lg:space-y-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+        {/* Left Column - Main Analytics (2/3 width) */}
+        <div className="xl:col-span-2 space-y-6 lg:space-y-8">
           <RevenueAnalytics data={data} todayStr={todayStr} />
-          
-          <LiveMonitors data={data} todaysClasses={todaysClasses} todayStr={todayStr} />
-          
+        </div>
+        
+        {/* Right Column - Operations (1/3 width) */}
+        <div className="xl:col-span-1 space-y-6 lg:space-y-8">
           <OperationsOverview data={data} />
         </div>
       </div>

@@ -57,7 +57,7 @@ export function StudentMyClassesPage() {
 
         if (res.status === 401) {
           toast.error("Please sign in again as Student.");
-          router.push("/login");
+          router.push("/student/login");
           return;
         }
 

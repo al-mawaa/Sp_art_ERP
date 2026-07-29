@@ -18,7 +18,7 @@ export function StatCard({
     destructive: "bg-destructive-soft text-destructive",
   } as const;
   return (
-    <div className="card-soft p-5 flex flex-col gap-4 transition-all hover:shadow-card">
+    <div className="card-soft p-4 flex flex-col gap-3 transition-all hover:shadow-card">
       <div className="flex items-center justify-between">
         <div className={cn("rounded-md p-2", toneMap[tone])}>
           <Icon className="w-4 h-4" strokeWidth={2} />
@@ -31,8 +31,8 @@ export function StatCard({
         )}
       </div>
       <div>
-        <div className="text-[26px] font-display font-semibold tracking-tight tabular-nums">{value}</div>
-        <div className="text-[13px] text-muted-foreground font-medium mt-0.5">{label}</div>
+        <div className="text-[22px] font-display font-semibold tracking-tight tabular-nums">{value}</div>
+        <div className="text-[12px] text-muted-foreground font-medium mt-0.5">{label}</div>
       </div>
     </div>
   );

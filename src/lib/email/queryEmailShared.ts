@@ -1,7 +1,8 @@
 import { sendTransactionalEmail } from "@/lib/email/mailer";
 import { getAdminNotifyEmails } from "@/lib/leave/leaveEmail";
 
-function escapeHtml(s: string) {
+function escapeHtml(s: string | undefined | null) {
+  if (s == null) return "";
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

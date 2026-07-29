@@ -35,6 +35,7 @@ type FeedbackItem = {
   status: "Submitted" | "Reviewed" | "Closed";
   adminRemark?: string;
   submittedDate: string;
+  anonymous?: boolean;
 };
 
 export function AdminFeedbackList({ onStatusChange }: { onStatusChange: () => void }) {
@@ -120,8 +121,9 @@ export function AdminFeedbackList({ onStatusChange }: { onStatusChange: () => vo
   const filteredFeedbacks = feedbacks.filter((f) => {
     if (!searchQuery) return true;
     const lowerQ = searchQuery.toLowerCase();
+    const displayName = f.anonymous ? "Anonymous" : f.studentName;
     return (
-      f.studentName.toLowerCase().includes(lowerQ) ||
+      displayName.toLowerCase().includes(lowerQ) ||
       f.teacherName.toLowerCase().includes(lowerQ) ||
       f.subject.toLowerCase().includes(lowerQ) ||
       f.courseName.toLowerCase().includes(lowerQ)
@@ -205,7 +207,7 @@ export function AdminFeedbackList({ onStatusChange }: { onStatusChange: () => vo
                   <td className="px-4 py-3 whitespace-nowrap text-slate-600">
                     {format(new Date(f.submittedDate), "MMM dd, yyyy")}
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{f.studentName}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{f.anonymous ? "Anonymous" : f.studentName}</td>
                   <td className="px-4 py-3 text-slate-700">{f.teacherName}</td>
                   <td className="px-4 py-3 text-slate-600">
                     <div className="font-medium">{f.courseName}</div>

@@ -5,9 +5,6 @@ import { HeroSection } from "./widgets/HeroSection";
 import { QuickAnalyticsGrid } from "./widgets/QuickAnalyticsGrid";
 import { TodaysClassesWidget } from "./widgets/TodaysClassesWidget";
 import { AttendanceInsights } from "./widgets/AttendanceInsights";
-import { CourseProgressWidget } from "./widgets/CourseProgressWidget";
-import { NotificationCenterWidget } from "./widgets/NotificationCenterWidget";
-import { AchievementsAndActivity } from "./widgets/AchievementsAndActivity";
 import { QuickActionsAndInsights } from "./widgets/QuickActionsAndInsights";
 
 export function PremiumStudentDashboard() {
@@ -66,30 +63,37 @@ export function PremiumStudentDashboard() {
         {/* Top Section */}
         <HeroSection profile={data?.profile} classes={data?.classes} />
 
-        {/* Analytics Grid */}
-        <QuickAnalyticsGrid 
-          profile={data?.profile} 
-          attendance={data?.attendance} 
-          referrals={data?.referrals}
-          enrolledCourses={data?.enrolledCourses}
-        />
-
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column (Main Content) */}
-          <div className="lg:col-span-2 space-y-6">
-            <AttendanceInsights attendance={data?.attendance} />
-            <CourseProgressWidget profile={data?.profile} enrolledCourses={data?.enrolledCourses} />
-            <AchievementsAndActivity />
+        {/* Top Row - 4 Cards in Single Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <h3 className="text-slate-500 text-sm font-medium mb-2">Attendance</h3>
+            <p className="text-2xl font-bold text-slate-800">{data?.attendance?.summary?.percentage || 0}%</p>
+            <p className="text-xs text-slate-500 mt-1">{data?.attendance?.summary?.present || 0} days present</p>
           </div>
-
-          {/* Right Column (Sidebar Widgets) */}
-          <div className="space-y-6">
-            <QuickActionsAndInsights />
-            <TodaysClassesWidget profile={data?.profile} classes={data?.classes} />
-            <NotificationCenterWidget />
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <h3 className="text-slate-500 text-sm font-medium mb-2">Total Referrals</h3>
+            <p className="text-2xl font-bold text-slate-800">{data?.referrals?.stats?.successfulReferrals || data?.referrals?.total || 0}</p>
+            <p className="text-xs text-slate-500 mt-1">₹{data?.referrals?.stats?.totalEarnings || 0} earned</p>
           </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <h3 className="text-slate-500 text-sm font-medium mb-2">Quick Actions</h3>
+            <p className="text-2xl font-bold text-slate-800">4</p>
+            <p className="text-xs text-slate-500 mt-1">Available actions</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <h3 className="text-slate-500 text-sm font-medium mb-2">Today's Classes</h3>
+            <p className="text-2xl font-bold text-slate-800">{data?.classes?.length || 1}</p>
+            <p className="text-xs text-slate-500 mt-1">Scheduled today</p>
+          </div>
+        </div>
+
+        {/* Attendance Trend - Full Width */}
+        <AttendanceInsights attendance={data?.attendance} />
+
+        {/* Quick Actions and Today's Classes - Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <QuickActionsAndInsights />
+          <TodaysClassesWidget profile={data?.profile} classes={data?.classes} />
         </div>
       </div>
     </div>
