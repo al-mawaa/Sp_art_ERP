@@ -133,7 +133,7 @@ export default function StudentCertificatesPage() {
                     
                     <div className="flex items-center gap-3">
                       <a 
-                        href={selectedCert.pdfUrl} 
+                        href={selectedCert.pdfUrl.includes("/api/view-pdf") ? selectedCert.pdfUrl : `/api/view-pdf?url=${encodeURIComponent(selectedCert.pdfUrl)}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors tooltip"
@@ -160,8 +160,7 @@ export default function StudentCertificatesPage() {
                         <Share2 size={20} />
                       </button>
                       <a 
-                        href={selectedCert.pdfUrl}
-                        download={`Certificate_${selectedCert.certificateNumber}.pdf`}
+                        href={`${selectedCert.pdfUrl}&download=true`}
                         className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                       >
                         <Download size={18} /> Download
@@ -173,7 +172,7 @@ export default function StudentCertificatesPage() {
                     {/* PDF Viewer / Image Preview */}
                     {selectedCert.pdfUrl ? (
                       <iframe 
-                        src={`${selectedCert.pdfUrl}#toolbar=0`} 
+                        src={selectedCert.pdfUrl.includes("/api/view-pdf") ? `${selectedCert.pdfUrl}#toolbar=0` : `/api/view-pdf?url=${encodeURIComponent(selectedCert.pdfUrl)}#toolbar=0`} 
                         className="w-full h-full min-h-[600px] rounded-xl shadow-sm bg-white"
                         title="Certificate PDF Preview"
                       />
