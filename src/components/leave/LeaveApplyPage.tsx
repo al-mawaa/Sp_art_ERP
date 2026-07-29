@@ -109,33 +109,8 @@ export function LeaveApplyPage({
     <div className="space-y-6">
       <PageHeader title={title} subtitle={subtitle} />
 
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="space-y-3">
-          <div className="card-soft p-5">
-            <div className="text-sm font-semibold text-muted-foreground mb-2">Leave balance</div>
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 rounded-lg" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {BALANCE_UI.map(b => (
-                  <div
-                    key={b.k}
-                    className="flex items-center justify-between p-2 rounded-lg bg-muted/40"
-                  >
-                    <span className="font-semibold text-sm">{b.k}</span>
-                    <span className={`font-display font-bold text-xl ${b.c}`}>{balance[b.key]}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 card-soft p-5">
+      <div>
+        <div className="card-soft p-5">
           <h3 className="font-display font-bold mb-3">Apply for leave</h3>
           <form
             className="space-y-3"
