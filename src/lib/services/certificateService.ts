@@ -20,6 +20,7 @@ async function ensureFonts() {
 
   const regPath = path.join(fontsDir, 'Hind-Regular.ttf');
   const boldPath = path.join(fontsDir, 'Hind-Bold.ttf');
+  const gothicPath = path.join(fontsDir, 'UnifrakturMaguntia-Regular.ttf');
 
   if (!fs.existsSync(regPath)) {
     try {
@@ -45,16 +46,29 @@ async function ensureFonts() {
     }
   }
 
+  if (!fs.existsSync(gothicPath)) {
+    try {
+      const res = await fetch('https://raw.githubusercontent.com/google/fonts/main/ofl/unifrakturmaguntia/UnifrakturMaguntia-Regular.ttf');
+      if (res.ok) {
+        const buffer = Buffer.from(await res.arrayBuffer());
+        fs.writeFileSync(gothicPath, buffer);
+      }
+    } catch (e) {
+      console.error('Failed to download Gothic font', e);
+    }
+  }
+
   return {
     regExists: fs.existsSync(regPath) ? regPath : null,
-    boldExists: fs.existsSync(boldPath) ? boldPath : null
+    boldExists: fs.existsSync(boldPath) ? boldPath : null,
+    gothicExists: fs.existsSync(gothicPath) ? gothicPath : null
   };
 }
 
 /** Evaluates all conditions to see if the student is eligible for a certificate */
 export async function checkEligibility(studentId: string, courseId: string) {
   await dbConnect();
-  
+
   const enrollment = await CourseEnrollmentModel.findOne({
     studentId,
     courseId,
@@ -67,7 +81,7 @@ export async function checkEligibility(studentId: string, courseId: string) {
 /** Automatically generates a pending certificate if eligible */
 export async function generatePendingCertificate(studentId: string, courseId: string) {
   await dbConnect();
-  
+
   const enrollment = await CourseEnrollmentModel.findOne({
     studentId,
     courseId,
@@ -197,6 +211,65 @@ export async function approveCertificate(
   return certificate;
 }
 
+/** Helper to draw text along an arch/curve matching the certificate styling */
+function drawArchedText(
+  doc: any,
+  text: string,
+  cx: number,
+  cy: number,
+  r: number,
+  fontName: string,
+  fontSize: number,
+  fillColor: string,
+  letterSpacingMultiplier = 1.08
+) {
+  doc.save();
+  doc.font(fontName).fontSize(fontSize).fillColor(fillColor);
+
+  const len = text.length;
+  const charWidths: number[] = [];
+  let totalWidth = 0;
+  
+  for (let i = 0; i < len; i++) {
+    const charW = doc.widthOfString(text[i]);
+    charWidths.push(charW);
+    totalWidth += charW;
+  }
+
+  // Apply letter spacing multiplier
+  totalWidth *= letterSpacingMultiplier;
+
+  // Arc span in radians
+  const span = totalWidth / r;
+  const startAngle = -Math.PI / 2 - span / 2;
+
+  let currentAngle = startAngle;
+  for (let i = 0; i < len; i++) {
+    const char = text[i];
+    const charW = charWidths[i] * letterSpacingMultiplier;
+    
+    // Middle angle of the character segment
+    const charAngleSpan = charW / r;
+    const midAngle = currentAngle + charAngleSpan / 2;
+
+    const x = cx + r * Math.cos(midAngle);
+    const y = cy + r * Math.sin(midAngle);
+
+    doc.save();
+    doc.translate(x, y);
+    // Rotate coordinate system so text is perpendicular to radial vector (normal)
+    doc.rotate((midAngle + Math.PI / 2) * (180 / Math.PI));
+    
+    // Draw the character centered at the rotated origin
+    doc.text(char, -charWidths[i] / 2, -fontSize / 2, { lineBreak: false });
+    doc.restore();
+
+    currentAngle += charAngleSpan;
+  }
+
+  doc.restore();
+}
+
 /** Generates the certificate PDF on the fly and returns it as a Buffer */
 export async function generateCertificatePDFBuffer(certificate: any): Promise<Buffer> {
   const fontPaths = await ensureFonts();
@@ -215,7 +288,7 @@ export async function generateCertificatePDFBuffer(certificate: any): Promise<Bu
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
-      layout: 'landscape',
+      layout: 'portrait',
       margins: { top: 30, bottom: 30, left: 30, right: 30 }
     });
 
@@ -237,105 +310,178 @@ export async function generateCertificatePDFBuffer(certificate: any): Promise<Bu
       doc.registerFont('Devanagari-Bold', 'Helvetica-Bold');
     }
 
+    if (fontPaths.gothicExists) {
+      doc.registerFont('Gothic', fontPaths.gothicExists);
+    } else {
+      doc.registerFont('Gothic', 'Times-BoldItalic');
+    }
+
     const w = doc.page.width;
     const h = doc.page.height;
 
     // --- Premium PDF Design ---
 
-    // 1. Red Border Background
-    doc.rect(15, 15, w - 30, h - 30).fill('#881337');
+    // 1. Solid Outer Red Background Fill
+    doc.rect(0, 0, w, h).fill('#881337');
 
-    // 2. Patterned repeating white circles inside red border
+    // 2. Interlocking White Rings Pattern on Outer Margins
     doc.save();
-    doc.fillColor('#ffffff').opacity(0.15);
-    // Top and Bottom pattern
-    for (let x = 25; x < w - 25; x += 14) {
-      doc.circle(x, 25, 4).fill();
-      doc.circle(x, h - 25, 4).fill();
+    doc.strokeColor('#ffffff').lineWidth(0.85).opacity(0.85);
+    // Top border rings
+    for (let x = 10; x < w - 10; x += 11) {
+      doc.circle(x, 17.5, 7.5).stroke();
     }
-    // Left and Right pattern
-    for (let y = 25; y < h - 25; y += 14) {
-      doc.circle(25, y, 4).fill();
-      doc.circle(w - 25, y, 4).fill();
+    // Bottom border rings
+    for (let x = 10; x < w - 10; x += 11) {
+      doc.circle(x, h - 17.5, 7.5).stroke();
+    }
+    // Left border rings
+    for (let y = 10; y < h - 10; y += 11) {
+      doc.circle(17.5, y, 7.5).stroke();
+    }
+    // Right border rings
+    for (let y = 10; y < h - 10; y += 11) {
+      doc.circle(w - 17.5, y, 7.5).stroke();
     }
     doc.restore();
 
-    // 3. Inner Cream Background Container
-    doc.rect(35, 35, w - 70, h - 70).fill('#FCFBF4');
+    // 3. Cream Inner Background Container
+    doc.rect(35, 35, w - 70, h - 70).fill('#F8F3E3');
 
-    // 4. Inner Gold Border
-    doc.rect(42, 42, w - 84, h - 84).lineWidth(2).stroke('#D4AF37');
+    // 4. Staggered Watermark Pattern "SP ART HUB"
+    doc.save();
+    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#B59353').opacity(0.04);
+    const watermarkText = "SP ART HUB     ";
+    const singleLine = watermarkText.repeat(16);
+    for (let y = 45; y < h - 45; y += 13) {
+      const xOffset = (Math.floor(y / 13) % 2 === 0) ? 50 : 35;
+      doc.text(singleLine, xOffset, y, { lineBreak: false });
+    }
+    doc.restore();
 
-    // 5. Inner Thin Red Line
-    doc.rect(46, 46, w - 92, h - 92).lineWidth(0.5).stroke('#881337');
+    // 5. Central Mandala Ornament Watermark
+    doc.save();
+    doc.strokeColor('#B59353').lineWidth(0.5).opacity(0.045);
+    const cx = w / 2;
+    const cy = h / 2 + 10;
+    doc.circle(cx, cy, 60).stroke();
+    doc.circle(cx, cy, 80).stroke();
+    doc.circle(cx, cy, 100).stroke();
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 6) {
+      const px = cx + 80 * Math.cos(angle);
+      const py = cy + 80 * Math.sin(angle);
+      doc.circle(px, py, 40).stroke();
+    }
+    doc.restore();
 
-    // 6. Foundation Header
-    doc.fontSize(22).font('Times-Bold').fillColor('#881337').text('SHRI DATTAGURU EDUCATION FOUNDATION', 50, 60, { align: 'center', width: w - 100 });
-    doc.fontSize(9).font('Times-BoldItalic').fillColor('#334155').text('Reg: MAHA/19391/5 F34929 (Maharashtra Government Approved)', 50, 85, { align: 'center', width: w - 100 });
+    // 6. Gold Inner Double Border Layout
+    doc.rect(42, 42, w - 84, h - 84).lineWidth(2.8).stroke('#D4AF37');
+    doc.rect(47, 47, w - 94, h - 94).lineWidth(0.8).stroke('#881337');
+    doc.rect(49.5, 49.5, w - 99, h - 99).lineWidth(0.5).stroke('#D4AF37');
 
-    // 7. Embed Logo Main
+    // 7. Foundation Header
+    doc.fontSize(18).font('Times-Bold').fillColor('#881337').text('SHRI DATTAGURU EDUCATION FOUNDATION', 50, 70, { align: 'center', width: w - 100 });
+    doc.fontSize(8.5).font('Times-BoldItalic').fillColor('#334155').text('Reg: MAHA/19391/5 F34929 (Maharashtra Government Approved)', 50, 92, { align: 'center', width: w - 100 });
+
+    // 8. Embed Logo Main
     const logoPath = path.join(process.cwd(), 'public', 'logoMain.png');
     if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, (w / 2) - 35, 100, { width: 70 });
+      doc.image(logoPath, (w / 2) - 40, 110, { width: 80 });
     }
 
-    // 8. Institute Text
-    doc.fontSize(12).font('Times-Bold').fillColor('#0f172a').text('PROFESSIONAL DRAWING & PAINTING INSTITUTE FOR KIDS AND ADULTS', 50, 175, { align: 'center', width: w - 100 });
-    doc.fontSize(10).font('Times-Bold').fillColor('#b91c1c').text('AN ISO 9001:2015', 50, 192, { align: 'center', width: w - 100 });
+    // 9. Arched Institute Titles
+    // Center at w/2, cy = 475, radius = 270/254
+    drawArchedText(
+      doc,
+      "PROFESSIONAL DRAWING & PAINTING INSTITUTE",
+      w / 2,
+      475,
+      270,
+      'Times-Bold',
+      12.5,
+      '#0f172a'
+    );
+    drawArchedText(
+      doc,
+      "FOR KIDS AND ADULTS",
+      w / 2,
+      475,
+      254,
+      'Times-Bold',
+      10.5,
+      '#0f172a'
+    );
 
-    // 9. Big "Certificate" text
-    doc.fontSize(38).font('Times-BoldItalic').fillColor('#881337').text('Certificate', 50, 205, { align: 'center', width: w - 100 });
+    // 10. ISO Sub-header
+    doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#b91c1c').text('AN ISO 9001:2015', 50, 246, { align: 'center', width: w - 100 });
 
-    // 10. "This is to certify that"
-    doc.fontSize(10).font('Times-Italic').fillColor('#334155').text('This is to certify that', 50, 252, { align: 'center', width: w - 100 });
-    doc.fontSize(10).font('Devanagari').fillColor('#334155').text('यह प्रमाणित किया जाता है की', 50, 265, { align: 'center', width: w - 100 });
+    // 11. Gothic Certificate Text
+    doc.fontSize(46).font('Gothic').fillColor('#881337').text('Certificate', 50, 260, { align: 'center', width: w - 100 });
 
-    // 11. Student Name
-    doc.fontSize(22).font('Devanagari-Bold').fillColor('#0f172a').text(certificate.customStudentName, 50, 280, { align: 'center', width: w - 100 });
+    // 12. Certify Introductory Text
+    doc.fontSize(11).font('Times-Italic').fillColor('#334155').text('This is to certify that', 50, 320, { align: 'center', width: w - 100 });
+    doc.fontSize(10).font('Devanagari').fillColor('#334155').text('यह प्रमाणित किया जाता है की', 50, 336, { align: 'center', width: w - 100 });
 
-    // 12. Completion details
-    doc.fontSize(10).font('Times-Italic').fillColor('#334155').text('This student has successfully completed the certificate course in', 50, 315, { align: 'center', width: w - 100 });
-    doc.fontSize(10).font('Devanagari').fillColor('#334155').text('इस छात्र ने सफलतापूर्वक सर्टिफिकेट कोर्स पूरा कर लिया है', 50, 328, { align: 'center', width: w - 100 });
+    // 13. Student Name
+    doc.fontSize(24).font('Devanagari-Bold').fillColor('#0f172a').text(certificate.customStudentName, 50, 368, { align: 'center', width: w - 100 });
 
-    // 13. Course Title
-    doc.fontSize(18).font('Devanagari-Bold').fillColor('#881337').text(certificate.customCourseTitle, 50, 342, { align: 'center', width: w - 100 });
+    // 14. Completion Text Details
+    doc.fontSize(11).font('Times-Italic').fillColor('#334155').text('This student has successfully completed the certificate course in', 50, 432, { align: 'center', width: w - 100 });
+    doc.fontSize(10).font('Devanagari').fillColor('#334155').text('इस छात्र ने सफलतापूर्वक सर्टिफिकेट कोर्स पूरा कर लिया है', 50, 448, { align: 'center', width: w - 100 });
 
-    // 14. Conducted at, Dates & Grade
-    doc.fontSize(10).font('Times-Italic').fillColor('#334155').text('Conducted at', 50, 368, { align: 'center', width: w - 100 });
-    doc.fontSize(12).font('Times-Bold').fillColor('#881337').text(certificate.conductedAt, 50, 380, { align: 'center', width: w - 100 });
+    // 15. Course Title
+    doc.fontSize(20).font('Devanagari-Bold').fillColor('#881337').text(certificate.customCourseTitle, 50, 472, { align: 'center', width: w - 100 });
+
+    // 16. Conducted at, Dates & Grade
+    doc.fontSize(11).font('Times-Italic').fillColor('#334155').text('Conducted at', 50, 512, { align: 'center', width: w - 100 });
+    doc.fontSize(13).font('Times-Bold').fillColor('#881337').text(certificate.conductedAt, 50, 528, { align: 'center', width: w - 100 });
 
     const dateRange = (certificate.fromDate && certificate.toDate) 
       ? `From ${certificate.fromDate} to ${certificate.toDate}` 
       : '';
     const gradeText = certificate.grade ? ` with Grade "${certificate.grade}"` : '';
     if (dateRange || gradeText) {
-      doc.fontSize(10).font('Times-BoldItalic').fillColor('#334155').text(`${dateRange}${gradeText}`, 50, 396, { align: 'center', width: w - 100 });
+      doc.fontSize(10.5).font('Times-BoldItalic').fillColor('#334155').text(`${dateRange}${gradeText}`, 50, 548, { align: 'center', width: w - 100 });
     }
 
-    // 15. Witness Text
-    doc.fontSize(9).font('Times-Italic').fillColor('#475569').text('In witness whereof is best the signature & seal of the Director, Shri Dattaguru Education Foundation', 50, 420, { align: 'center', width: w - 100 });
-    doc.fontSize(9).font('Devanagari').fillColor('#475569').text('गवाह में जिसका सबसे अच्छा हस्ताक्षर एवं निदेशक शैक्षणिक बोर्ड की व्यावसायिक मुहर है श्री दत्तगुरु शिक्षा फाउंडेशन मुहर है', 50, 432, { align: 'center', width: w - 100 });
+    // 17. Witness Text
+    doc.fontSize(9).font('Times-Italic').fillColor('#475569').text('In witness whereof is best the signature & seal of the Director, Shri Dattaguru Education Foundation', 50, 590, { align: 'center', width: w - 100 });
+    doc.fontSize(9).font('Devanagari').fillColor('#475569').text('गवाह में जिसका सबसे अच्छा हस्ताक्षर एवं निदेशक शैक्षणिक बोर्ड की व्यावसायिक मुहर है श्री दत्तगुरु शिक्षा फाउंडेशन मुहर है', 50, 604, { align: 'center', width: w - 100 });
 
-    // 16. Bottom layout: Signatures, Seal, QR Code
-    const bottomY = h - 110;
+    // 18. Bottom layout: Signatures, ISO Badge, QR Code, Seal
+    const bottomY = h - 145;
 
     // Chairman signature line
-    doc.lineWidth(1).moveTo(70, bottomY + 20).lineTo(200, bottomY + 20).stroke('#334155');
-    doc.fontSize(9).font('Times-Bold').fillColor('#0f172a').text('CHAIRMAN\nOF EXAMINATION', 70, bottomY + 25, { width: 130, align: 'center' });
+    doc.lineWidth(1).moveTo(65, bottomY + 20).lineTo(185, bottomY + 20).stroke('#334155');
+    doc.fontSize(9).font('Times-Bold').fillColor('#0f172a').text('CHAIRMAN\nOF EXAMINATION', 65, bottomY + 25, { width: 120, align: 'center' });
 
-    // Director signature line
-    doc.lineWidth(1).moveTo(355, bottomY + 20).lineTo(485, bottomY + 20).stroke('#334155');
-    doc.fontSize(9).font('Times-Bold').fillColor('#0f172a').text('DIRECTOR OF\nSP ART HUB', 355, bottomY + 25, { width: 130, align: 'center' });
+    // Stylized ISO Badge
+    const isoX = 205;
+    const isoY = bottomY + 20;
+    doc.save();
+    doc.fillColor('#0b3c5d');
+    doc.circle(isoX, isoY, 18).fill();
+    doc.fillColor('#ffffff');
+    doc.circle(isoX, isoY, 16).fill();
+    doc.fillColor('#0b3c5d');
+    doc.circle(isoX, isoY, 14).fill();
+    doc.fontSize(6).font('Helvetica-Bold').fillColor('#ffffff').text('ISO', isoX - 10, isoY - 7, { width: 20, align: 'center' });
+    doc.fontSize(4.5).text('9001:2015', isoX - 15, isoY + 1, { width: 30, align: 'center' });
+    doc.restore();
 
     // QR Code
     if (qrBuffer) {
-      doc.image(qrBuffer, 245, bottomY - 5, { width: 60 });
-      doc.fontSize(7).font('Times-Bold').fillColor('#64748b').text('Scan to Verify', 245, bottomY + 58, { width: 60, align: 'center' });
+      doc.image(qrBuffer, 235, bottomY - 5, { width: 55 });
+      doc.fontSize(6.5).font('Times-Bold').fillColor('#64748b').text('Scan to Verify', 235, bottomY + 54, { width: 55, align: 'center' });
     }
 
+    // Director signature line
+    doc.lineWidth(1).moveTo(310, bottomY + 20).lineTo(430, bottomY + 20).stroke('#334155');
+    doc.fontSize(9).font('Times-Bold').fillColor('#0f172a').text('DIRECTOR OF\nSP ART HUB', 310, bottomY + 25, { width: 120, align: 'center' });
+
     // Draw Wax Seal on the right
-    const sealX = w - 140;
-    const sealY = bottomY + 5;
+    const sealX = 495;
+    const sealY = bottomY + 15;
 
     // Wax Ribbons
     doc.save();
@@ -345,7 +491,7 @@ export async function generateCertificatePDFBuffer(certificate: any): Promise<Bu
     doc.polygon([sealX + 10, sealY + 10], [sealX + 25, sealY + 45], [sealX + 5, sealY + 40], [sealX, sealY + 10]).fill();
     doc.restore();
 
-    // Outer Wax Base (concentric circles for wobbly look)
+    // Outer Wax Base
     doc.save();
     doc.fillColor('#881337');
     doc.circle(sealX, sealY, 26).fill();
@@ -358,7 +504,7 @@ export async function generateCertificatePDFBuffer(certificate: any): Promise<Bu
     doc.lineWidth(1.5).strokeColor('#D4AF37').circle(sealX, sealY, 15).stroke();
     doc.restore();
 
-    doc.fontSize(7).font('Times-Bold').fillColor('#881337').text('OFFICIAL SEAL', w - 205, bottomY + 55, { width: 130, align: 'center' });
+    doc.fontSize(7).font('Times-Bold').fillColor('#881337').text('OFFICIAL SEAL', sealX - 65, bottomY + 50, { width: 130, align: 'center' });
 
     // Finish doc
     doc.end();
