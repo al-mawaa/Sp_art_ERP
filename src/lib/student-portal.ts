@@ -35,6 +35,7 @@ export type StudentProfileDto = {
   role: string;
   profileEditCompleted: boolean;
   vanFacility: boolean;
+  branch: string;
   classes: {
     id: string;
     batchName: string;
@@ -85,6 +86,7 @@ export function toProfileDto(doc: StudentDocument): StudentProfileDto {
     role: "student",
     profileEditCompleted: doc.profileEditCompleted ?? false,
     vanFacility: doc.vanFacility ?? false,
+    branch: doc.branch ?? "",
     classes: [],
   };
 }
@@ -191,6 +193,7 @@ export type StudentProfileUpdate = {
   howYouComeToKnow?: string;
   courseName?: string;
   vanFacility?: boolean;
+  branch?: string;
 };
 
 /** Update existing `students` document only — never inserts. */
@@ -241,6 +244,9 @@ export async function updateStudentProfile(
   }
   if (data.vanFacility !== undefined) {
     student.vanFacility = data.vanFacility;
+  }
+  if (data.branch !== undefined) {
+    student.branch = data.branch || undefined;
   }
 
   await student.save();

@@ -28,6 +28,8 @@ const updateSchema = z.object({
   motherOccupation: z.string().optional(),
   courseName: z.string().trim().max(100).optional(),
   vanFacility: z.boolean().optional(),
+  branch: z.string().trim().optional(),
+  age: z.number().optional(),
 });
 
 export async function GET(request: NextRequest) {
