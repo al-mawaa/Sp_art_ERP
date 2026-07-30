@@ -42,6 +42,8 @@ const HOW_YOU_KNOW_US_OPTIONS = [
   'Other',
 ] as const;
 
+const BRANCH_OPTIONS = ['Mumbai', 'Pune', 'Nagpur'];
+
 type FormState = {
   email: string;
   studentId: string;
@@ -64,6 +66,7 @@ type FormState = {
   motherOccupation: string;
   courseName: string;
   vanFacility: string;
+  branch: string;
 };
 
 function profileToForm(p: StudentProfileData): FormState {
@@ -92,6 +95,7 @@ function profileToForm(p: StudentProfileData): FormState {
     motherOccupation: p.motherOccupation || '',
     courseName: p.courseName || '',
     vanFacility: p.vanFacility ? 'Yes' : 'No',
+    branch: p.branch || '',
   };
 }
 
@@ -100,6 +104,13 @@ function formatDisplayDate(value: string): string {
   const [year, month, day] = value.split("-");
   if (year && month && day) return `${day}-${month}-${year}`;
   return value;
+}
+
+function calculateAge(dob: string): number {
+  if (!dob) return 0;
+  const date = new Date(dob);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
@@ -167,26 +178,40 @@ export function StudentProfilePage() {
     void loadProfile();
   }, [loadProfile]);
 
+  // Auto-calculate age from date of birth
+  useEffect(() => {
+    if (!form?.dob) return;
+    const date = new Date(form.dob);
+    if (Number.isNaN(date.getTime())) return;
+    const age = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+    // Age is calculated and displayed, but not stored in form state
+    // It will be sent to the API when saving
+  }, [form?.dob]);
+
   const handleSave = async () => {
     if (!form || !profile) return;
-    
+
     // Validate "How you came to know us" field - either dropdown or text field must have a value
     if (!form.howYouKnowUsSelect && !form.howYouKnowUsOther.trim()) {
       toast.error('Please select how you came to know us or specify in the text field');
       return;
     }
-    
+
     setSaving(true);
     try {
       // If user typed anything in "Please specify" field, save that text
       // Otherwise, save the dropdown selection
-      const finalHowYouKnowUs = form.howYouKnowUsOther.trim() 
-        ? form.howYouKnowUsOther 
+      const finalHowYouKnowUs = form.howYouKnowUsOther.trim()
+        ? form.howYouKnowUsOther
         : form.howYouKnowUsSelect;
-      
+
+      // Calculate age from date of birth
+      const calculatedAge = form.dob ? calculateAge(form.dob) : undefined;
+
       const payload = {
         howYouKnowUs: finalHowYouKnowUs,
         dob: form.dob,
+        age: calculatedAge,
         gender: form.gender,
         bloodGroup: form.bloodGroup,
         phone: form.phone,
@@ -202,6 +227,7 @@ export function StudentProfilePage() {
         motherOccupation: form.motherOccupation,
         courseName: form.courseName,
         vanFacility: form.vanFacility === 'Yes',
+        branch: form.branch || undefined,
       };
       
       const res = await fetch("/api/student/profile", {
@@ -383,7 +409,7 @@ export function StudentProfilePage() {
               ) : (
                 <ReadOnlyField label="Date of birth" value={formatDisplayDate(profile.dob)} />
               )}
-              <ReadOnlyField label="Age" value={profile.age != null ? String(profile.age) : ""} />
+              <ReadOnlyField label="Age" value={form.dob ? String(calculateAge(form.dob)) : (profile.age != null ? String(profile.age) : "")} />
               {editing ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="bloodGroup">Blood group</Label>
@@ -446,6 +472,28 @@ export function StudentProfilePage() {
                 </div>
               ) : (
                 <ReadOnlyField label="Course name" value={profile.courseName} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="branch">Select Branch</Label>
+                  <Select
+                    value={form.branch}
+                    onValueChange={v => setForm({ ...form, branch: v })}
+                  >
+                    <SelectTrigger id="branch" className="rounded-xl">
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRANCH_OPTIONS.map(branch => (
+                        <SelectItem key={branch} value={branch}>
+                          {branch}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <ReadOnlyField label="Branch" value={profile.branch} />
               )}
               {editing ? (
                 <div className="space-y-1.5">
