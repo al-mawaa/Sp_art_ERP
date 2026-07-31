@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import {
-  LayoutDashboard, CalendarOff, CalendarDays, MessageSquare, TrendingUp, User, Boxes, GraduationCap, Users, Wallet,
+  LayoutDashboard, CalendarOff, CalendarDays, MessageSquare, TrendingUp, User, Boxes, GraduationCap, Users, Wallet, Palette,
 } from "lucide-react";
 import { RoleLayout, NavItem, RequireRoles } from "@/components/layouts/RoleLayout";
 import { useSeniorTeacherSessionGuard } from "@/components/senior-teacher/useSeniorTeacherSessionGuard";
@@ -15,6 +15,7 @@ const seniorNav: NavItem[] = [
   { to: "/senior-teacher/classes", label: "My Classes", icon: CalendarDays },
   { to: "/senior-teacher/performance", label: "Performance", icon: TrendingUp },
   { to: "/senior-teacher/progress", label: "Student Progress", icon: TrendingUp },
+  { to: "/senior-teacher/drawing-tasks", label: "Drawing Tasks", icon: Palette },
   { to: "/senior-teacher/leave", label: "Leave", icon: CalendarOff },
   { to: "/senior-teacher/salary", label: "Salary", icon: Wallet },
   { to: "/senior-teacher/chat", label: "Chat", icon: MessageSquare },
