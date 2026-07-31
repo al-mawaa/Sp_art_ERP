@@ -451,6 +451,12 @@ export async function generateCertificatePDFBuffer(certificate: any): Promise<Bu
     // 18. Bottom layout: Signatures, ISO Badge, QR Code, Seal
     const bottomY = h - 145;
 
+    // Chairman signature image
+    const chairmanSigPath = path.join(process.cwd(), 'public', 'chairman_signature.png');
+    if (fs.existsSync(chairmanSigPath)) {
+      doc.image(chairmanSigPath, 85, bottomY - 25, { width: 80 });
+    }
+
     // Chairman signature line
     doc.lineWidth(1).moveTo(65, bottomY + 20).lineTo(185, bottomY + 20).stroke('#334155');
     doc.fontSize(9).font('Times-Bold').fillColor('#0f172a').text('CHAIRMAN\nOF EXAMINATION', 65, bottomY + 25, { width: 120, align: 'center' });
@@ -473,6 +479,12 @@ export async function generateCertificatePDFBuffer(certificate: any): Promise<Bu
     if (qrBuffer) {
       doc.image(qrBuffer, 235, bottomY - 5, { width: 55 });
       doc.fontSize(6.5).font('Times-Bold').fillColor('#64748b').text('Scan to Verify', 235, bottomY + 54, { width: 55, align: 'center' });
+    }
+
+    // Director signature image
+    const directorSigPath = path.join(process.cwd(), 'public', 'director_signature.png');
+    if (fs.existsSync(directorSigPath)) {
+      doc.image(directorSigPath, 330, bottomY - 25, { width: 80 });
     }
 
     // Director signature line
