@@ -30,6 +30,7 @@ const updateSchema = z.object({
   vanFacility: z.boolean().optional(),
   branch: z.string().trim().optional(),
   age: z.number().optional(),
+  batchId: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {

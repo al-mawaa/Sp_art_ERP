@@ -67,6 +67,7 @@ type FormState = {
   courseName: string;
   vanFacility: string;
   branch: string;
+  batchId?: string;
 };
 
 function profileToForm(p: StudentProfileData): FormState {
@@ -96,6 +97,7 @@ function profileToForm(p: StudentProfileData): FormState {
     courseName: p.courseName || '',
     vanFacility: p.vanFacility ? 'Yes' : 'No',
     branch: p.branch || '',
+    batchId: p.batchId || '',
   };
 }
 
@@ -137,6 +139,27 @@ export function StudentProfilePage() {
   const [canEditProfile, setCanEditProfile] = useState(false);
   const [latestQuery, setLatestQuery] = useState<StudentQueryDto | null>(null);
 
+  const [branchesList, setBranchesList] = useState<string[]>([]);
+  const [coursesList, setCoursesList] = useState<{ id: string; courseTitle: string }[]>([]);
+  const [batchesList, setBatchesList] = useState<{ id: string; _id?: string; batchName: string; batchTiming?: string; batchTime?: string; branch?: string; courseName?: string }[]>([]);
+
+  useEffect(() => {
+    async function fetchRegistrationOptions() {
+      try {
+        const res = await fetch("/api/student/registration-options");
+        const data = await res.json();
+        if (res.ok && data.data) {
+          setBranchesList(data.data.branches || []);
+          setCoursesList(data.data.courses || []);
+          setBatchesList(data.data.batches || []);
+        }
+      } catch (error) {
+        console.error("Error loading registration options:", error);
+      }
+    }
+    void fetchRegistrationOptions();
+  }, []);
+
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
@@ -150,6 +173,9 @@ export function StudentProfilePage() {
       setForm(profileToForm(p));
       setCanEditProfile(Boolean(data.data.canEditProfile));
       setLatestQuery((data.data.latestQuery as StudentQueryDto | null) ?? null);
+      if (!p.profileEditCompleted) {
+        setEditing(true);
+      }
       if (user?.email !== p.email || user?.name !== p.fullName) {
         login("student", p.email, p.fullName);
       }
@@ -228,6 +254,7 @@ export function StudentProfilePage() {
         courseName: form.courseName,
         vanFacility: form.vanFacility === 'Yes',
         branch: form.branch || undefined,
+        batchId: form.batchId || undefined,
       };
       
       const res = await fetch("/api/student/profile", {
@@ -265,6 +292,10 @@ export function StudentProfilePage() {
   };
 
   const cancelEdit = () => {
+    if (profile && !profile.profileEditCompleted) {
+      toast.error("You must complete registration before canceling.");
+      return;
+    }
     if (profile) setForm(profileToForm(profile));
     setEditing(false);
   };
@@ -280,16 +311,18 @@ export function StudentProfilePage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto min-h-screen pb-10">
       <PageHeader 
-        title="My Profile" 
-        subtitle="View and update your student details"
+        title={profile.profileEditCompleted ? "My Profile" : "Registration Form"} 
+        subtitle={profile.profileEditCompleted ? "View and update your student details" : "Please fill out the registration form below"}
         action={
-          <Button
-            variant="outline"
-            className="rounded-xl border-primary/30 text-primary hover:bg-primary/5"
-            onClick={() => setQueryOpen(true)}
-          >
-            <MessageSquarePlus className="w-4 h-4 mr-1" /> Request Query Form
-          </Button>
+          profile.profileEditCompleted ? (
+            <Button
+              variant="outline"
+              className="rounded-xl border-primary/30 text-primary hover:bg-primary/5"
+              onClick={() => setQueryOpen(true)}
+            >
+              <MessageSquarePlus className="w-4 h-4 mr-1" /> Request Query Form
+            </Button>
+          ) : undefined
         }
       />
 
@@ -461,14 +494,22 @@ export function StudentProfilePage() {
               )}
               {editing ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="courseName">Course name</Label>
-                  <Input
-                    id="courseName"
+                  <Label htmlFor="courseName">Select Course</Label>
+                  <Select
                     value={form.courseName}
-                    onChange={e => setForm({ ...form, courseName: e.target.value })}
-                    className="rounded-xl"
-                    placeholder="Enter course name"
-                  />
+                    onValueChange={v => setForm({ ...form, courseName: v })}
+                  >
+                    <SelectTrigger id="courseName" className="rounded-xl">
+                      <SelectValue placeholder="Select course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coursesList.map(course => (
+                        <SelectItem key={course.id || course.courseTitle} value={course.courseTitle}>
+                          {course.courseTitle}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : (
                 <ReadOnlyField label="Course name" value={profile.courseName} />
@@ -484,7 +525,7 @@ export function StudentProfilePage() {
                       <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BRANCH_OPTIONS.map(branch => (
+                      {(branchesList.length > 0 ? branchesList : BRANCH_OPTIONS).map(branch => (
                         <SelectItem key={branch} value={branch}>
                           {branch}
                         </SelectItem>
@@ -515,6 +556,45 @@ export function StudentProfilePage() {
                 </div>
               ) : (
                 <ReadOnlyField label="Van facility" value={profile.vanFacility ? "Yes" : "No"} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="batchId">Select Batch</Label>
+                  <Select
+                    value={form.batchId}
+                    onValueChange={v => {
+                      const selectedBatch = batchesList.find(b => b._id === v || b.id === v);
+                      setForm({
+                        ...form,
+                        batchId: v,
+                        branch: selectedBatch?.branch || form.branch,
+                        courseName: selectedBatch?.courseName || form.courseName,
+                      });
+                    }}
+                  >
+                    <SelectTrigger id="batchId" className="rounded-xl">
+                      <SelectValue placeholder="Select a batch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {batchesList
+                        .filter(batch => {
+                          const matchBranch = !form.branch || batch.branch === form.branch;
+                          const matchCourse = !form.courseName || batch.courseName === form.courseName;
+                          return matchBranch && matchCourse;
+                        })
+                        .map(batch => (
+                          <SelectItem key={batch._id || batch.id} value={batch._id || batch.id || ""}>
+                            {batch.batchName} ({batch.batchTiming || batch.batchTime}) - {batch.branch}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <>
+                  <ReadOnlyField label="Batch name" value={profile.batchName} />
+                  <ReadOnlyField label="Batch timing" value={profile.batchTiming} />
+                </>
               )}
             </div>
           </div>
@@ -711,16 +791,9 @@ export function StudentProfilePage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
-            <h3 className="font-display font-bold text-lg">Class & course</h3>
-            {profile.classes.length === 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ReadOnlyField label="Batch name" value={profile.batchName} />
-                <ReadOnlyField label="Batch timing" value={profile.batchTiming} />
-                <ReadOnlyField label="Course name" value={profile.courseName} />
-                <ReadOnlyField label="Teacher name" value={profile.teacherName} />
-              </div>
-            ) : (
+          {profile.classes && profile.classes.length > 0 && !editing && (
+            <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
+              <h3 className="font-display font-bold text-lg">Class & course</h3>
               <div className="space-y-4">
                 {profile.classes.map((cls, index) => (
                   <div key={cls.id} className="rounded-2xl border border-border/80 bg-white/80 p-4 shadow-sm">
@@ -740,8 +813,8 @@ export function StudentProfilePage() {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
-import type { HydratedDocument } from "mongoose";
+import mongoose, { type HydratedDocument } from "mongoose";
 import bcrypt from "bcryptjs";
 import Credential, { type CredentialDocument } from "@/lib/models/Credentials";
 import Student, { type StudentDocument } from "@/lib/models/Student";
 import { verifyCredentialPassword } from "@/lib/auth/verifyCredentialPassword";
+import Batch from "@/lib/models/Batch";
 
 export type StudentHydrated = HydratedDocument<StudentDocument>;
 
@@ -36,6 +37,7 @@ export type StudentProfileDto = {
   profileEditCompleted: boolean;
   vanFacility: boolean;
   branch: string;
+  batchId?: string;
   classes: {
     id: string;
     batchName: string;
@@ -87,6 +89,7 @@ export function toProfileDto(doc: StudentDocument): StudentProfileDto {
     profileEditCompleted: doc.profileEditCompleted ?? false,
     vanFacility: doc.vanFacility ?? false,
     branch: doc.branch ?? "",
+    batchId: doc.batchId?.toString(),
     classes: [],
   };
 }
@@ -194,6 +197,7 @@ export type StudentProfileUpdate = {
   courseName?: string;
   vanFacility?: boolean;
   branch?: string;
+  batchId?: string;
 };
 
 /** Update existing `students` document only — never inserts. */
@@ -247,6 +251,58 @@ export async function updateStudentProfile(
   }
   if (data.branch !== undefined) {
     student.branch = data.branch || undefined;
+  }
+
+  // Handle batch assignment changes if batchId is provided
+  if (data.batchId !== undefined) {
+    const oldBatchId = student.batchId?.toString();
+    const newBatchId = data.batchId;
+
+    if (oldBatchId !== newBatchId) {
+      // Remove student from old batch if exists
+      if (oldBatchId) {
+        const oldBatch = await Batch.findById(oldBatchId);
+        if (oldBatch) {
+          oldBatch.students = oldBatch.students.filter(
+            s => s.studentId?.toString() !== student._id.toString()
+          );
+          await oldBatch.save();
+        }
+      }
+
+      // Add student to new batch if provided
+      if (newBatchId) {
+        const newBatch = await Batch.findById(newBatchId);
+        if (newBatch) {
+          // Check if student is already in the new batch
+          const alreadyInBatch = newBatch.students.some(
+            s => s.studentId?.toString() === student._id.toString()
+          );
+          if (!alreadyInBatch) {
+            newBatch.students.push({
+              _id: student._id,
+              studentId: student._id,
+              studentName: data.fullName || student.fullName,
+              studentEmail: student.email || '',
+              phone: data.phone || student.phone || '',
+              course: newBatch.courseName,
+              batchDay: newBatch.batchDay,
+              batchTime: newBatch.batchTime,
+              startMonth: newBatch.startMonth,
+              endMonth: newBatch.endMonth,
+            });
+            await newBatch.save();
+          }
+
+          // Update student fields based on selected batch
+          student.batchId = new mongoose.Types.ObjectId(newBatchId);
+          student.className = newBatch.batchName;
+          student.courseName = newBatch.courseName;
+        }
+      } else {
+        student.batchId = undefined;
+      }
+    }
   }
 
   await student.save();
