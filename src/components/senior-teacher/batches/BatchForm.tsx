@@ -77,6 +77,7 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
   const routes = useBatchRoutes();
   const [teacherList, setTeacherList] = useState<TeacherBrief[]>([]);
   const [courseOptions, setCourseOptions] = useState<string[]>([]);
+  const [branchOptions, setBranchOptions] = useState<{ id: string; name: string }[]>([]);
   const [studentModal, setStudentModal] = useState(false);
   const [studentList, setStudentList] = useState<Array<{ id: string; name?: string; fullName?: string; email?: string; badgeId?: string; phone?: string; currentCourse?: string; currentCourses?: string[]; batchDays?: string; batchTime?: string }>>([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -148,6 +149,20 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
       }
     })();
   }, [form]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/branches");
+        const json = await res.json();
+        if (res.ok && Array.isArray(json.branches)) {
+          setBranchOptions(json.branches.filter((b: any) => b.status === "Active"));
+        }
+      } catch (err) {
+        console.error("Failed to load branch options", err);
+      }
+    })();
+  }, []);
 
   const teacherIds = form.watch("teacherIds") || [];
 
@@ -419,7 +434,27 @@ export function BatchForm({ mode, batchId, initial }: { mode: "create" | "edit";
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Branch</Label>
-                <Input className="rounded-xl" placeholder="e.g. Pune Main Branch" {...form.register("branch")} />
+                <Select
+                  value={form.watch("branch") || undefined}
+                  onValueChange={v => form.setValue("branch", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branchOptions.length > 0 ? (
+                      branchOptions.map(b => (
+                        <SelectItem key={b.id} value={b.name}>
+                          {b.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="__no-branches" disabled>
+                        No branches available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 {form.formState.errors.branch && (
                   <p className="text-sm text-red-600">{form.formState.errors.branch.message}</p>
                 )}

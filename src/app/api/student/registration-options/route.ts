@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireStudentFromRequest } from "@/lib/auth/require-student";
 import CourseModel from "@/lib/models/Course";
 import BatchModel from "@/lib/models/Batch";
+import BranchModel from "@/lib/models/Branch";
 
 export const runtime = "nodejs";
 
@@ -23,8 +24,9 @@ export async function GET(request: NextRequest) {
       "batchName batchTiming branch courseName"
     ).lean();
 
-    // Get unique branches from the active batches
-    const branches = await BatchModel.distinct("branch", { batchStatus: "Active" });
+    // Fetch branches from Branch collection
+    const activeBranches = await BranchModel.find({ status: "Active" }, "name").lean();
+    const branches = activeBranches.map(b => b.name);
 
     return apiSuccess({
       courses,

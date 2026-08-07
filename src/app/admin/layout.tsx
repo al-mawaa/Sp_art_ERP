@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck, TrendingUp,
 
   Sparkles, Wallet, Boxes, CreditCard, Award, Bell, MessageSquareHeart, MessageSquare, Shield, UserPlus, Package, BookOpen, CalendarOff, HelpCircle, Gift, Trophy,
-
+  MapPin,
 
 } from "lucide-react";
 import { RoleLayout, NavItem, NavSection } from "@/components/layouts/RoleLayout";
@@ -29,6 +29,7 @@ const adminNav: Array<NavItem | NavSection> = [
   {
     title: "Academic Management",
     items: [
+      { to: "/admin/branches", label: "Branches", icon: MapPin },
       { to: "/admin/courses", label: "Courses", icon: BookOpen },
       { to: "/admin/batches", label: "Batches", icon: Package, end: false },
       { to: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
