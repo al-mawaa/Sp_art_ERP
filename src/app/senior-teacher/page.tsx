@@ -25,7 +25,7 @@ export default async function SeniorTeacherDashboardPage() {
   const seniorTeacherId = cookieStore.get(SENIOR_TEACHER_SESSION_COOKIE)?.value;
 
   if (!seniorTeacherId || !mongoose.Types.ObjectId.isValid(seniorTeacherId)) {
-    redirect("/login/senior-teacher");
+    redirect("/login");
   }
 
   await dbConnect();
@@ -35,7 +35,7 @@ export default async function SeniorTeacherDashboardPage() {
 
   // Fetch Senior Teacher
   const seniorTeacher = await SeniorTeacher.findById(seniorTeacherId).lean();
-  if (!seniorTeacher) redirect("/login/senior-teacher");
+  if (!seniorTeacher) redirect("/login");
 
   // Fetch related data concurrently
   const [

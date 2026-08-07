@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ClipboardCheck, CalendarDays, Users, Check, X, Plus } from "lucide-react";
+import { ClipboardCheck, CalendarDays, Users, Check, X, Plus, Calendar } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { StatusPill } from "@/components/shared/StatusPill";
@@ -12,6 +12,8 @@ import AdmissionForm from "@/components/senior-teacher/AdmissionForm";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { todaysClasses } from "@/data/mockData";
 import { useStore, actions } from "@/store/dataStore";
 import { toast } from "sonner";
@@ -25,10 +27,100 @@ export function SeniorDashboard() {
   
   // Show birthday notification on page load
   useBirthdayNotification();
+
+  const [selfAttDate, setSelfAttDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selfAttStatus, setSelfAttStatus] = useState<string | null>(null);
+  const [checkingSelfAtt, setCheckingSelfAtt] = useState(false);
+  const [submittingSelfAtt, setSubmittingSelfAtt] = useState(false);
+
+  const checkSelfAttendance = async (dateStr: string) => {
+    if (!dateStr) return;
+    setCheckingSelfAtt(true);
+    try {
+      const res = await fetch(`/api/senior-teacher/self-attendance?date=${dateStr}`);
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSelfAttStatus(json.data?.record?.attendanceStatus || "Present");
+      } else {
+        setSelfAttStatus("Present");
+      }
+    } catch (err) {
+      console.error(err);
+      setSelfAttStatus("Present");
+    } finally {
+      setCheckingSelfAtt(false);
+    }
+  };
+
+  useEffect(() => {
+    checkSelfAttendance(selfAttDate);
+  }, [selfAttDate]);
+
+  const handleMarkAbsent = async () => {
+    setSubmittingSelfAtt(true);
+    try {
+      const res = await fetch(`/api/senior-teacher/self-attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attendanceDate: selfAttDate,
+          status: "Absent",
+          remarks: "Marked absent from dashboard"
+        })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to mark absent");
+      toast.success("Marked as Absent successfully");
+      checkSelfAttendance(selfAttDate);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save attendance");
+    } finally {
+      setSubmittingSelfAtt(false);
+    }
+  };
   
   return (
     <div className="space-y-6">
       <PageHeader title="Senior Teacher Dashboard" subtitle="Approvals and oversight" />
+      
+      {/* SELF ATTENDANCE CARD */}
+      <div className="card-soft p-5 max-w-md">
+        <h3 className="font-display font-bold text-lg mb-3 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-primary" /> Self Attendance
+        </h3>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="self-att-date">Select Date</Label>
+            <Input
+              id="self-att-date"
+              type="date"
+              value={selfAttDate}
+              onChange={(e) => setSelfAttDate(e.target.value)}
+              className="rounded-xl"
+            />
+          </div>
+
+          <div className="p-4 rounded-xl bg-muted/45 border border-border/50 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-muted-foreground block">Status for {selfAttDate}</span>
+              <span className={`text-sm font-bold ${selfAttStatus === "Absent" ? "text-destructive" : "text-success"}`}>
+                {checkingSelfAtt ? "Checking..." : selfAttStatus === "Absent" ? "Absent" : "Present (Active)"}
+              </span>
+            </div>
+            {selfAttStatus !== "Absent" && !checkingSelfAtt && (
+              <Button
+                onClick={handleMarkAbsent}
+                disabled={submittingSelfAtt}
+                variant="destructive"
+                size="sm"
+                className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium"
+              >
+                Absent
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Pending Slot Approvals" value={pendingSlots} icon={ClipboardCheck} tone="warning" />
         <StatCard label="Classes Today" value={todaysClasses.length} icon={CalendarDays} tone="primary" />

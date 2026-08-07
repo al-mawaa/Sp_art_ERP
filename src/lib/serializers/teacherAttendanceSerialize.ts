@@ -6,7 +6,7 @@ export function serializeTeacherAttendance(doc: TeacherAttendanceDocument) {
     userId: doc.teacherId.toString(),
     teacherId: doc.teacherId.toString(),
     role: doc.role ?? "teacher",
-    batchId: doc.batchId.toString(),
+    batchId: doc.batchId?.toString() ?? "",
     batchName: doc.batchName ?? "",
     attendanceDate: doc.attendanceDate,
     attendanceStatus: doc.status,

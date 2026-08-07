@@ -27,7 +27,7 @@ export function useSeniorTeacherSessionGuard() {
           if (res.status === 401) {
             logout();
             toast.error("Session expired. Please sign in again as Senior Teacher.");
-            router.replace("/senior-teacher/login");
+            router.replace("/login");
           } else {
             toast.error("Could not verify senior teacher session. Try again or sign in.");
           }
