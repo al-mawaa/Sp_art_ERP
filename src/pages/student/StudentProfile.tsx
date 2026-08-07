@@ -148,10 +148,13 @@ export function StudentProfilePage() {
       try {
         const res = await fetch("/api/student/registration-options");
         const data = await res.json();
+        console.log("Registration Options API Response:", data);
         if (res.ok && data.data) {
           setBranchesList(data.data.branches || []);
           setCoursesList(data.data.courses || []);
           setBatchesList(data.data.batches || []);
+        } else {
+          console.error("Failed to load registration options API:", data);
         }
       } catch (error) {
         console.error("Error loading registration options:", error);
@@ -266,18 +269,7 @@ export function StudentProfilePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
       const updated = data.data.profile as StudentProfileData;
-      setProfile(prev =>
-        prev
-          ? {
-              ...updated,
-              classes: prev.classes,
-              batchName: prev.batchName,
-              batchTiming: prev.batchTiming,
-              courseName: prev.courseName,
-              teacherName: prev.teacherName,
-            }
-          : updated,
-      );
+      setProfile(updated);
       setForm(profileToForm(updated));
       login("student", updated.email, updated.fullName);
       setEditing(false);
@@ -351,35 +343,6 @@ export function StudentProfilePage() {
                 )}
               </div>
             )}
-
-            <div className="flex flex-wrap gap-2">
-            {editing ? (
-              <>
-                <Button
-                  className="rounded-xl gradient-primary text-white border-0"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  <Save className="w-4 h-4 mr-1" /> {saving ? "Saving…" : "Save Changes"}
-                </Button>
-                <Button variant="outline" className="rounded-xl" onClick={cancelEdit} disabled={saving}>
-                  Cancel
-                </Button>
-              </>
-            ) : (!profile.profileEditCompleted || canEditProfile) ? (
-              <Button
-                className="rounded-xl gradient-primary text-white border-0"
-                onClick={() => setEditing(true)}
-                title="Edit your profile"
-              >
-                <Pencil className="w-4 h-4 mr-1" /> Edit Profile
-              </Button>
-            ) : null}
-            <Button variant="outline" className="rounded-xl" onClick={() => router.push("/student/dashboard")}>
-              <Home className="w-4 h-4 mr-1" /> Home
-            </Button>
-
-          </div>
 
           <StudentQueryRequestModal
             open={queryOpen}
@@ -494,10 +457,32 @@ export function StudentProfilePage() {
               )}
               {editing ? (
                 <div className="space-y-1.5">
+                  <Label htmlFor="branch">Select Branch</Label>
+                  <Select
+                    value={form.branch || undefined}
+                    onValueChange={v => setForm({ ...form, branch: v, batchId: "" })}
+                  >
+                    <SelectTrigger id="branch" className="rounded-xl">
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(branchesList.length > 0 ? branchesList : BRANCH_OPTIONS).map(branch => (
+                        <SelectItem key={branch} value={branch}>
+                          {branch}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <ReadOnlyField label="Branch" value={profile.branch} />
+              )}
+              {editing ? (
+                <div className="space-y-1.5">
                   <Label htmlFor="courseName">Select Course</Label>
                   <Select
-                    value={form.courseName}
-                    onValueChange={v => setForm({ ...form, courseName: v })}
+                    value={form.courseName || undefined}
+                    onValueChange={v => setForm({ ...form, courseName: v, batchId: "" })}
                   >
                     <SelectTrigger id="courseName" className="rounded-xl">
                       <SelectValue placeholder="Select course" />
@@ -516,25 +501,46 @@ export function StudentProfilePage() {
               )}
               {editing ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="branch">Select Branch</Label>
+                  <Label htmlFor="batchId">Select Batch</Label>
                   <Select
-                    value={form.branch}
-                    onValueChange={v => setForm({ ...form, branch: v })}
+                    value={form.batchId || undefined}
+                    onValueChange={v => {
+                      const selectedBatch = batchesList.find(b => b._id === v || b.id === v);
+                      setForm({
+                        ...form,
+                        batchId: v,
+                        branch: selectedBatch?.branch || form.branch,
+                        courseName: selectedBatch?.courseName || form.courseName,
+                      });
+                    }}
                   >
-                    <SelectTrigger id="branch" className="rounded-xl">
-                      <SelectValue placeholder="Select branch" />
+                    <SelectTrigger id="batchId" className="rounded-xl">
+                      <SelectValue placeholder="Select a batch" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(branchesList.length > 0 ? branchesList : BRANCH_OPTIONS).map(branch => (
-                        <SelectItem key={branch} value={branch}>
-                          {branch}
-                        </SelectItem>
-                      ))}
+                      {batchesList
+                        .filter(batch => {
+                          const activeBranches = branchesList.length > 0 ? branchesList : BRANCH_OPTIONS;
+                          const isValidBranch = activeBranches.some(b => b.toLowerCase().trim() === form.branch?.toLowerCase().trim());
+                          const isValidCourse = coursesList.some(c => c.courseTitle?.toLowerCase().trim() === form.courseName?.toLowerCase().trim());
+
+                          const matchBranch = !form.branch || !isValidBranch || batch.branch?.toLowerCase().trim() === form.branch.toLowerCase().trim();
+                          const matchCourse = !form.courseName || !isValidCourse || batch.courseName?.toLowerCase().trim() === form.courseName.toLowerCase().trim();
+                          return matchBranch && matchCourse;
+                        })
+                        .map(batch => (
+                          <SelectItem key={batch._id || batch.id} value={batch._id || batch.id || ""}>
+                            {batch.batchName} ({batch.batchTiming || batch.batchTime}) - {batch.branch}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
               ) : (
-                <ReadOnlyField label="Branch" value={profile.branch} />
+                <>
+                  <ReadOnlyField label="Batch name" value={profile.batchName} />
+                  <ReadOnlyField label="Batch timing" value={profile.batchTiming} />
+                </>
               )}
               {editing ? (
                 <div className="space-y-1.5">
@@ -556,45 +562,6 @@ export function StudentProfilePage() {
                 </div>
               ) : (
                 <ReadOnlyField label="Van facility" value={profile.vanFacility ? "Yes" : "No"} />
-              )}
-              {editing ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="batchId">Select Batch</Label>
-                  <Select
-                    value={form.batchId}
-                    onValueChange={v => {
-                      const selectedBatch = batchesList.find(b => b._id === v || b.id === v);
-                      setForm({
-                        ...form,
-                        batchId: v,
-                        branch: selectedBatch?.branch || form.branch,
-                        courseName: selectedBatch?.courseName || form.courseName,
-                      });
-                    }}
-                  >
-                    <SelectTrigger id="batchId" className="rounded-xl">
-                      <SelectValue placeholder="Select a batch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {batchesList
-                        .filter(batch => {
-                          const matchBranch = !form.branch || batch.branch === form.branch;
-                          const matchCourse = !form.courseName || batch.courseName === form.courseName;
-                          return matchBranch && matchCourse;
-                        })
-                        .map(batch => (
-                          <SelectItem key={batch._id || batch.id} value={batch._id || batch.id || ""}>
-                            {batch.batchName} ({batch.batchTiming || batch.batchTime}) - {batch.branch}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <>
-                  <ReadOnlyField label="Batch name" value={profile.batchName} />
-                  <ReadOnlyField label="Batch timing" value={profile.batchTiming} />
-                </>
               )}
             </div>
           </div>
@@ -815,6 +782,34 @@ export function StudentProfilePage() {
               </div>
             </div>
           )}
+
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
+            {editing ? (
+              <>
+                <Button
+                  className="rounded-xl gradient-primary text-white border-0"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  <Save className="w-4 h-4 mr-1" /> {saving ? "Saving…" : "Save Changes"}
+                </Button>
+                <Button variant="outline" className="rounded-xl" onClick={cancelEdit} disabled={saving}>
+                  Cancel
+                </Button>
+              </>
+            ) : (!profile.profileEditCompleted || canEditProfile) ? (
+              <Button
+                className="rounded-xl gradient-primary text-white border-0"
+                onClick={() => setEditing(true)}
+                title="Edit your profile"
+              >
+                <Pencil className="w-4 h-4 mr-1" /> Edit Profile
+              </Button>
+            ) : null}
+            <Button variant="outline" className="rounded-xl" onClick={() => router.push("/student/dashboard")}>
+              <Home className="w-4 h-4 mr-1" /> Home
+            </Button>
+          </div>
         </div>
       </div>
     </div>

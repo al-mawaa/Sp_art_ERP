@@ -47,7 +47,9 @@ export async function GET(request: NextRequest) {
 
     const access = await getStudentProfileEditAccess(auth.student.id);
     const classes = await findBatchesForStudent(student);
-    const currentClass = classes[0] ?? null;
+    const currentClass = student.batchId 
+      ? (classes.find(c => c.id === student.batchId?.toString()) ?? classes[0] ?? null)
+      : (classes[0] ?? null);
 
     const profile = toProfileDto(student);
     profile.classes = classes.map(c => ({
@@ -107,8 +109,30 @@ export async function PUT(request: NextRequest) {
     // Consume profile edit access if it was from an admin-approved request
     await consumeProfileEditAccess("student", auth.student.id);
 
+    // Fetch updated batch options to populate return payload correctly
+    const classes = await findBatchesForStudent(student);
+    const currentClass = student.batchId 
+      ? (classes.find(c => c.id === student.batchId?.toString()) ?? classes[0] ?? null)
+      : (classes[0] ?? null);
+
+    const profile = toProfileDto(student);
+    profile.classes = classes.map(c => ({
+      id: c.id,
+      batchName: c.batchName,
+      batchTiming: c.batchTime,
+      courseName: c.courseName,
+      teacherName: c.teachers,
+    }));
+
+    if (currentClass) {
+      profile.batchName = currentClass.batchName;
+      profile.batchTiming = currentClass.batchTime;
+      profile.courseName = currentClass.courseName;
+      profile.teacherName = currentClass.teachers;
+    }
+
     return apiSuccess(
-      { profile: toProfileDto(student) },
+      { profile },
       { message: "Profile saved successfully" },
     );
   } catch (error) {
