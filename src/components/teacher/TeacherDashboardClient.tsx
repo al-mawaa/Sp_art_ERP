@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { 
   Users, CheckCircle, Clock, Calendar, TrendingUp, AlertCircle, 
@@ -10,6 +10,9 @@ import { Avatar } from "@/components/shared/Avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { MyDocumentsCard } from "@/components/shared/MyDocumentsCard";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import Link from "next/link";
 import { useStore } from "@/store/dataStore"; // Using this for slot requests per plan
 
@@ -36,6 +39,57 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
   
   // Use Zustand store for slot requests fallback
   const slotRequestsFallback = useStore(s => s.slots);
+
+  const [selfAttDate, setSelfAttDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [selfAttStatus, setSelfAttStatus] = useState<string | null>(null);
+  const [checkingSelfAtt, setCheckingSelfAtt] = useState(false);
+  const [submittingSelfAtt, setSubmittingSelfAtt] = useState(false);
+
+  const checkSelfAttendance = async (dateStr: string) => {
+    if (!dateStr) return;
+    setCheckingSelfAtt(true);
+    try {
+      const res = await fetch(`/api/teacher/self-attendance?date=${dateStr}`);
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSelfAttStatus(json.data?.record?.attendanceStatus || "Present");
+      } else {
+        setSelfAttStatus("Present");
+      }
+    } catch (err) {
+      console.error(err);
+      setSelfAttStatus("Present");
+    } finally {
+      setCheckingSelfAtt(false);
+    }
+  };
+
+  useEffect(() => {
+    checkSelfAttendance(selfAttDate);
+  }, [selfAttDate]);
+
+  const handleMarkAbsent = async () => {
+    setSubmittingSelfAtt(true);
+    try {
+      const res = await fetch(`/api/teacher/self-attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attendanceDate: selfAttDate,
+          status: "Absent",
+          remarks: "Marked absent from dashboard"
+        })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to mark absent");
+      toast.success("Marked as Absent successfully");
+      checkSelfAttendance(selfAttDate);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save attendance");
+    } finally {
+      setSubmittingSelfAtt(false);
+    }
+  };
 
   // Computed data
   const todaysClasses = useMemo(() => {
@@ -250,6 +304,45 @@ export function TeacherDashboardClient({ data }: DashboardProps) {
 
         {/* RIGHT COLUMN */}
         <div className="space-y-8">
+
+          {/* SELF ATTENDANCE CARD */}
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" /> Self Attendance
+            </h2>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="self-att-date">Select Date</Label>
+                <Input
+                  id="self-att-date"
+                  type="date"
+                  value={selfAttDate}
+                  onChange={(e) => setSelfAttDate(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="p-4 rounded-xl bg-muted/40 border border-border/50 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-muted-foreground block">Status for {selfAttDate}</span>
+                  <span className={`text-sm font-bold ${selfAttStatus === "Absent" ? "text-destructive" : "text-success"}`}>
+                    {checkingSelfAtt ? "Checking..." : selfAttStatus === "Absent" ? "Absent" : "Present (Active)"}
+                  </span>
+                </div>
+                {selfAttStatus !== "Absent" && !checkingSelfAtt && (
+                  <Button
+                    onClick={handleMarkAbsent}
+                    disabled={submittingSelfAtt}
+                    variant="destructive"
+                    size="sm"
+                    className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium"
+                  >
+                    Absent
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
           
           {/* 14. QUICK ACTIONS */}
           <div className="glass-card p-6">

@@ -174,15 +174,20 @@ async function getBatchSessionCounts(
   };
 }
 
-async function calculateMissedBatches(
+async function calculateDateBasedDeductions(
   staffType: PayrollStaffType,
   staffId: mongoose.Types.ObjectId,
   month: string,
-  batches: Array<{ batchType: string; batchDay: string }>,
+  monthlySalary: number,
 ) {
   const role = staffType === "teacher" ? "teacher" : "senior-teacher";
   const { startDate, endDate, start, end } = monthBounds(month);
 
+  // 1. Get total days in this month
+  const totalDaysInMonth = end.getDate();
+  const dailySalary = totalDaysInMonth > 0 ? monthlySalary / totalDaysInMonth : 0;
+
+  // 2. Fetch explicit Absences & Half Days
   const attendances = await TeacherAttendance.find({
     role,
     teacherId: staffId,
@@ -190,6 +195,7 @@ async function calculateMissedBatches(
     status: { $in: ["Absent", "Half Day"] }
   }).select("attendanceDate status").lean();
 
+  // 3. Fetch Rejected Leaves
   const leaves = staffType === "teacher"
     ? await Leave.find({ teacherId: staffId, fromDate: { $lte: endDate }, toDate: { $gte: startDate }, status: "Rejected" }).lean()
     : await SeniorTeacherLeave.find({ seniorTeacherId: staffId, fromDate: { $lte: endDate }, toDate: { $gte: startDate }, status: "Rejected" }).lean();
@@ -210,24 +216,22 @@ async function calculateMissedBatches(
     }
   }
 
-  let missedWeekdaySessions = 0;
-  let missedWeekendSessions = 0;
+  // 4. Compute daily-basis and double-basis deductions
+  let totalDeduction = 0;
 
   for (const [dateStr, multiplier] of missedDates.entries()) {
+    // getDay() returns 0 for Sunday, 6 for Saturday
     const d = new Date(dateStr).getDay();
-    for (const batch of batches) {
-      const days = parseBatchDays(batch.batchDay ?? "");
-      if (days.includes(d)) {
-        if (batch.batchType === "Weekend") {
-          missedWeekendSessions += multiplier;
-        } else {
-          missedWeekdaySessions += multiplier;
-        }
-      }
+    const isWeekend = d === 0 || d === 6;
+    
+    if (isWeekend) {
+      totalDeduction += multiplier * dailySalary * 2;
+    } else {
+      totalDeduction += multiplier * dailySalary;
     }
   }
 
-  return { missedWeekdaySessions, missedWeekendSessions };
+  return Number(totalDeduction.toFixed(2));
 }
 
 async function getAttendanceSummary(
@@ -491,20 +495,16 @@ async function computePayrollEntryFields(
     getLeaveSummary(profile.staffType, staffId, month),
   ]);
 
-  const { missedWeekdaySessions, missedWeekendSessions } = await calculateMissedBatches(
-    profile.staffType,
-    staffId,
-    month,
-    batchCounts.batches,
-  );
-
   const monthlySalary = Math.max(0, Number(profile.monthlySalary ?? 0));
   const salaryPerBatch = batchCounts.totalBatches > 0 ? monthlySalary / batchCounts.totalBatches : 0;
   
-  const weekdayDeduction = salaryPerBatch * missedWeekdaySessions;
-  const weekendDeduction = (salaryPerBatch * 2) * missedWeekendSessions;
+  const deductionAmount = await calculateDateBasedDeductions(
+    profile.staffType,
+    staffId,
+    month,
+    monthlySalary,
+  );
   
-  const deductionAmount = Number((weekdayDeduction + weekendDeduction).toFixed(2));
   const netSalary = Math.max(0, Number((monthlySalary - deductionAmount).toFixed(2)));
   const remarks =
     leave.pending > 0 ? `Hold calculation: ${leave.pending} pending leave day(s).` : "";

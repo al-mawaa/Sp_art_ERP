@@ -151,7 +151,7 @@ export function StaffSelfAttendancePage({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendanceDate, status, remarks }),
+        body: JSON.stringify({ attendanceDate, status: "Absent", remarks }),
       });
       const json = await parseJsonResponse<{ error?: string; message?: string }>(res);
       if (res.status === 409) {
@@ -257,64 +257,31 @@ export function StaffSelfAttendancePage({
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={status}
-                    onValueChange={v => setStatus(v as (typeof STATUS_OPTIONS)[number])}
-                    disabled={!!existing || loadingRecord}
+              <div className="p-4 rounded-xl bg-muted/40 border border-border/50 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-muted-foreground block">Status for {attendanceDate}</span>
+                  <span className={`text-sm font-bold ${existing?.attendanceStatus === "Absent" ? "text-destructive" : "text-success"}`}>
+                    {loadingRecord ? "Checking..." : existing?.attendanceStatus === "Absent" ? "Absent" : "Present (Active)"}
+                  </span>
+                </div>
+                {!existing && !loadingRecord && (
+                  <Button
+                    onClick={() => { setStatus("Absent"); handleSubmit(); }}
+                    disabled={submitting || loadingRecord}
+                    variant="destructive"
+                    className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium"
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map(s => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="remarks">Remarks</Label>
-                  <Textarea
-                    id="remarks"
-                    value={remarks}
-                    onChange={e => setRemarks(e.target.value)}
-                    placeholder="Optional notes"
-                    rows={3}
-                    disabled={!!existing || loadingRecord}
-                  />
-                </div>
-              </div>
-
-              {loadingRecord ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Checking existing record…
-                </div>
-              ) : existing ? (
-                <p className="text-sm text-muted-foreground rounded-xl bg-muted/40 px-4 py-3">
-                  Attendance already submitted for {existing.attendanceDate}.
-                </p>
-              ) : null}
-
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting || !!existing || loadingRecord}
-                className="rounded-full"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  "Submit attendance"
+                    {submitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving…
+                      </>
+                    ) : (
+                      "Absent"
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </CardContent>
           </Card>
         </>

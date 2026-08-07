@@ -23,7 +23,7 @@ export default async function TeacherDashboardPage() {
   const teacherId = cookieStore.get(TEACHER_SESSION_COOKIE)?.value;
 
   if (!teacherId || !mongoose.Types.ObjectId.isValid(teacherId)) {
-    redirect("/login/teacher");
+    redirect("/login");
   }
 
   await dbConnect();
@@ -33,7 +33,7 @@ export default async function TeacherDashboardPage() {
 
   // Fetch teacher
   const teacher = await Teacher.findById(teacherId).lean();
-  if (!teacher) redirect("/login/teacher");
+  if (!teacher) redirect("/login");
 
   // Fetch related data concurrently
   const [
